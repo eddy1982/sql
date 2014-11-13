@@ -1,0 +1,14 @@
+捉歷史的actionlog
+mysqldump.exe --set-gtid-purged=OFF --user=analysis -peddy --max_allowed_packet=1G --host=192.168.1.33 --port=3306 --default-character-set=utf8 --comments --no-create-db --single-transaction --where="date(time) between '2014-07-31' and '2014-08-13'" userActions action_20140801 > C:\\proc\\dumps\\actionlog_20140801.sql
+
+捉linode上的actionlog(近一個月內)
+mysqldump.exe --set-gtid-purged=OFF --user=analysis -peddy --max_allowed_packet=1G --host=106.185.35.141 --port=3306 --default-character-set=utf8 --comments --no-create-db --single-transaction --where="date(time) between '2014-07-31' and '2014-08-18'" userActions action_201408 > C:\\proc\\dumps\\actionlog_201408_linode.sql
+
+捉forum content的資料
+mysqldump.exe --set-gtid-purged=OFF --user=analysis -peddy --max_allowed_packet=1G --host=192.168.1.34 --port=3306 --default-character-set=utf8 --comments --no-create-db --single-transaction --where="date(postdate) between '2014-04-01' and '2014-09-14'" plsport_playsport forumcontent > C:\\proc\\dumps\\forumcontent_custom.sql
+
+捉forum like的資料
+mysqldump.exe --set-gtid-purged=OFF --user=analysis -peddy --max_allowed_packet=1G --host=192.168.1.34 --port=3306 --default-character-set=utf8 --comments --no-create-db --single-transaction --where="date(create_date) between '2014-04-01' and '2014-09-14'" plsport_playsport forum_like > C:\\proc\\dumps\\forum_like.sql
+
+捉prediction_archive的資料
+mysqldump.exe --set-gtid-purged=OFF --user=analysis -peddy --max_allowed_packet=1G --host=192.168.1.34 --port=3306 --default-character-set=utf8 --comments --no-create-db --single-transaction --where="id between 80000000 and 83200000" plsport_playsport prediction_archive > C:\\proc\\dumps\\prediction_archive_temp.sql
