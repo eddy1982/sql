@@ -1081,7 +1081,7 @@ FROM plsport_playsport._wpbillboard_with_vol_8;
 		and biweekgame  >= 24 #雙週注數
 		group by dish, vol, dif;
 
-# 開始處理殺手的部分
+# 開始處理單場殺手的部分
 # 要匯入單殺的主推表
 #     (1) mainpmpbillboard  運彩盤
 #     (2) imainpmpbillboard 國際盤
@@ -1116,15 +1116,13 @@ FROM plsport_playsport.singlekiller_record_2;
 
 create table plsport_playsport.singlekiller_record_4 engine = myisam
 SELECT userid, nickname, allianceid, alliancename, dish, wingame, losegame, totalgame, winpercentage, (case when (dif<7) then '6'
-																										  when (dif<13) then '12'
-																										  when (dif<19) then '18'
-																										  when (dif<23) then '24'
-																										  when (dif<29) then '30'
-																										  when (dif<35) then '36' 
-																										  else '37' end) as dif
+																											  when (dif<13) then '12'
+																											  when (dif<19) then '18'
+																											  when (dif<23) then '24'
+																											  when (dif<29) then '30'
+																											  when (dif<35) then '36' 
+																											  else '37' end) as dif
 FROM plsport_playsport.singlekiller_record_3;
-
-
 
 SELECT yearmonth, dish, dif, count(userid) as c
 FROM plsport_playsport.singlekiller_record_4
