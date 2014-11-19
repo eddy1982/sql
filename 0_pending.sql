@@ -7212,7 +7212,7 @@ SELECT u, count(articleid) as c
 FROM plsport_playsport._forumcontent_with_post_method_3
 group by u;
 
-#有排除
+# 有排除
 SELECT u, count(articleid) as c 
 FROM plsport_playsport._forumcontent_with_post_method_4_only_normal_reply_people
 group by u;
