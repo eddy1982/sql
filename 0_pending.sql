@@ -7102,6 +7102,7 @@ FROM plsport_playsport._list_4);
 #   (2)forumcontent
 #   (3)abtesting_forum_reply_enhanced
 # =================================================================================================
+# <--以下是abtesting檢查的部分-->
 create table plsport_playsport._forumcontent engine = myisam
 SELECT * FROM plsport_playsport.forumcontent
 where articleid > 11200000;
@@ -7126,11 +7127,11 @@ SELECT abtest, post_from, count(userid) as c
 FROM plsport_playsport._forumcontent_with_post_method_1
 group by abtest, post_from;
 
-
-# 開始做abtesting 2014-11-14
+# <--以下才是abtesting檢驗的部分--> 開始做abtesting 2014-11-14
+# where date(postdate) between '2014-10-30' and '2014-11-13'
 create table plsport_playsport._forumcontent engine = myisam
 SELECT * FROM plsport_playsport.forumcontent
-where date(postdate) between '2014-10-30' and '2014-11-13';
+where date(postdate) between '2014-10-30' and '2014-11-19';
 
         ALTER TABLE plsport_playsport._forumcontent ADD INDEX (`articleid`);
         ALTER TABLE plsport_playsport.abtesting_forum_reply_enhanced ADD INDEX (`articleid`);
@@ -7230,3 +7231,56 @@ group by abtest, userid;
     into outfile 'C:/Users/1-7_ASUS/Desktop/_forumcontent_with_post_method_5_only_use_mobile_reply_people.txt'
     fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
     FROM plsport_playsport._forumcontent_with_post_method_5_only_use_mobile_reply_people);
+
+# update 2014-11-20
+# 要製作名單給靜怡
+# 有回答問券的人, 然後在後面補上他們的回文方式和回文數
+
+create table plsport_playsport._user_reply_count_detail engine = myisam
+select b.abtest, b.userid, b.post_by_pc, b.post_by_mobile, (b.post_by_pc+b.post_by_mobile) as post_count
+from (
+	select a.abtest, a.userid, sum(a.post_by_pc) as post_by_pc, sum(a.post_by_mobile) as post_by_mobile
+	from (
+		SELECT abtest, g, articleid, subjectid, userid, postdate, 
+			   (case when (post_from=0) then 1 else 0 end) as post_by_pc,
+			   (case when (post_from>0) then 1 else 0 end) as post_by_mobile, post_from, u
+		FROM plsport_playsport._forumcontent_with_post_method_3) as a
+	group by a.abtest, a.userid) as b;
+
+create table plsport_playsport._last_signin engine = myisam # 最近一次登入
+SELECT userid, max(signin_time) as last_signin
+FROM plsport_playsport.member_signin_log_archive
+group by userid;
+
+create table plsport_playsport._questionnarie_list_1 engine = myisam
+SELECT a.userid, b.nickname, date(b.createon) as join_date, date(a.write_time) as write_date, a.question01, a.question02, a.question03 
+FROM plsport_playsport.questionnaire_forumreplyenhancedtemplate_answer a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._questionnarie_list_2 engine = myisam
+SELECT a.userid, a.nickname, a.join_date, a.write_date, a.question01, a.question02, a.question03, b.post_by_pc, b.post_by_mobile, b.post_count
+FROM plsport_playsport._questionnarie_list_1 a left join plsport_playsport._user_reply_count_detail b on a.userid = b.userid;
+
+create table plsport_playsport._questionnarie_list_3 engine = myisam
+SELECT a.userid, a.nickname, a.join_date, a.write_date, a.question01, a.question02, a.question03, a.post_by_pc, a.post_by_mobile, a.post_count, date(b.last_signin) as last_signin
+FROM plsport_playsport._questionnarie_list_2 a left join plsport_playsport._last_signin b on a.userid = b.userid;
+
+ALTER TABLE plsport_playsport._questionnarie_list_3 convert to character set utf8 collate utf8_general_ci;
+
+update plsport_playsport._questionnarie_list_3 set question03 = replace(question03, '.',''); 
+update plsport_playsport._questionnarie_list_3 set question03 = replace(question03, ';','');
+update plsport_playsport._questionnarie_list_3 set question03 = replace(question03, '/','');
+update plsport_playsport._questionnarie_list_3 set question03 = replace(question03, '\\','_'); # backslash
+update plsport_playsport._questionnarie_list_3 set question03 = replace(question03, '"','');
+update plsport_playsport._questionnarie_list_3 set question03 = replace(question03, '&','');
+update plsport_playsport._questionnarie_list_3 set question03 = replace(question03, '#','');
+update plsport_playsport._questionnarie_list_3 set question03 = replace(question03, ' ','');
+update plsport_playsport._questionnarie_list_3 set question03 = replace(question03, '\t',''); # replace tab
+update plsport_playsport._questionnarie_list_3 set question03 = replace(question03, '\n',''); # replace new lines
+update plsport_playsport._questionnarie_list_3 set question03 = replace(question03, '\b',''); # replace backspace
+
+    # 輸出.txt
+    SELECT 'userid','nickname','join_date','write_date','question01','question02','question03','post_by_pc','post_by_mobile','post_count','last_signin' union (
+    SELECT *
+    into outfile 'C:/Users/1-7_ASUS/Desktop/_questionnarie_list_3.txt'
+    fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+    FROM plsport_playsport._questionnarie_list_3);
