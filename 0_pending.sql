@@ -6855,15 +6855,20 @@ FROM plsport_playsport._order_data_2014_5 a left join plsport_playsport._user_to
 # 欄位：帳號、暱稱、使用天數、NBA即時比分 pv及全站佔比(註2)、NHL即時比分 pv及全站佔比、手機/電腦使用比率
 # 備註：
 # 1.  前50%指的是跟全站使用者相比
-# 2. 全站佔比指的是跟全站使用者相比
+# 2.  全站佔比指的是跟全站使用者相比
 # =================================================================================================
+
+# update: 2014-11-24 同樣的篩選條件下, 阿達需要依資料區間：11/5 ~ 11/20重跑一次名單
+#         今天action_log更新至11-23, 所以 資料區間：11/5 ~ 11/23
 
 create table actionlog._actionlog_livescore engine = myisam 
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_20141025
-where date(time) between '2014-10-05' and '2014-10-25'
+FROM actionlog.action_20141123
+where date(time) between '2014-11-05' and '2014-11-23'
 and uri like '%/livescore.php%'
 and userid <> '';
+
+# actionlog._actionlog_livescore_1~3捉出聯盟
 
 create table actionlog._actionlog_livescore_1 engine = myisam
 select a.userid, a.uri, (case when (locate('&',a.p)=0) then a.p
@@ -6937,7 +6942,7 @@ FROM actionlog._actionlog_livescore_3
 where alliancename = 'NBA'
 group by userid;
 
-        ALTER TABLE `_actionlog_livescore_3_nba_pv` CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE actionlog._actionlog_livescore_3_nba_pv CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 
 create table actionlog._actionlog_livescore_3_nhl_pv engine = myisam
 SELECT userid, count(userid) as nhl_pv
@@ -6945,7 +6950,7 @@ FROM actionlog._actionlog_livescore_3
 where alliancename = '冰球'
 group by userid;
 
-        ALTER TABLE `_actionlog_livescore_3_nhl_pv` CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE actionlog._actionlog_livescore_3_nhl_pv CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 
 use plsport_playsport;
 
@@ -6982,12 +6987,27 @@ create table plsport_playsport._list_6 engine = myisam
 SELECT * FROM plsport_playsport._list_5
 where nba_pv is not null;
 
+		# ...最後一次登入的時間
+		create table plsport_playsport._last_signin engine = myisam # 最近一次登入
+		SELECT userid, max(signin_time) as last_signin
+		FROM plsport_playsport.member_signin_log_archive
+		group by userid;
+
+        ALTER TABLE plsport_playsport._list_6 CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE plsport_playsport._last_signin CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+		ALTER TABLE plsport_playsport._list_6 ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._last_signin ADD INDEX (`userid`);
+
+create table plsport_playsport._list_7 engine = myisam
+SELECT a.userid, a.nickname, date(b.last_signin) as last_signin, a.d_count_all, a.d_count_nba, a.d_count_nhl, a.nba_pv, a.nhl_pv, a.desktop_pv, a.mobile_pv, a.desktop_p, a.mobile_p
+FROM plsport_playsport._list_6 a left join plsport_playsport._last_signin b on a.userid = b.userid;
+
 # 最後名單
-    select 'userid', 'nickname', 'd_count_all', 'd_count_nba', 'd_count_nhl', 'nba_pv', 'nhl_pv', 'desktop_pv', 'mobile_pv', 'desktop_p', 'mobile_p' union (
+    select 'userid', 'nickname', 'last_signin', 'd_count_all', 'd_count_nba', 'd_count_nhl', 'nba_pv', 'nhl_pv', 'desktop_pv', 'mobile_pv', 'desktop_p', 'mobile_p' union (
     SELECT * 
-    into outfile 'C:/Users/1-7_ASUS/Desktop/_list_6.csv' 
+    into outfile 'C:/Users/1-7_ASUS/Desktop/_list_7.csv' 
     fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
-    FROM plsport_playsport._list_6);
+    FROM plsport_playsport._list_7);
 
 
 # =================================================================================================

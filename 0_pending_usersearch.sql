@@ -532,3 +532,246 @@ SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/action_log_position_use_6.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog.action_log_position_use_6);
+
+# ----------------------------------------------------------------------------------------------------------------------
+# 第三次檢查 2014-11-21(五)
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=3419&projectId=11
+# ----------------------------------------------------------------------------------------------------------------------
+
+# task 1 
+# 有使用玩家搜尋的行為
+
+create table actionlog.action_log_usersearch engine = myisam
+SELECT userid, uri, time 
+FROM actionlog.action_20141120
+where time between '2014-11-06 00:00:00' and '2014-11-20 23:59:59'
+and userid <> ''
+and uri like '%/usersearch%';
+
+create table plsport_playsport.action_search_1 engine = myisam
+SELECT userid, uri, time, (case when (locate('searchuser=',uri) >0) then '1' else '0' end) as status
+FROM actionlog.action_log_usersearch
+where userid <> '';
+
+create table plsport_playsport.action_search_2 engine = myisam
+select c.g, (case when (c.g < 8) then 'a' else 'b' end) as abtest, c.userid, c.uri, c.time, c.status
+from (
+    SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time, a.status 
+    FROM plsport_playsport.action_search_1 a left join plsport_playsport.member b on a.userid = b.userid) as c;
+
+drop table plsport_playsport.action_search_1;
+rename table plsport_playsport.action_search_2 to plsport_playsport._task_1_list;
+
+# 計算有沒有點擊搜尋bar的功能 卡方檢驗
+select a.abtest, a.status, count(userid) as c
+from (
+    SELECT abtest, userid, status, count(userid) as c
+    FROM plsport_playsport._task_1_list
+    group by abtest, userid, status) as a
+group by a.abtest, a.status;
+
+# 第一次結果
+# A: 2241 > 1405 > 63%
+# B: 4105 > 3302 > 80% V 
+# Test "B" converted 28% better than Test "A." We are 100% certain that the changes in Test "B" will improve your conversion rate.
+# 第二次結果
+# A: 1568 > 843  > 54%
+# B: 2943 > 2303 > 78% V 
+# Test "B" converted 46% better than Test "A." We are 100% certain that the changes in Test "B" will improve your conversion rate.
+
+
+# task 2
+# 2. 檢查只有玩家搜尋的點擊-點到個人頁去了 
+create table actionlog.action_log_position_us engine = myisam
+SELECT userid, uri, time 
+FROM actionlog.action_20141120
+where time between '2014-11-06 00:00:00' and '2014-11-20 23:59:59'
+and userid <> ''
+and uri like '%rp=US%';
+
+create table plsport_playsport._check_list_us engine = myisam
+select a.userid, a.uri, a.time, (case when (locate('&',a.p)=0) then a.p else substr(a.p,1,locate('&',a.p)-1) end) as p
+from (
+    SELECT userid, uri, time, substr(uri, locate('rp=',uri)+3, length(uri)) as p
+    FROM actionlog.action_log_position_us) as a;
+
+create table plsport_playsport._check_list_us_0 engine = myisam
+SELECT userid, uri, time, (case when (locate('/',p)=0) then p else substr(p,1,(locate('/',p)-1)) end) as p
+FROM plsport_playsport._check_list_us;
+
+ALTER TABLE plsport_playsport._check_list_us_0 convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._check_list_us_1 engine = myisam
+SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time, a.p
+FROM plsport_playsport._check_list_us_0 a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._check_list_us_2 engine = myisam
+SELECT (case when (g<8) then 'a' else 'b' end) as abtest, g, userid, uri, time, p 
+FROM plsport_playsport._check_list_us_1;
+
+create table plsport_playsport._check_list_us_3 engine = myisam
+select *
+from (
+	SELECT abtest, g, userid, uri, time, p, concat(abtest,'_',p) as c 
+	FROM plsport_playsport._check_list_us_2) as a
+where a.c in ('a_USE_HB','a_USE_RS','a_USE_RV','a_USE_SB','b_USE_H','b_USE_S');
+
+rename table plsport_playsport._check_list_us_3 to plsport_playsport._task_2_list;
+drop table plsport_playsport._check_list_us, plsport_playsport._check_list_us_0, plsport_playsport._check_list_us_1, plsport_playsport._check_list_us_2;
+
+create table plsport_playsport._task_2_list_export engine = myisam
+SELECT abtest, userid, count(p) as c
+FROM plsport_playsport._task_2_list
+group by abtest, userid;
+
+# task 3
+create table plsport_playsport._check_list_only_visit_search engine = myisam
+select *
+from (
+	SELECT userid, uri, time,  length(uri) as l
+	FROM actionlog.action_log_usersearch) as a
+where a.l in (15,19);
+
+ALTER TABLE plsport_playsport._check_list_only_visit_search convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._check_list_only_visit_search_1 engine = myisam
+SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time 
+FROM plsport_playsport._check_list_only_visit_search a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._check_list_only_visit_search_2 engine = myisam
+SELECT (case when (g<8) then 'a' else 'b' end) as abtest, g, userid, uri, time 
+FROM plsport_playsport._check_list_only_visit_search_1;
+
+drop table plsport_playsport._check_list_only_visit_search, plsport_playsport._check_list_only_visit_search_1;
+rename table plsport_playsport._check_list_only_visit_search_2 to plsport_playsport._task_3_list;
+
+create table plsport_playsport._task_3_list_export engine = myisam
+SELECT abtest, userid, count(userid) as c 
+FROM plsport_playsport._task_3_list
+group by abtest, userid;
+
+
+# task 4
+# 1. 進入玩家搜尋頁面usersearch.php的點擊率(4)
+# 晨暐將abtesting機制做了改變, user開始進入不同頁面
+#   a版: usersearch.php      101916pv 
+#   b版: userserach_mvp.php  70514pv
+#   實驗組佔了7/20=35%
+
+create table actionlog.action_log_usersearch engine = myisam
+SELECT userid, uri, time 
+FROM actionlog.action_20141120
+where time between '2014-11-06 00:00:00' and '2014-11-20 23:59:59'
+and userid <> ''
+and uri like '%/usersearch%';
+
+ALTER TABLE actionlog.action_log_usersearch convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._check_list engine = myisam
+SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time 
+FROM actionlog.action_log_usersearch a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._check_list1 engine = myisam
+SELECT (case when (g<8) then 'a' else 'b' end) as abtest, g, userid, uri, substr(uri,1,15) as u, time 
+FROM plsport_playsport._check_list;
+
+rename table plsport_playsport._check_list1 to plsport_playsport._task_4_list;
+
+create table plsport_playsport._task_4_list_export engine = myisam
+SELECT abtest, userid, count(userid) as c 
+FROM plsport_playsport._task_4_list
+group by abtest, userid;
+
+
+
+# 輸出txt
+SELECT 'abtest', 'userid', 'c' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_task_2_list_export.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._task_2_list_export);
+
+# 輸出txt
+SELECT 'abtest', 'userid', 'c' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_task_3_list_export.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._task_3_list_export);
+
+# 輸出txt
+SELECT 'abtest', 'userid', 'c' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_task_4_list_export.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._task_4_list_export);
+
+
+# 來看消費金額
+create table plsport_playsport._who_buy_predict_via_user_search engine = myisam
+SELECT * 
+FROM plsport_playsport._predict_buyer_with_cons
+where substr(position,1,3) = 'USE'
+and date(buy_date) between '2014-11-06 00:00:00' and '2014-11-20 23:59:59';
+
+create table plsport_playsport._who_buy_predict_via_user_search_1 engine = myisam
+select c.g, (case when (c.g < 8) then 'a' else 'b' end) as abtest, c.userid, c.buy_date, c.buy_price, c.position
+from (
+    SELECT (b.id%20)+1 as g, a.buyerid as userid, a.buy_date, a.buy_price, a.position
+    FROM plsport_playsport._who_buy_predict_via_user_search a left join plsport_playsport.member b on a.buyerid = b.userid) as c;
+
+create table plsport_playsport._who_buy_predict_via_user_search_2 engine = myisam
+select a.g, a.abtest, a.userid, a.buy_date, a.buy_price, a.position, a.p
+from (
+    SELECT g, abtest, userid, buy_date, buy_price, position, concat(abtest,'_',position) as p
+    FROM plsport_playsport._who_buy_predict_via_user_search_1) as a;
+
+create table plsport_playsport._who_buy_predict_via_user_search_3 engine = myisam
+SELECT * 
+FROM plsport_playsport._who_buy_predict_via_user_search_2
+where p in ('a_USE_HB','a_USE_RS','a_USE_RV','a_USE_SB','b_USE_H','b_USE_S');
+
+create table plsport_playsport._task_5_list_export engine = myisam
+SELECT abtest, userid, sum(buy_price) as c 
+FROM plsport_playsport._who_buy_predict_via_user_search_3
+group by abtest, userid;
+
+
+# 全站
+create table plsport_playsport._who_buy_predict_via_user_search_all engine = myisam
+SELECT * 
+FROM plsport_playsport._predict_buyer_with_cons
+where date(buy_date) between '2014-11-06 00:00:00' and '2014-11-20 23:59:59';
+
+
+create table plsport_playsport._who_buy_predict_via_user_search_4 engine = myisam
+SELECT buyerid as userid, buy_date as date, buy_price as price  
+FROM plsport_playsport._who_buy_predict_via_user_search_all
+where buyerid in (SELECT userid 
+					FROM plsport_playsport._task_5_list_export
+					group by userid);
+
+create table plsport_playsport._who_buy_predict_via_user_search_5 engine = myisam
+select c.g, (case when (c.g < 8) then 'a' else 'b' end) as abtest, c.userid, c.date, c.price
+from (
+    SELECT (b.id%20)+1 as g, a.userid as userid, a.date, a.price
+    FROM plsport_playsport._who_buy_predict_via_user_search_4 a left join plsport_playsport.member b on a.userid = b.userid) as c;
+
+create table plsport_playsport._task_6_list_export engine = myisam
+SELECT abtest, userid, sum(price) as c 
+FROM plsport_playsport._who_buy_predict_via_user_search_5
+group by abtest, userid;
+
+
+# 輸出txt
+SELECT 'abtest', 'userid', 'c' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_task_5_list_export.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._task_5_list_export);
+
+# 輸出txt
+SELECT 'abtest', 'userid', 'c' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_task_6_list_export.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._task_6_list_export);
