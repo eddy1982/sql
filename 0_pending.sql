@@ -4032,6 +4032,7 @@ group by buyerid);
 # 麻煩你了，感謝。
 # =================================================================================================
 
+create table plsport_playsport._1 engine = myisam
 select a.m, a.allianceid, count(a.subjectid) as best_ana_post_count
 from (
     SELECT userid, subjectid, allianceid ,date(got_time) as d, substr(got_time,1,7) as m, year(got_time) as y
@@ -4064,6 +4065,42 @@ from (
     FROM plsport_playsport.forum
     where gametype = 1
     and posttime between '2014-01-01 00:00:00' and '2014-12-31 23:59:59'
+    order by posttime) as a
+group by a.d, a.allianceid;
+
+
+# =================================================================================================
+# 任務: 協助撈取分析文資料 [新建](柔雅) 2014-11-25 此任務類似上面的
+# EDDY:
+# 
+# 麻煩請你提供:
+#     1.活動時間內的 NBA 分析文總數
+#     2.活動時間內的 NBA 最讚分析文數量
+# 
+# 煩請撈取以下兩個時間內的資料:
+#     1.2014/10/30-11/12(14天)
+#     2.2014/11/13-11/26(14天)
+#
+# 需要的tables:
+#     (1) analysis_king
+#     (2) forum
+# =================================================================================================
+
+select a.d, a.allianceid, count(a.subjectid) as best_ana_post_count
+from (
+    SELECT userid, subjectid, allianceid, date(got_time) as d, substr(got_time,1,7) as m, year(got_time) as y
+    FROM plsport_playsport.analysis_king
+    where allianceid = 3 # NBA 
+    and got_time between '2014-10-30 00:00:00' and '2014-11-26 23:59:59') as a
+group by a.d, a.allianceid;
+
+select a.d, a.allianceid, count(a.subjectid) as ana_post_count
+from (
+    SELECT subjectid, posttime, allianceid, date(posttime) as d, substr(posttime,1,7) as m, year(posttime) as y 
+    FROM plsport_playsport.forum
+    where gametype = 1 # 分析文
+    and allianceid = 3 # NBA 
+    and posttime between '2014-10-30 00:00:00' and '2014-11-26 23:59:59'
     order by posttime) as a
 group by a.d, a.allianceid;
 
@@ -4160,8 +4197,6 @@ FROM plsport_playsport._applelist4 a left join plsport_playsport._pcash_log b on
 create table plsport_playsport._applelist6 engine = myisam
 SELECT a.userid, a.sent_text, a.nickname, a.browses, a.createon, a.last_sign_in, a.sign_in_count, a.coupon_used_count, a.total_spent, b.redeem_total
 FROM plsport_playsport._applelist5 a left join plsport_playsport._order_data b on a.userid = b.userid;
-
-
 
 
 # =================================================================================================
