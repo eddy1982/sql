@@ -677,6 +677,22 @@ into outfile 'C:/Users/1-7_ASUS/Documents/R/stable_killer_research/_predict_sell
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
 from _predict_seller_calculated_with_killer_state);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*  
   2013/11/15 edited
   <找出殺手是在什麼時候成為長期穩定殺手的>
@@ -692,13 +708,12 @@ from _predict_seller_calculated_with_killer_state);
 create table _first_stable_killer engine = myisam
 select a.userid, a.nickname, a.allianceid, a.alliancename, a.gamehost, a.b, a.become_stable_killer
 from (
-  SELECT userid, nickname, allianceid, alliancename, gamehost, count(backtoback) as b, 
-         (case when (userid is not null) then 4 end) as become_stable_killer
-  FROM killer._medal_fire
+    SELECT userid, nickname, allianceid, alliancename, gamehost, count(backtoback) as b, 
+           (case when (userid is not null) then 4 end) as become_stable_killer
+    FROM killer._medal_fire
     where vol between 1 and 4 /*vol期累計期間*/
-  group by userid, nickname, allianceid, alliancename, gamehost) as a
-where a.b=3
-;
+    group by userid, nickname, allianceid, alliancename, gamehost) as a
+where a.b=3;
 
 /*(2)>>>執行C:\Python27\eddy_python\calculate_when_killer_became_stable.py */
 /*記得要調整莊殺的期數範圍, 要打開.py檔修改*/
@@ -706,9 +721,10 @@ where a.b=3
 /*(3)每一期中有那些人是擁有殺手資格的*/
 create table _became_stable_killer engine = myisam
 select userid, nickname, allianceid, alliancename,
-  (case when (gamehost='北富') then 1
-        when (gamehost='國際') then 2 end) as mode, gamehost, b, become_stable_killer,
-  (case when (gamehost is not null) then 'stable_killer_in_vol' end ) as been_stable_killer
+       (case when (gamehost='北富') then 1
+             when (gamehost='國際') then 2 end) as mode, 
+       gamehost, b, become_stable_killer,
+       (case when (gamehost is not null) then 'stable_killer_in_vol' end ) as been_stable_killer
 from killer._first_stable_killer
 order by b;
  
@@ -716,13 +732,13 @@ order by b;
 create table _became_stable_killer_in_vol engine = myisam
 select *
 from (
-  SELECT userid, nickname, allianceid, alliancename, 
-  (case when (gamehost='北富') then 1
-        when (gamehost='國際') then 2 end) as mode, gamehost, b, min(become_stable_killer) as become_stable_killer /*當上的是那一期*/
-  FROM killer._first_stable_killer
-  group by userid, nickname, allianceid, alliancename, gamehost, b) as a
-order by a.become_stable_killer desc
-;
+       SELECT userid, nickname, allianceid, alliancename, 
+       (case when (gamehost='北富') then 1
+             when (gamehost='國際') then 2 end) as mode, 
+       gamehost, b, min(become_stable_killer) as become_stable_killer /*當上的是那一期*/
+       FROM killer._first_stable_killer
+       group by userid, nickname, allianceid, alliancename, gamehost, b) as a
+order by a.become_stable_killer desc;
 
 ALTER TABLE  `_became_stable_killer` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 ALTER TABLE  `_became_stable_killer_in_vol` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
@@ -980,11 +996,11 @@ FROM plsport_playsport._wpbillboard_with_vol_3_biweek;
 create table plsport_playsport._wpbillboard_with_vol_3_first_and_second_week engine = myisam
 select a.userid, a.nickname, a.allianceid, a.alliancename, a.dish, a.vol, sum(a.first_week) as first_week, sum(a.second_week) as second_week
 from (
-	SELECT userid, nickname, allianceid, alliancename, dish, vol, 
-		   (case when (week_odd=1) then totalgame else 0 end) as first_week,
-		   (case when (week_odd=2) then totalgame else 0 end) as second_week
-	FROM plsport_playsport._wpbillboard_with_vol_3
-	order by userid) as a
+  SELECT userid, nickname, allianceid, alliancename, dish, vol, 
+       (case when (week_odd=1) then totalgame else 0 end) as first_week,
+       (case when (week_odd=2) then totalgame else 0 end) as second_week
+  FROM plsport_playsport._wpbillboard_with_vol_3
+  order by userid) as a
 group by a.userid, a.nickname, a.allianceid, a.alliancename, a.dish, a.vol; #下次SQL可以把a.nickname和a.alliancename移除掉, 因為多餘
 
 
@@ -993,16 +1009,16 @@ SELECT concat(userid,'_',allianceid,'_',dish,'_',vol) as main_id,
        userid, nickname, allianceid, alliancename, dish, vol, first_week, second_week
 FROM plsport_playsport._wpbillboard_with_vol_3_first_and_second_week;
 
-		ALTER TABLE plsport_playsport._temp1 ADD INDEX (`main_id`);
-		ALTER TABLE plsport_playsport._temp1 convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE plsport_playsport._temp1 ADD INDEX (`main_id`);
+    ALTER TABLE plsport_playsport._temp1 convert to character set utf8 collate utf8_general_ci;
 
 create table plsport_playsport._temp2 engine = myisam
 SELECT concat(userid,'_',allianceid,'_',dish,'_',vol) as main_id,
        userid, nickname, allianceid, alliancename, dish, vol, wingame, losegame, biweekgame, winratio
 FROM plsport_playsport._wpbillboard_with_vol_3_biweek_1;
 
-		ALTER TABLE plsport_playsport._temp2 ADD INDEX (`main_id`);
-		ALTER TABLE plsport_playsport._temp2 convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE plsport_playsport._temp2 ADD INDEX (`main_id`);
+    ALTER TABLE plsport_playsport._temp2 convert to character set utf8 collate utf8_general_ci;
 
 # 完成第1週+第2週+雙週注數的表
 create table plsport_playsport._wpbillboard_with_vol_4 engine = myisam
@@ -1011,12 +1027,12 @@ SELECT a.main_id, a.userid, a.nickname, a.allianceid, a.alliancename, a.dish, a.
 FROM plsport_playsport._temp1 a left join plsport_playsport._temp2 b on a.main_id = b.main_id
 where a.userid <> 'daniel690505'; # 此使用者有點異常
 
-		# 檢查有無注數異常 (例:-32, -30)
-		select a.c, count(main_id)
-		from (
-			SELECT main_id, first_week+second_week as check_week, biweekgame, ((first_week+second_week) - biweekgame) as c
-			FROM plsport_playsport._wpbillboard_with_vol_4) as a
-		group by a.c;
+    # 檢查有無注數異常 (例:-32, -30)
+    select a.c, count(main_id)
+    from (
+      SELECT main_id, first_week+second_week as check_week, biweekgame, ((first_week+second_week) - biweekgame) as c
+      FROM plsport_playsport._wpbillboard_with_vol_4) as a
+    group by a.c;
 
 # 這次任務要撈的範圍
 create table plsport_playsport._wpbillboard_with_vol_5 engine = myisam
@@ -1042,44 +1058,44 @@ FROM plsport_playsport._wpbillboard_with_vol_7;
 create table plsport_playsport._wpbillboard_with_vol_9 engine = myisam
 SELECT userid, nickname, allianceid, alliancename, dish, vol, 
        first_week, second_week, biweekgame, wingame, losegame, winratio, (case when (dif<7) then '6'
-																			  when (dif<13) then '12'
-																			  when (dif<19) then '18'
-																			  when (dif<23) then '24'
-																			  when (dif<29) then '30'
-																			  when (dif<35) then '36' 
-																			  else '37' end) as dif
+                                        when (dif<13) then '12'
+                                        when (dif<19) then '18'
+                                        when (dif<23) then '24'
+                                        when (dif<29) then '30'
+                                        when (dif<35) then '36' 
+                                        else '37' end) as dif
 FROM plsport_playsport._wpbillboard_with_vol_8;
 
 # MLB
-		SELECT *
-		FROM plsport_playsport._wpbillboard_with_vol_9
-		where allianceid = 1 # MLB
-		and first_week  >= 9 # 第一週注數
-		and second_week >= 9 # 第二週注數
-		and biweekgame  >= 28; #雙週注數
+    SELECT *
+    FROM plsport_playsport._wpbillboard_with_vol_9
+    where allianceid = 1 # MLB
+    and first_week  >= 9 # 第一週注數
+    and second_week >= 9 # 第二週注數
+    and biweekgame  >= 28; #雙週注數
 
-		SELECT dish, vol, dif, count(userid) as c 
-		FROM plsport_playsport._wpbillboard_with_vol_9
-		where allianceid = 1 # MLB
-		and first_week  >= 9 # 第一週注數
-		and second_week >= 9 # 第二週注數
-		and biweekgame  >= 28 #雙週注數
-		group by dish, vol, dif;
+    SELECT dish, vol, dif, count(userid) as c 
+    FROM plsport_playsport._wpbillboard_with_vol_9
+    where allianceid = 1 # MLB
+    and first_week  >= 9 # 第一週注數
+    and second_week >= 9 # 第二週注數
+    and biweekgame  >= 28 #雙週注數
+    group by dish, vol, dif;
 # 日棒
-		SELECT *
-		FROM plsport_playsport._wpbillboard_with_vol_9
-		where allianceid = 2 # MLB
-		and first_week  >= 8 # 第一週注數
-		and second_week >= 8 # 第二週注數
-		and biweekgame  >= 24; #雙週注數
+    SELECT *
+    FROM plsport_playsport._wpbillboard_with_vol_9
+    where allianceid = 2 # MLB
+    and first_week  >= 8 # 第一週注數
+    and second_week >= 8 # 第二週注數
+    and biweekgame  >= 24; #雙週注數
 
-		SELECT dish, vol, dif, count(userid) as c 
-		FROM plsport_playsport._wpbillboard_with_vol_9
-		where allianceid = 2 # MLB
-		and first_week  >= 8 # 第一週注數
-		and second_week >= 8 # 第二週注數
-		and biweekgame  >= 24 #雙週注數
-		group by dish, vol, dif;
+    SELECT dish, vol, dif, count(userid) as c 
+    FROM plsport_playsport._wpbillboard_with_vol_9
+    where allianceid = 2 # MLB
+    and first_week  >= 8 # 第一週注數
+    and second_week >= 8 # 第二週注數
+    and biweekgame  >= 24 #雙週注數
+    group by dish, vol, dif;
 
 # 開始處理單場殺手的部分
 # 要匯入單殺的主推表
@@ -1103,8 +1119,8 @@ and allianceid in (1,2);
 create table plsport_playsport.singlekiller_record_1 engine = myisam
 select a.userid, a.nickname, a.allianceid, a.alliancename, a.dish, a.wingame, a.losegame, a.totalgame, a.winpercentage, date(concat(y,'-',m,'-','30')) as d
 from (
-	SELECT userid, nickname, allianceid, alliancename, dish, wingame, losegame, totalgame, winpercentage, substr(yearmonth,1,4) as y, substr(yearmonth,5,2) as m
-	FROM plsport_playsport.singlekiller_record) as a;
+  SELECT userid, nickname, allianceid, alliancename, dish, wingame, losegame, totalgame, winpercentage, substr(yearmonth,1,4) as y, substr(yearmonth,5,2) as m
+  FROM plsport_playsport.singlekiller_record) as a;
 
 create table plsport_playsport.singlekiller_record_2 engine = myisam
 SELECT a.userid, a.nickname, a.allianceid, a.alliancename, a.dish, a.wingame, a.losegame, a.totalgame, a.winpercentage, a.d, date(b.createon) as join_date
@@ -1116,12 +1132,12 @@ FROM plsport_playsport.singlekiller_record_2;
 
 create table plsport_playsport.singlekiller_record_4 engine = myisam
 SELECT userid, nickname, allianceid, alliancename, dish, wingame, losegame, totalgame, winpercentage, (case when (dif<7) then '6'
-																											  when (dif<13) then '12'
-																											  when (dif<19) then '18'
-																											  when (dif<23) then '24'
-																											  when (dif<29) then '30'
-																											  when (dif<35) then '36' 
-																											  else '37' end) as dif
+                                                        when (dif<13) then '12'
+                                                        when (dif<19) then '18'
+                                                        when (dif<23) then '24'
+                                                        when (dif<29) then '30'
+                                                        when (dif<35) then '36' 
+                                                        else '37' end) as dif
 FROM plsport_playsport.singlekiller_record_3;
 
 SELECT yearmonth, dish, dif, count(userid) as c
