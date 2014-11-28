@@ -429,13 +429,6 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n' from _user_w
 
 
 
-
-
-
-
-
-
-
 /* 先刪掉用不到的tables*/
 drop table _user_wpbillboard_2013_first_week;
 drop table _user_wpbillboard_2013_first_week1;
@@ -457,19 +450,12 @@ drop table _medal_fire_2013_1;
 
 
 
-
-
 /*2014新增: 各聯盟殺手人數變化查詢*/
 SELECT vol, aid, aname, gh, count(userid) as killer_count
 FROM killer._user_wpbillboard_2013_merge9
 where vol between 83 and 108
 and killer is not null
 group by vol, gh, aid;
-
-
-
-
-
 
 
 
@@ -676,92 +662,6 @@ select *
 into outfile 'C:/Users/1-7_ASUS/Documents/R/stable_killer_research/_predict_seller_calculated_with_killer_state.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
 from _predict_seller_calculated_with_killer_state);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*  
-  2013/11/15 edited
-  <找出殺手是在什麼時候成為長期穩定殺手的>
-  可以從_medal_fire_2013這個表來開始研究, 這個表只有2013年的medal_fire資料<錯誤>
-  應該要從_medal_fire來推, 因為長期穩定殺手的資格是永久影響的, 不能只籨2013年來推
-      backtoback:1當期是殺手
-      backtoback:2已經連續2期是殺手
-    
-  執行順序:(1)>(2)>(3)>(4)
-*/
-
-/*(1)第一位長期穩定殺手產生*/
-create table _first_stable_killer engine = myisam
-select a.userid, a.nickname, a.allianceid, a.alliancename, a.gamehost, a.b, a.become_stable_killer
-from (
-    SELECT userid, nickname, allianceid, alliancename, gamehost, count(backtoback) as b, 
-           (case when (userid is not null) then 4 end) as become_stable_killer
-    FROM killer._medal_fire
-    where vol between 1 and 4 /*vol期累計期間*/
-    group by userid, nickname, allianceid, alliancename, gamehost) as a
-where a.b=3;
-
-/*(2)>>>執行C:\Python27\eddy_python\calculate_when_killer_became_stable.py */
-/*記得要調整莊殺的期數範圍, 要打開.py檔修改*/
-
-/*(3)每一期中有那些人是擁有殺手資格的*/
-create table _became_stable_killer engine = myisam
-select userid, nickname, allianceid, alliancename,
-       (case when (gamehost='北富') then 1
-             when (gamehost='國際') then 2 end) as mode, 
-       gamehost, b, become_stable_killer,
-       (case when (gamehost is not null) then 'stable_killer_in_vol' end ) as been_stable_killer
-from killer._first_stable_killer
-order by b;
- 
-/*(4)殺手是那一期當上穩定殺手的, 最後的資訊, OK*/
-create table _became_stable_killer_in_vol engine = myisam
-select *
-from (
-       SELECT userid, nickname, allianceid, alliancename, 
-       (case when (gamehost='北富') then 1
-             when (gamehost='國際') then 2 end) as mode, 
-       gamehost, b, min(become_stable_killer) as become_stable_killer /*當上的是那一期*/
-       FROM killer._first_stable_killer
-       group by userid, nickname, allianceid, alliancename, gamehost, b) as a
-order by a.become_stable_killer desc;
-
-ALTER TABLE  `_became_stable_killer` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  `_became_stable_killer_in_vol` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  `_became_stable_killer` ADD INDEX (userid, become_stable_killer, mode, allianceid);
-ALTER TABLE  `_became_stable_killer_in_vol` ADD INDEX (userid, mode, allianceid);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1153,4 +1053,280 @@ where allianceid = 2 # 日棒
 and totalgame >= 20  # 符合資格注數
 group by yearmonth, dish, dif
 order by dish, yearmonth;  
+
+
+
+
+
+
+
+# ===============================================================================================
+#    2013/11/15 edited
+#     <找出殺手是在什麼時候成為長期穩定殺手的>
+#     可以從_medal_fire_2013這個表來開始研究, 這個表只有2013年的medal_fire資料<錯誤>
+#     應該要從_medal_fire來推, 因為長期穩定殺手的資格是永久影響的, 不能只籨2013年來推
+#         backtoback:1當期是殺手
+#         backtoback:2已經連續2期是殺手
+# 
+#     執行順序:(1)>(2)>(3)>(4)
+# ===============================================================================================
+
+create table killer.medal_fire engine = myisam select * from plsport_playsport.medal_fire;
+create table killer.medal_fire_vols engine = myisam select * from plsport_playsport.medal_fire_vols;
+
+create table killer._medal_fire engine = myisam
+SELECT vol, userid, nickname, allianceid, alliancename, mode as gamehost, backtoback 
+FROM killer.medal_fire;
+
+# (1)第一位長期穩定殺手產生
+create table killer._first_stable_killer engine = myisam
+select a.userid, a.nickname, a.allianceid, a.alliancename, a.gamehost, a.b, a.become_stable_killer
+from (
+    SELECT userid, nickname, allianceid, alliancename, gamehost, count(backtoback) as b, 
+           (case when (userid is not null) then 4 end) as become_stable_killer # 在第4期變成長期穩定殺手
+    FROM killer._medal_fire
+    where vol between 1 and 4 # vol期累計期間
+    group by userid, nickname, allianceid, alliancename, gamehost) as a
+where a.b=3;
+
+# (2)>>>執行C:\proc\python\calculate\1_calculate_when_killer_became_stable.py
+#       記得要調整莊殺的期數範圍, 要打開.py檔修改
+
+# (3)每一期中有那些人是擁有殺手資格的
+create table killer._became_stable_killer engine = myisam
+select userid, nickname, allianceid, alliancename,
+       (case when (gamehost='1') then '運彩'
+             when (gamehost='2') then '國際' end) as mode, 
+       gamehost, b, become_stable_killer,
+       (case when (gamehost is not null) then 'stable_killer_in_vol' end) as been_stable_killer
+from killer._first_stable_killer
+order by b;
+ 
+# (4)殺手是那一期當上穩定殺手的, 最後的資訊, 排除重覆當上穩定殺手的資訊
+create table killer._became_stable_killer_in_vol engine = myisam
+select *
+from (
+       SELECT userid, nickname, allianceid, alliancename, 
+		     (case when (gamehost='1') then '運彩'
+				   when (gamehost='2') then '國際' end) as mode, 
+			  gamehost, b, min(become_stable_killer) as become_stable_killer # 當上的是那一期
+       FROM killer._first_stable_killer
+       group by userid, nickname, allianceid, alliancename, gamehost, b) as a
+order by a.become_stable_killer desc;
+
+		ALTER TABLE  killer._became_stable_killer        CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+		ALTER TABLE  killer._became_stable_killer_in_vol CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+		ALTER TABLE  killer._became_stable_killer        ADD INDEX (userid, become_stable_killer, mode, allianceid);
+		ALTER TABLE  killer._became_stable_killer_in_vol ADD INDEX (userid, mode, allianceid);
+
+# killer._became_stable_killer:        每期有那些人是長期穩定殺手
+# killer._became_stable_killer_in_vol: 長期穩定殺手是在那一期當上的
+
+# 每一期全站有多少位長期穩定殺手? 為累積的, 期數越後面, 長期穩定的殺手就越來越多
+create table killer._stable_killer_at_every_vol engine = myisam
+SELECT become_stable_killer as vol, allianceid, alliancename, mode, count(userid) as c
+FROM killer._became_stable_killer
+group by become_stable_killer, allianceid, alliancename, mode
+order by become_stable_killer desc;
+
+
+SELECT 'vol', 'allianceid', 'alliancename', 'mode', 'count'  union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_stable_killer_at_every_vol.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM killer._stable_killer_at_every_vol);
+
+
+
+
+
+create table killer._medal_fire_with_check_id engine = myisam 
+SELECT concat(userid,'_',allianceid,'_',gamehost) as check_id, vol, userid, nickname, allianceid, alliancename, gamehost
+FROM killer._medal_fire;
+
+create table killer._became_stable_killer_in_vol_with_check_id engine = myisam 
+SELECT concat(userid,'_',allianceid,'_',gamehost) as check_id, 
+       userid, nickname, allianceid, alliancename, mode, gamehost, b, become_stable_killer
+FROM killer._became_stable_killer_in_vol;
+
+		ALTER TABLE killer._medal_fire_with_check_id                  convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE killer._became_stable_killer_in_vol_with_check_id convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE killer._medal_fire_with_check_id                  ADD INDEX (`check_id`);
+		ALTER TABLE killer._became_stable_killer_in_vol_with_check_id ADD INDEX (`check_id`);
+
+
+create table killer._medal_fire_with_when_they_become_stable_killer engine = myisam
+SELECT a.vol, a.userid, a.nickname, a.allianceid, a.alliancename, a.gamehost, b.become_stable_killer
+FROM killer._medal_fire_with_check_id a left join killer._became_stable_killer_in_vol_with_check_id b on a.check_id = b.check_id;
+
+create table killer._medal_fire_with_when_they_become_stable_killer_1 engine = myisam
+SELECT vol, userid, nickname, allianceid, alliancename, gamehost, become_stable_killer, (vol-become_stable_killer) as n
+FROM killer._medal_fire_with_when_they_become_stable_killer;
+
+		# 檢查user: 諸葛狂龍, 結果正確無誤
+		SELECT * FROM killer._medal_fire_with_when_they_become_stable_killer_1
+		where userid = 'a120869420'
+		and allianceid = 2
+		order by gamehost, vol;
+
+
+# 完成!^O^, 正確指出在當期殺手是否為長期穩定?
+create table killer._medal_fire_with_when_they_become_stable_killer_2 engine = myisam
+SELECT vol, userid, nickname, allianceid, alliancename, gamehost,
+       (case when (gamehost=2) then '國際' else '運彩' end) as mode,
+       become_stable_killer, n,
+       (case when (n>-1) then 1 else 0 end) as n_stable_killer
+FROM killer._medal_fire_with_when_they_become_stable_killer_1;
+
+		# 檢查user: 諸葛狂龍, 結果正確無誤
+		SELECT * FROM killer._medal_fire_with_when_they_become_stable_killer_2
+		where userid = 'a120869420' 
+        and allianceid = 2 and gamehost = 2
+		order by mode, vol;
+
+
+create table killer._medal_fire_with_when_they_become_stable_killer_3 engine = myisam
+select a.vol, a.alliancename, a.mode, (case when (a.vol is not null) then 'all_killer_count' end) as killer, a.all_killer_count as c
+from (
+	SELECT vol, alliancename, mode, count(userid) as all_killer_count 
+	FROM killer._medal_fire_with_when_they_become_stable_killer_2
+	group by vol, alliancename, mode) as a
+union
+select a.vol, a.alliancename, a.mode, (case when (a.vol is not null) then 'stable_killer_count' end) as killer, a.stable_killer_count as c
+from (
+	SELECT vol, alliancename, mode, count(userid) as stable_killer_count 
+	FROM killer._medal_fire_with_when_they_become_stable_killer_2
+    where n_stable_killer = 1
+	group by vol, alliancename, mode) as a;
+
+# _medal_fire_with_when_they_become_stable_killer_3 可以匯出給R繪製成圖
+SELECT 'vol', 'alliancename', 'mode', 'killer', 'c' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_medal_fire_with_when_they_become_stable_killer_3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM killer._medal_fire_with_when_they_become_stable_killer_3);
+
+create table killer._medal_fire_with_when_they_become_stable_killer_3_percent engine = myisam
+select b.vol, b.alliancename, b.mode, b.all_killer_count, b.stable_killer_count, round((b.stable_killer_count/b.all_killer_count),3) as precent_stable_killers
+from (
+	select a.vol, a.alliancename, a.mode, sum(a.all_killer_count) as all_killer_count, sum(a.stable_killer_count) as stable_killer_count
+	from (
+		SELECT vol, alliancename, mode, (case when (killer='all_killer_count') then c else 0 end) as all_killer_count,
+										(case when (killer='stable_killer_count') then c else 0 end) as stable_killer_count
+		FROM killer._medal_fire_with_when_they_become_stable_killer_3) as a 
+	group by a.vol, a.alliancename, a.mode) as b;
+
+
+SELECT 'vol', 'alliancename', 'mode', 'all_killer_count', 'stable_killer_count','percent_stable_killer' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_medal_fire_with_when_they_become_stable_killer_3_percent.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM killer._medal_fire_with_when_they_become_stable_killer_3_percent);
+
+
+
+
+
+
+
+
+# 以下是計算若套用"近兩年當三次殺手才有長期穩定"，每期各聯盟的長期穩定殺手佔多少比例
+
+create table killer._medal_fire engine = myisam
+SELECT vol, userid, nickname, allianceid, alliancename, mode as gamehost, backtoback 
+FROM killer.medal_fire;
+
+# (1)第一位長期穩定殺手產生
+create table killer._first_stable_killer engine = myisam
+select a.userid, a.nickname, a.allianceid, a.alliancename, a.gamehost, a.b, a.become_stable_killer
+from (
+    SELECT userid, nickname, allianceid, alliancename, gamehost, count(backtoback) as b, 
+           (case when (userid is not null) then 4 end) as become_stable_killer # 在第4期變成長期穩定殺手
+    FROM killer._medal_fire
+    where vol between 1 and 4 # vol期累計期間
+    group by userid, nickname, allianceid, alliancename, gamehost) as a
+where a.b=3;
+
+# (2)>>>執行C:\proc\python\calculate\1_calculate_when_killer_became_stable_1.py
+#       要小心是不一樣的.py檔哦!!!
+
+# (3)每一期中有那些人是擁有殺手資格的
+create table killer._became_stable_killer engine = myisam
+select userid, nickname, allianceid, alliancename,
+       (case when (gamehost='1') then '運彩'
+             when (gamehost='2') then '國際' end) as mode, 
+       gamehost, b, become_stable_killer,
+       (case when (gamehost is not null) then 'stable_killer_in_vol' end) as been_stable_killer
+from killer._first_stable_killer
+order by b;
+
+create table killer._medal_fire_with_check_id engine = myisam 
+SELECT concat(vol,'_',userid,'_',allianceid,'_',gamehost) as check_id, vol, userid, nickname, allianceid, alliancename, gamehost
+FROM killer._medal_fire;
+
+create table killer._became_stable_killer_with_check_id engine = myisam 
+SELECT concat(become_stable_killer,'_',userid,'_',allianceid,'_',gamehost) as check_id, 
+       userid, nickname, allianceid, alliancename, mode, gamehost, become_stable_killer
+FROM killer._became_stable_killer;
+
+		ALTER TABLE killer._medal_fire_with_check_id                  convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE killer._became_stable_killer_with_check_id        convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE killer._medal_fire_with_check_id                  ADD INDEX (`check_id`);
+		ALTER TABLE killer._became_stable_killer_with_check_id        ADD INDEX (`check_id`);
+
+create table killer._medal_fire_with_when_they_become_stable_killer engine = myisam
+SELECT a.vol, a.userid, a.nickname, a.allianceid, a.alliancename, a.gamehost, b.become_stable_killer
+FROM killer._medal_fire_with_check_id a left join killer._became_stable_killer_with_check_id b on a.check_id = b.check_id;
+
+create table killer._medal_fire_with_when_they_become_stable_killer_1 engine = myisam
+SELECT vol, userid, nickname, allianceid, alliancename, gamehost, become_stable_killer, (vol-become_stable_killer) as n
+FROM killer._medal_fire_with_when_they_become_stable_killer;
+
+
+SELECT * FROM killer._medal_fire_with_when_they_become_stable_killer
+where userid = 'Sabathia52' 
+and allianceid = 1 
+and gamehost = 1;
+
+SELECT * FROM killer._became_stable_killer_with_check_id
+where userid = 'a120869420' 
+and allianceid = 2 
+and gamehost = 1;
+
+SELECT * FROM killer._first_stable_killer
+where userid = 'a120869420' 
+and allianceid = 2 
+and gamehost = 1;
+
+SELECT * FROM killer._medal_fire
+where userid = 'a120869420' 
+and allianceid = 2 
+and gamehost = 1;
+
+
+
+select a.userid, a.nickname, a.allianceid, a.alliancename, a.gamehost, a.b, a.become_stable_killer
+from (
+	SELECT userid, nickname, allianceid, alliancename, gamehost, count(backtoback) as b, 
+		   (case when (userid is not null) then 62 end) as become_stable_killer
+	FROM killer._medal_fire
+	where vol between 10 and 62
+    and userid = 'a120869420' 
+	and allianceid = 2 
+	and gamehost = 1
+	group by userid, allianceid, gamehost) as a
+where a.b=3;
+
+
+
+	SELECT userid, nickname, allianceid, alliancename, gamehost, count(backtoback) as b, 
+		   (case when (userid is not null) then 62 end) as become_stable_killer
+	FROM killer._medal_fire
+	where vol between 10 and 62
+    and userid = 'a120869420' 
+	and allianceid = 2 
+	and gamehost = 1
+	group by userid, allianceid, gamehost;
+
+
 
