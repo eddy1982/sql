@@ -4071,8 +4071,8 @@ group by a.d, a.allianceid;
 
 # =================================================================================================
 # 任務: 協助撈取分析文資料 [新建](柔雅) 2014-11-25 此任務類似上面的
+#       http://pm.playsport.cc/index.php/tasksComments?tasksId=3875&projectId=11
 # EDDY:
-# 
 # 麻煩請你提供:
 #     1.活動時間內的 NBA 分析文總數
 #     2.活動時間內的 NBA 最讚分析文數量
@@ -7183,10 +7183,13 @@ FROM plsport_playsport._forumcontent_with_post_method_1
 group by abtest, post_from;
 
 # <--以下才是abtesting檢驗的部分--> 開始做abtesting 2014-11-14
-# where date(postdate) between '2014-10-30' and '2014-11-13'
+#     where date(postdate) between '2014-10-30' and '2014-11-13'
+# 第二次abtesting
+#     where date(postdate) between '2014-11-14' and '2014-11-25'
+# PS.linode滿了, 所以26~27沒有actionlog
 create table plsport_playsport._forumcontent engine = myisam
 SELECT * FROM plsport_playsport.forumcontent
-where date(postdate) between '2014-10-30' and '2014-11-19';
+where date(postdate) between '2014-11-14' and '2014-11-25';
 
         ALTER TABLE plsport_playsport._forumcontent ADD INDEX (`articleid`);
         ALTER TABLE plsport_playsport.abtesting_forum_reply_enhanced ADD INDEX (`articleid`);
@@ -7213,29 +7216,30 @@ FROM plsport_playsport._forumcontent_with_post_method_2
 where u not in ('a_1','b_2');
 
 # 2組使用者人數比較 (來做chi-square檢驗)
-select a.abtest, count(a.userid) as user_count
-from (
-    SELECT abtest, g, userid, count(articleid) as reply_count 
-    FROM plsport_playsport._forumcontent_with_post_method_3
-    group by abtest, g, userid) as a
-group by a.abtest;
+        # 所有人
+		select a.abtest, count(a.userid) as user_count
+		from (
+			SELECT abtest, g, userid, count(articleid) as reply_count 
+			FROM plsport_playsport._forumcontent_with_post_method_3
+			group by abtest, g, userid) as a
+		group by a.abtest;
+        # 有在用的人
+		select a.abtest, count(a.userid) as c
+		from (
+			SELECT abtest, userid, count(articleid) as c 
+			FROM plsport_playsport._forumcontent_with_post_method_3
+			where u in ('a_2','b_1')
+			group by abtest, userid) as a
+		group by a.abtest;
 
-select a.abtest, count(a.userid) as c
-from (
-    SELECT abtest, userid, count(articleid) as c 
-    FROM plsport_playsport._forumcontent_with_post_method_3
-    where u in ('a_2','b_1')
-    group by abtest, userid) as a
-group by a.abtest;
-
-# 是否有人會2種版本都用?
-select a.abtest, a.g, a.userid, sum(ver0) as ver0,sum(ver1) as ver1,sum(ver2) as ver2
-from (
-    SELECT abtest, g, userid, (case when (post_from=0) then 1 else 0 end) as ver0, 
-                              (case when (post_from=1) then 1 else 0 end) as ver1, 
-                              (case when (post_from=2) then 1 else 0 end) as ver2
-    FROM plsport_playsport._forumcontent_with_post_method_3) as a
-group by a.abtest, a.g, a.userid;
+		# 是否有人會2種版本都用?
+		select a.abtest, a.g, a.userid, sum(ver0) as ver0,sum(ver1) as ver1,sum(ver2) as ver2
+		from (
+			SELECT abtest, g, userid, (case when (post_from=0) then 1 else 0 end) as ver0, 
+									  (case when (post_from=1) then 1 else 0 end) as ver1, 
+									  (case when (post_from=2) then 1 else 0 end) as ver2
+			FROM plsport_playsport._forumcontent_with_post_method_3) as a
+		group by a.abtest, a.g, a.userid;
 
 
 # 每位使用者的回文數(準備要輸出給R用)
@@ -7261,7 +7265,7 @@ FROM plsport_playsport._forumcontent_with_post_method_3 as e inner join (select 
                                                                              SELECT userid, count(articleid) as reply_count 
                                                                              FROM plsport_playsport._forumcontent_with_post_method_3
                                                                              group by userid) as a
-                                                                         where a.reply_count <= 301
+                                                                         where a.reply_count <= 300
                                                                          order by a.reply_count desc) as f on e.userid = f.userid;
 # 沒有排除
 SELECT u, count(articleid) as c 
@@ -7279,6 +7283,10 @@ SELECT abtest, userid, count(articleid) as reply_count
 FROM plsport_playsport._forumcontent_with_post_method_4_only_normal_reply_people
 where substr(u,3,1) <> '0'
 group by abtest, userid;
+
+	SELECT abtest, count(userid) as c 
+	FROM plsport_playsport._forumcontent_with_post_method_5_only_use_mobile_reply_people
+	group by abtest;
 
     # 輸出.txt給R
     SELECT 'abtest',  'userid', 'reply_count' union (
