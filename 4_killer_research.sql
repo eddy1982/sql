@@ -1304,7 +1304,6 @@ and allianceid = 2
 and gamehost = 1;
 
 
-
 select a.userid, a.nickname, a.allianceid, a.alliancename, a.gamehost, a.b, a.become_stable_killer
 from (
 	SELECT userid, nickname, allianceid, alliancename, gamehost, count(backtoback) as b, 
@@ -1317,8 +1316,6 @@ from (
 	group by userid, allianceid, gamehost) as a
 where a.b=3;
 
-
-
 	SELECT userid, nickname, allianceid, alliancename, gamehost, count(backtoback) as b, 
 		   (case when (userid is not null) then 62 end) as become_stable_killer
 	FROM killer._medal_fire
@@ -1327,6 +1324,4 @@ where a.b=3;
 	and allianceid = 2 
 	and gamehost = 1
 	group by userid, allianceid, gamehost;
-
-
 
