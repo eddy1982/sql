@@ -1761,6 +1761,9 @@ SELECT userid, city,
             when (city       =24) then'連江縣'
             when (city       =25) then'南海諸島' else '不明' end) as city1 #0是基隆市或真的沒有,所以標不明
 FROM plsport_playsport._city_info_ok;
+
+drop table plsport_playsport._city_info_ok, plsport_playsport._city_info;
+
 # -------------------------------------------------------------------------------------------------
 # a+b+c
 ALTER TABLE  `_city_info_ok_with_chinese` CHANGE  `userid`  `userid` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
@@ -7347,3 +7350,265 @@ update plsport_playsport._questionnarie_list_3 set question03 = replace(question
     into outfile 'C:/Users/1-7_ASUS/Desktop/_questionnarie_list_3.txt'
     fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
     FROM plsport_playsport._questionnarie_list_3);
+
+
+# =================================================================================================
+# 任務: [201406-B-10]強化玩家搜尋-優化電訪名單撈取 [新建] (靜怡) 2014-12-01
+# 
+# 說明
+# 提供電訪名單
+# 
+# 內容
+# - 族群：D1~D5
+# - 使用新版玩家搜尋
+# - 撈取時段：8/22~11/19
+# - 欄位：暱稱、ID、玩家搜尋PV、玩家搜尋使用比例(重度、中度、輕度)、電腦與手機使用比率、最近登入時間
+# =================================================================================================
+
+create table actionlog._usersearch_0 engine = myisam
+SELECT * FROM actionlog.action_201408 where userid <> '' and uri like '%usersearch%';
+insert ignore into actionlog._usersearch_0 
+SELECT * FROM actionlog.action_201409 where userid <> '' and uri like '%usersearch%';
+insert ignore into actionlog._usersearch_0 
+SELECT * FROM actionlog.action_201410 where userid <> '' and uri like '%usersearch%';
+insert ignore into actionlog._usersearch_0 
+SELECT * FROM actionlog.action_201411 where userid <> '' and uri like '%usersearch%';
+
+create table actionlog._usersearch_1 engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog._usersearch_0
+where date(time) between '2014-08-22' and '2014-11-19';
+
+ALTER TABLE actionlog._usersearch_1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._usersearch_1 ADD INDEX (`userid`);
+
+create table actionlog._usersearch_2 engine = myisam
+select c.g, (case when (c.g<8) then 'a' else 'b' end) as abtest, c.userid, c.nickname, c.uri, c.time, c.platform_type
+from (
+	SELECT (b.id%20)+1 as g, a.userid, b.nickname, a.uri, a.time, a.platform_type 
+	FROM actionlog._usersearch_1 a left join plsport_playsport.member b on a.userid = b.userid) as c;
+
+create table actionlog._usersearch_3 engine = myisam
+SELECT g, abtest, userid, nickname, uri, time, (case when (platform_type<2) then 1 else 2 end) as platform_type
+FROM actionlog._usersearch_2;
+
+create table actionlog._usersearch_4 engine = myisam
+select a.g, a.abtest, a.userid, a.nickname, sum(a.pc) as pc, sum(a.mobile) as mobile
+from (
+	SELECT g, abtest, userid, nickname, uri, time, (case when (platform_type=1) then 1 else 0 end) as pc,
+												  (case when (platform_type=2) then 1 else 0 end) as mobile
+	FROM actionlog._usersearch_3) as a
+group by a.g, a.abtest, a.userid;
+
+create table actionlog._usersearch_5 engine = myisam
+SELECT g, abtest, userid, nickname, (pc+mobile) as pv, pc, mobile, round((pc/(pc+mobile)),2) as pc_p, round((mobile/(pc+mobile)),2) as mobile_p
+FROM actionlog._usersearch_4;
+
+
+create table plsport_playsport._last_signin engine = myisam # 最近一次登入
+SELECT userid, max(signin_time) as last_signin
+FROM plsport_playsport.member_signin_log_archive
+group by userid;
+
+		ALTER TABLE actionlog._usersearch_5 ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._last_signin ADD INDEX (`userid`);
+
+create table actionlog._usersearch_6 engine = myisam
+SELECT a.g, a.abtest, a.userid, a.nickname, a.pv, a.pc, a.mobile, a.pc_p, a.mobile_p, date(b.last_signin) as last_signin
+FROM actionlog._usersearch_5 a left join plsport_playsport._last_signin b on a.userid = b.userid;
+
+create table actionlog._usersearch_7 engine = myisam
+SELECT * FROM actionlog._usersearch_6
+where abtest = 'a';
+
+SELECT 'g', 'abtest', 'userid', 'nickname', 'pv', 'pc', 'mobile', 'pc_p', 'mobile_p', 'last_signin' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_usersearch_7.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._usersearch_7);
+
+# =================================================================================================
+# 任務: [201411-C-1] 討論區APP使用者訪談 - 訪談名單 [新建]
+# 
+# 說明
+#  
+# 撈取訪談名單
+# 負責人：Eddy 
+# 時間：12/3(三) 
+# 訪談名單
+# 
+# 1. 討論區APP使用者
+#    a. 分享者
+#    條件：
+#    - 近三個月討論區app發文數於前 50%或回文數於前 50%
+#    - 近三個月登入天數大於 30天
+#  
+# 欄位：帳號、暱稱、討論區app登入天數/開啟次數、討論區app發文數/回文數、居住地
+# 註：以上數字皆統計近三個月即可
+#  
+#    b. 觀看者
+#    條件：
+#    - 近三個月討論區app觀看文章數於前50%
+#    - 近三個月登入天數大於 30天
+# 欄位：帳號、暱稱、討論區app登入天數/開啟次數、討論區app發文數/回文數、居住地
+# 註：以上數字皆統計近三個月即可
+# 
+# 2. 網頁版討論區使用者
+#  
+#    a. 分享者
+#    條件：
+#    - 近三個月網頁版討論區發文數於前 50%或回文數於前 50%
+#    - 近三個月網站登入天數大於30天
+# 欄位：帳號、暱稱、網站登入天數、網頁版討論區發文數/回文數、網頁版討論區觀看文章篇數、討論區app登入天數/開啟次數、居住地
+# 註：以上數字皆統計近三個月即可
+# 
+#    b. 觀看者
+#    條件：
+#    - 近三個月討論區討論區觀看文章數於前50%
+#    - 近三個月網站登入天數大於 30天
+# 欄位：帳號、暱稱、網站登入天數、網頁版討論區發文數/回文數、網頁版討論區觀看文章篇數、討論區app登入天數/開啟次數、居住地
+# 註：以上數字皆統計近三個月即可
+# =================================================================================================
+
+# 先跑居住地
+# code: 1715~1763
+# 需匯入:
+#     (1)exchange_validate
+#     (2)user_living_city
+#     (3)udata
+
+create table plsport_playsport._app_action_log_0 engine = myisam
+SELECT * FROM plsport_playsport.app_action_log
+where datetime between subdate(now(),90) and now();
+
+create table plsport_playsport._app_action_log_1 engine = myisam
+select a.userid, sum(a.post) as post, sum(a.reply) as reply, sum(a.login) as login
+from (
+	SELECT userid, (case when (action=1) then 1 else 0 end) as post,
+				   (case when (action=2) then 1 else 0 end) as reply,
+				   (case when (action=3) then 1 else 0 end) as login
+	FROM plsport_playsport._app_action_log_0) as a
+group by a.userid;
+
+create table plsport_playsport._app_action_log_2 engine = myisam
+SELECT a.userid, b.nickname, a.post, a.reply, a.login 
+FROM plsport_playsport._app_action_log_1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._app_login_date_count engine = myisam
+select b.userid, count(b.d) as login_date_count
+from (
+	select a.userid, a.d, count(a.d) as c 
+	from (
+		SELECT userid, date(datetime) as d 
+		FROM plsport_playsport._app_action_log_0) as a
+	group by a.userid, a.d) as b
+group by b.userid;
+
+create table plsport_playsport._app_action_log_3 engine = myisam
+SELECT a.userid, a.nickname, b.login_date_count, a.login, a.post, a.reply 
+FROM plsport_playsport._app_action_log_2 a left join plsport_playsport._app_login_date_count b on a.userid = b.userid;
+
+# 新發現, Calculate percentile in MySQL based on totals, 直接用SQL計算percentile
+
+# (1)計算post percentile
+create table plsport_playsport._app_action_log_3_1 engine = myisam
+select userid, nickname, login_date_count, login, post, reply, round((cnt-rank+1)/cnt,2) as post_percentile 
+from (SELECT userid, nickname, login_date_count, login, post, reply, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._app_action_log_3, (SELECT @curRank := 0) r
+      where post > 0
+      order by post desc) as dt, 
+     (select count(distinct userid) as cnt from plsport_playsport._app_action_log_3
+      where post > 0) as ct;
+
+# (2)計算reply percentile
+create table plsport_playsport._app_action_log_3_2 engine = myisam
+select userid, nickname, login_date_count, login, post, reply, round((cnt-rank+1)/cnt,2) as reply_percentile 
+from (SELECT userid, nickname, login_date_count, login, post, reply, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._app_action_log_3, (SELECT @curRank := 0) r
+      where reply > 0
+      order by reply desc) as dt, 
+     (select count(distinct userid) as cnt from plsport_playsport._app_action_log_3
+      where reply > 0) as ct;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		ALTER TABLE plsport_playsport._city_info_ok_with_chinese ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._app_action_log_5 ADD INDEX (`userid`);
+
+create table plsport_playsport._app_action_log_6 engine = myisam
+SELECT a.userid, a.nickname, a.login_date_count as login_days_count, a.login, a.post, a.post_percentile, a.reply, a.reply_percentile, b.city1 as city 
+FROM plsport_playsport._app_action_log_5 a left join plsport_playsport._city_info_ok_with_chinese b on a.userid = b.userid;
+
+		create table plsport_playsport._last_signin_app engine = myisam # 最近一次登入(討論區APP)
+		SELECT userid, max(datetime) as last_signin
+		FROM plsport_playsport._app_action_log_0
+		group by userid;
+
+		ALTER TABLE actionlog._usersearch_6 ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._last_signin_app ADD INDEX (`userid`);
+
+create table plsport_playsport._app_action_log_7 engine = myisam
+SELECT a.userid, a.nickname, a.login_days_count, a.login, a.post, a.post_percentile, a.reply, a.reply_percentile, a.city, date(b.last_signin) as last_signin
+FROM plsport_playsport._app_action_log_6 a left join plsport_playsport._last_signin_app b on a.userid = b.userid;
+
+
+
+
+create table plsport_playsport._app_action_log_5_temp engine = myisam
+select userid, nickname, login_date_count, login, post, reply, post_percentile, round((cnt-rank+1)/cnt,2) as reply_percentile 
+from (SELECT userid, nickname, login_date_count, login, post, reply, post_percentile, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._app_action_log_4, (SELECT @curRank := 0) r
+      where reply > 0
+      order by reply desc) as dt, # 要修改....
+     (select count(distinct userid) as cnt from plsport_playsport._app_action_log_4) as ct;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		create table plsport_playsport._last_signin engine = myisam # 最近一次登入
+		SELECT userid, max(signin_time) as last_signin
+		FROM plsport_playsport.member_signin_log_archive
+		group by userid;
+
+		ALTER TABLE actionlog._usersearch_6 ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._last_signin ADD INDEX (`userid`);
+
+create table plsport_playsport._app_action_log_7 engine = myisam
+SELECT a.userid, a.nickname, a.login_days_count, a.login, a.post, a.post_percentile, a.reply, a.reply_percentile, a.city, date(b.last_signin) as last_signin
+FROM plsport_playsport._app_action_log_6 a left join plsport_playsport._last_signin b on a.userid = b.userid;
+
+
+
+
