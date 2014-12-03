@@ -7477,9 +7477,11 @@ FROM actionlog._usersearch_7);
 #     (2)user_living_city
 #     (3)udata
 
+# 1. 討論區APP使用者
+
 create table plsport_playsport._app_action_log_0 engine = myisam
 SELECT * FROM plsport_playsport.app_action_log
-where datetime between subdate(now(),90) and now();
+where datetime between subdate(now(),91) and now();
 
 create table plsport_playsport._app_action_log_1 engine = myisam
 select a.userid, sum(a.post) as post, sum(a.reply) as reply, sum(a.login) as login
@@ -7530,24 +7532,19 @@ from (SELECT userid, nickname, login_date_count, login, post, reply, @curRank :=
      (select count(distinct userid) as cnt from plsport_playsport._app_action_log_3
       where reply > 0) as ct;
 
+create table plsport_playsport._app_action_log_4 engine = myisam
+SELECT a.userid, a.nickname, a.login_date_count, a.login, a.post, b.post_percentile, a.reply 
+FROM plsport_playsport._app_action_log_3 a left join plsport_playsport._app_action_log_3_1 b on a.userid = b.userid;
 
-
-
-
-
-
-
-
-
-
-
-
+create table plsport_playsport._app_action_log_5 engine = myisam
+SELECT a.userid, a.nickname, a.login_date_count, a.login, a.post, a.post_percentile, a.reply, b.reply_percentile
+FROM plsport_playsport._app_action_log_4 a left join plsport_playsport._app_action_log_3_2 b on a.userid = b.userid;
 
 		ALTER TABLE plsport_playsport._city_info_ok_with_chinese ADD INDEX (`userid`);
 		ALTER TABLE plsport_playsport._app_action_log_5 ADD INDEX (`userid`);
 
 create table plsport_playsport._app_action_log_6 engine = myisam
-SELECT a.userid, a.nickname, a.login_date_count as login_days_count, a.login, a.post, a.post_percentile, a.reply, a.reply_percentile, b.city1 as city 
+SELECT a.userid, a.nickname, a.login_date_count as login_days, a.login, a.post, a.post_percentile, a.reply, a.reply_percentile, b.city1 as city 
 FROM plsport_playsport._app_action_log_5 a left join plsport_playsport._city_info_ok_with_chinese b on a.userid = b.userid;
 
 		create table plsport_playsport._last_signin_app engine = myisam # 最近一次登入(討論區APP)
@@ -7558,57 +7555,224 @@ FROM plsport_playsport._app_action_log_5 a left join plsport_playsport._city_inf
 		ALTER TABLE actionlog._usersearch_6 ADD INDEX (`userid`);
 		ALTER TABLE plsport_playsport._last_signin_app ADD INDEX (`userid`);
 
+# 完成
 create table plsport_playsport._app_action_log_7 engine = myisam
-SELECT a.userid, a.nickname, a.login_days_count, a.login, a.post, a.post_percentile, a.reply, a.reply_percentile, a.city, date(b.last_signin) as last_signin
+SELECT a.userid, a.nickname, a.login_days, a.login, a.post, a.post_percentile, a.reply, a.reply_percentile, a.city, date(b.last_signin) as last_signin
 FROM plsport_playsport._app_action_log_6 a left join plsport_playsport._last_signin_app b on a.userid = b.userid;
 
+rename table plsport_playsport._app_action_log_7 to plsport_playsport._full_list_forum_app_user;
+drop table plsport_playsport._app_action_log_0,plsport_playsport._app_action_log_1,plsport_playsport._app_action_log_2;
+drop table plsport_playsport._app_action_log_3,plsport_playsport._app_action_log_4,plsport_playsport._app_action_log_5;
+drop table plsport_playsport._app_action_log_6,plsport_playsport._app_action_log_3_1,plsport_playsport._app_action_log_3_2;
+
+update plsport_playsport._full_list_forum_app_user set nickname = TRIM(nickname);             #刪掉空白字完
+update plsport_playsport._full_list_forum_app_user set nickname = replace(nickname, '.',''); 
+update plsport_playsport._full_list_forum_app_user set nickname = replace(nickname, ';','');
+update plsport_playsport._full_list_forum_app_user set nickname = replace(nickname, '/','');
+update plsport_playsport._full_list_forum_app_user set nickname = replace(nickname, '\\','_');
+update plsport_playsport._full_list_forum_app_user set nickname = replace(nickname, '"','');
+update plsport_playsport._full_list_forum_app_user set nickname = replace(nickname, '&','');
+update plsport_playsport._full_list_forum_app_user set nickname = replace(nickname, '#','');
+update plsport_playsport._full_list_forum_app_user set nickname = replace(nickname, ' ','');
+update plsport_playsport._full_list_forum_app_user set nickname = replace(nickname, '\n','');
+update plsport_playsport._full_list_forum_app_user set nickname = replace(nickname, '\b','');
+update plsport_playsport._full_list_forum_app_user set nickname = replace(nickname, '\t','');
+
+SELECT '帳號', '暱稱', 'app登入天數', 'app開啟次數', 'app發文數', '%', 'app回文數', '%', '居住地', '最後一次打開app' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_full_list_forum_app_user.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._full_list_forum_app_user);
 
 
 
-create table plsport_playsport._app_action_log_5_temp engine = myisam
-select userid, nickname, login_date_count, login, post, reply, post_percentile, round((cnt-rank+1)/cnt,2) as reply_percentile 
-from (SELECT userid, nickname, login_date_count, login, post, reply, post_percentile, @curRank := @curRank + 1 AS rank
-      FROM plsport_playsport._app_action_log_4, (SELECT @curRank := 0) r
-      where reply > 0
-      order by reply desc) as dt, # 要修改....
-     (select count(distinct userid) as cnt from plsport_playsport._app_action_log_4) as ct;
+# 2. 網頁版討論區使用者
 
 
+# 網站登入天數
+create table plsport_playsport._signin_days engine = myisam
+SELECT userid, date(signin_time) as ad
+FROM plsport_playsport.member_signin_log_archive
+where signin_time between subdate(now(),91) and now();
+
+create table plsport_playsport._signin_days_1 engine = myisam
+SELECT userid, ad as d, count(userid) as c
+FROM plsport_playsport._signin_days
+group by userid, ad;
+
+create table plsport_playsport._signin_days_2 engine = myisam
+SELECT userid, count(d) as signin_days 
+FROM plsport_playsport._signin_days_1
+group by userid;
+
+drop table plsport_playsport._signin_days, plsport_playsport._signin_days_1;
+rename table plsport_playsport._signin_days_2 to plsport_playsport._signin_days;
+
+# 網頁版討論區發文數/回文數
+        # ---post---
+		create table plsport_playsport._post_count engine = myisam
+		SELECT subjectid, postuser as userid, posttime as time  
+		FROM plsport_playsport.forum
+		where posttime between subdate(now(),91) and now();
+
+		create table plsport_playsport._post_count_1 engine = myisam
+		SELECT userid, count(subjectid) as post_count 
+		FROM plsport_playsport._post_count
+		group by userid;
+
+        drop table plsport_playsport._post_count;
+        rename table plsport_playsport._post_count_1 to plsport_playsport._post_count;
+
+        # ---reply---
+		create table plsport_playsport._reply_count engine = myisam
+		SELECT userid, count(articleid) as reply_count
+		FROM plsport_playsport.forumcontent
+		where postdate between subdate(now(),91) and now()
+        group by userid;
+
+		# 計算出貼文的%數
+		create table plsport_playsport._post_count_with_percentile engine = myisam
+		select userid, post_count, round((cnt-rank+1)/cnt,2) as post_percentile
+		from (SELECT userid, post_count, @curRank := @curRank + 1 AS rank
+			  FROM plsport_playsport._post_count, (SELECT @curRank := 0) r
+			  order by post_count desc) as dt,
+			 (select count(distinct userid) as cnt from plsport_playsport._post_count) as ct;
+
+		# 計算出回文的%數
+		create table plsport_playsport._reply_count_with_percentile engine = myisam
+		select userid, reply_count, round((cnt-rank+1)/cnt,2) as reply_percentile
+		from (SELECT userid, reply_count, @curRank := @curRank + 1 AS rank
+			  FROM plsport_playsport._reply_count, (SELECT @curRank := 0) r
+			  order by reply_count desc) as dt,
+			 (select count(distinct userid) as cnt from plsport_playsport._reply_count) as ct;
 
 
+# 處理網頁版討論區觀看文章篇數(重覆不算)
+create table actionlog._forumdetail_pv_0 engine = myisam
+SELECT * FROM actionlog.action_201408 where uri like '%forumdetail%' and userid <> '';
+insert ignore into actionlog._forumdetail_pv_0 
+SELECT * FROM actionlog.action_201409 where uri like '%forumdetail%' and userid <> '';
+insert ignore into actionlog._forumdetail_pv_0 
+SELECT * FROM actionlog.action_201410 where uri like '%forumdetail%' and userid <> '';
+insert ignore into actionlog._forumdetail_pv_0 
+SELECT * FROM actionlog.action_20141130 where uri like '%forumdetail%' and userid <> '';
 
+create table actionlog._forumdetail_pv_1 engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog._forumdetail_pv_0
+where time between subdate(now(),90) and now();
 
+create table actionlog._forumdetail_pv_2 engine = myisam
+SELECT userid, uri, time, (case when (platform_type=1) then 1 else 2 end) as platform 
+FROM actionlog._forumdetail_pv_1;
 
+create table actionlog._forumdetail_pv_3 engine = myisam
+select a.userid, a.uri, (case when (locate('&',a.s)=0) then a.s else substr(a.s,1,locate('&',a.s)-1) end) as s, a.time, a.platform
+from (
+	SELECT userid, uri, substr(uri,locate('subjectid=',uri)+10, length(uri)) as s, time, platform
+	FROM actionlog._forumdetail_pv_2) as a;
 
+		create table actionlog._forumdetail_pv_3_1 engine = myisam
+		SELECT userid, uri, s, length(s) as c, time, platform 
+		FROM actionlog._forumdetail_pv_3;
 
+		create table actionlog._forumdetail_pv_3_2 engine = myisam
+		SELECT userid, uri, s, time, platform  
+		FROM actionlog._forumdetail_pv_3_1 where c = 15;
 
+				ALTER TABLE actionlog._forumdetail_pv_3_2 ADD INDEX (`userid`);
+				ALTER TABLE `_forumdetail_pv_3_2` CHANGE `s` `s` VARCHAR(17) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL;
+				ALTER TABLE actionlog._forumdetail_pv_3_2 ADD INDEX (`s`);
 
+        # note: it takes around 46 mins
+		create table actionlog._forumdetail_pv_3_3 engine = myisam
+		SELECT userid, s, platform 
+		FROM actionlog._forumdetail_pv_3_2
+		group by userid, s, platform;
 
+		create table actionlog._view_post_count engine = myisam
+		SELECT userid, count(s) as view_post_count 
+		FROM actionlog._forumdetail_pv_3_3
+		group by userid;
 
+		# 計算出回文的%數
+		create table plsport_playsport._view_post_count_with_percentile engine = myisam
+		select userid, view_post_count, round((cnt-rank+1)/cnt,2) as view_post_percentile
+		from (SELECT userid, view_post_count, @curRank := @curRank + 1 AS rank
+			  FROM actionlog._view_post_count, (SELECT @curRank := 0) r
+			  order by view_post_count desc) as dt,
+			 (select count(distinct userid) as cnt from actionlog._view_post_count) as ct;
 
+# 討論區app登入天數/開啟次數: 可以直接使用 plsport_playsport._app_action_log_3
 
+# 開始製作完整名單
 
+create table plsport_playsport._full_list_forum_web_user_0 engine = myisam
+select c.userid, c.nickname, c.signin_days, d.post_count, d.post_percentile
+from 
+   (SELECT a.userid, b.nickname, a.signin_days 
+	FROM plsport_playsport._signin_days a left join plsport_playsport.member b on a.userid = b.userid) as c
+	left join plsport_playsport._post_count_with_percentile as d on c.userid = d.userid;
 
+create table plsport_playsport._full_list_forum_web_user_1 engine = myisam
+SELECT a.userid, a.nickname, a.signin_days, a.post_count, a.post_percentile, b.reply_count, b.reply_percentile
+FROM plsport_playsport._full_list_forum_web_user_0 a left join plsport_playsport._reply_count_with_percentile b on a.userid = b.userid;
 
+		ALTER TABLE plsport_playsport._full_list_forum_web_user_1 convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE plsport_playsport._view_post_count_with_percentile convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE plsport_playsport._full_list_forum_web_user_1 ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._view_post_count_with_percentile ADD INDEX (`userid`);
 
+create table plsport_playsport._full_list_forum_web_user_2 engine = myisam
+SELECT a.userid, a.nickname, a.signin_days, a.post_count, a.post_percentile, a.reply_count, a.reply_percentile, 
+       b.view_post_count, b.view_post_percentile
+FROM plsport_playsport._full_list_forum_web_user_1 a left join plsport_playsport._view_post_count_with_percentile b on a.userid = b.userid;
 
+create table plsport_playsport._full_list_forum_web_user_3 engine = myisam
+SELECT a.userid, a.nickname, a.signin_days, a.post_count, a.post_percentile, a.reply_count, a.reply_percentile,
+       a.view_post_count, a.view_post_percentile, b.login_date_count, b.login
+FROM plsport_playsport._full_list_forum_web_user_2 a left join plsport_playsport._app_action_log_3 b on a.userid = b.userid;
 
-
-
-
+create table plsport_playsport._full_list_forum_web_user_4 engine = myisam
+SELECT a.userid, a.nickname, a.signin_days, a.post_count, a.post_percentile, a.reply_count, a.reply_percentile,
+       a.view_post_count, a.view_post_percentile, a.login_date_count, a.login, b.city1 as city
+FROM plsport_playsport._full_list_forum_web_user_3 a left join plsport_playsport._city_info_ok_with_chinese b on a.userid = b.userid
+where a.signin_days > 29;
 
 		create table plsport_playsport._last_signin engine = myisam # 最近一次登入
 		SELECT userid, max(signin_time) as last_signin
 		FROM plsport_playsport.member_signin_log_archive
 		group by userid;
 
-		ALTER TABLE actionlog._usersearch_6 ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._last_signin convert to character set utf8 collate utf8_general_ci;
 		ALTER TABLE plsport_playsport._last_signin ADD INDEX (`userid`);
 
-create table plsport_playsport._app_action_log_7 engine = myisam
-SELECT a.userid, a.nickname, a.login_days_count, a.login, a.post, a.post_percentile, a.reply, a.reply_percentile, a.city, date(b.last_signin) as last_signin
-FROM plsport_playsport._app_action_log_6 a left join plsport_playsport._last_signin b on a.userid = b.userid;
+create table plsport_playsport._full_list_forum_web_user_temp engine = myisam
+SELECT a.userid, a.nickname, a.signin_days, a.post_count, a.post_percentile, a.reply_count, a.reply_percentile,
+       a.view_post_count, a.view_post_percentile, a.login_date_count, a.login, a.city, date(b.last_signin) as last_signin
+FROM plsport_playsport._full_list_forum_web_user a left join plsport_playsport._last_signin b on a.userid = b.userid;
+
+rename table plsport_playsport._full_list_forum_web_user_temp to plsport_playsport._full_list_forum_web_user;
+drop table plsport_playsport._full_list_forum_web_user_0, plsport_playsport._full_list_forum_web_user_1;
+drop table plsport_playsport._full_list_forum_web_user_2, plsport_playsport._full_list_forum_web_user_3;
+
+update plsport_playsport._full_list_forum_web_user set nickname            = TRIM(nickname);             #刪掉空白字完
+update plsport_playsport._full_list_forum_web_user set nickname = replace(nickname, '.',''); 
+update plsport_playsport._full_list_forum_web_user set nickname = replace(nickname, ';','');
+update plsport_playsport._full_list_forum_web_user set nickname = replace(nickname, '/','');
+update plsport_playsport._full_list_forum_web_user set nickname = replace(nickname, '\\','_');
+update plsport_playsport._full_list_forum_web_user set nickname = replace(nickname, '"','');
+update plsport_playsport._full_list_forum_web_user set nickname = replace(nickname, '&','');
+update plsport_playsport._full_list_forum_web_user set nickname = replace(nickname, '#','');
+update plsport_playsport._full_list_forum_web_user set nickname = replace(nickname, ' ','');
+update plsport_playsport._full_list_forum_web_user set nickname = replace(nickname, '\n','');
+update plsport_playsport._full_list_forum_web_user set nickname = replace(nickname, '\b','');
+update plsport_playsport._full_list_forum_web_user set nickname = replace(nickname, '\t','');
 
 
-
+SELECT '帳號', '暱稱', '網站登入天數', '網頁版討論區發文數', '%', '網頁版討論區回文數', '%', '網頁版討論區觀看文章篇數', '%', 'app登入天數', 'app開啟次數', '居住地', '最後登入' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_full_list_forum_web_user.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._full_list_forum_web_user);
 
