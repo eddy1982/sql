@@ -7428,7 +7428,7 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._usersearch_7);
 
 # =================================================================================================
-# 任務: [201411-C-1] 討論區APP使用者訪談 - 訪談名單 [新建]
+# 任務: [201411-C-1] 討論區APP使用者訪談 - 訪談名單 [新建] (阿達) 2014-12-03
 # 
 # 說明
 #  
@@ -7775,4 +7775,62 @@ SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/_full_list_forum_web_user.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._full_list_forum_web_user);
+
+
+
+
+
+
+# 要製作新的台灣經計研究, 增加(1)討論區pv (2)即時比分pv (3)台灣運彩營收 2014-12-03
+
+create table actionlog._u_livescore engine = myisam
+SELECT * FROM actionlog.action_201401 where uri like '%/livescore%';
+insert ignore into actionlog._u_livescore SELECT * FROM actionlog.action_201402 where uri like '%/livescore%';
+insert ignore into actionlog._u_livescore SELECT * FROM actionlog.action_201403 where uri like '%/livescore%';
+insert ignore into actionlog._u_livescore SELECT * FROM actionlog.action_201404 where uri like '%/livescore%';
+insert ignore into actionlog._u_livescore SELECT * FROM actionlog.action_201405 where uri like '%/livescore%';
+insert ignore into actionlog._u_livescore SELECT * FROM actionlog.action_201406 where uri like '%/livescore%';
+insert ignore into actionlog._u_livescore SELECT * FROM actionlog.action_201407 where uri like '%/livescore%';
+insert ignore into actionlog._u_livescore SELECT * FROM actionlog.action_201408 where uri like '%/livescore%';
+insert ignore into actionlog._u_livescore SELECT * FROM actionlog.action_201409 where uri like '%/livescore%';
+insert ignore into actionlog._u_livescore SELECT * FROM actionlog.action_201410 where uri like '%/livescore%';
+insert ignore into actionlog._u_livescore SELECT * FROM actionlog.action_20141130 where uri like '%/livescore%';
+
+create table actionlog._u_forum engine = myisam
+SELECT * FROM actionlog.action_201401 where uri like '%/forum%';
+insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_201402 where uri like '%/forum%';
+insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_201403 where uri like '%/forum%';
+insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_201404 where uri like '%/forum%';
+insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_201405 where uri like '%/forum%';
+insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_201406 where uri like '%/forum%';
+insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_201407 where uri like '%/forum%';
+insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_201408 where uri like '%/forum%';
+insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_201409 where uri like '%/forum%';
+insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_201410 where uri like '%/forum%';
+insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_20141130 where uri like '%/forum%';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

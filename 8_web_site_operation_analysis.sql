@@ -89,18 +89,19 @@ drop table if exists forum.forum_edited;
 drop table if exists forum.forumcontent_edited_reply;
 drop table if exists forum.forum_edited_export;
 drop table if exists forum.forumcontent;
+drop table if exists forum.forum_edited_export_1;
 
 create table forum.forum engine = myisam /*直接把匯入的移到forum裡*/
 select * from plsport_playsport.forum
-where date(posttime) between '2012-01-01' and '2014-10-31'
-and postuser like '%xiaojita%'; # 2014-11-13洗版po文機器人
+where date(posttime) between '2012-01-01' and '2014-11-30'
+and postuser not like '%xiaojita%'; # 2014-11-13洗版po文機器人
 
 drop table if exists forum_temp.forumcontent_2014_;
 drop table if exists forum_temp.forumcontent;
 
 create table forum_temp.forumcontent_2014_ engine = myisam /*dump這個比較久, 只有這個是新的*/
 select * from plsport_playsport.forumcontent
-where date(postdate) between '2014-01-01' and '2014-10-31';
+where date(postdate) between '2014-01-01' and '2014-11-30';
 
 create table forum.forumcontent engine = myisam /*重新merge這2年內的forumcontent, 只更新最近的, 再把3個檔merge起來*/
 select * from forum_temp.forumcontent_2012;
@@ -161,13 +162,13 @@ select a.subjectid, a.subject, a.allianceid, a.viewtimes, a.postuser, a.posttime
        a.replycount, a.pushcount, b.board, b.boardtype
 from forum.forum a left join plsport_playsport._alliance b on a.allianceid = b.allianceid
 where b.board is not null
-order by a. posttime desc;
+order by a.posttime desc;
 
 /*(2)處理forumcontent:是討論區每篇文章的內容, 包含主文和回文*/
 /*(2-1)整理後的forumcontent, forum討論區主文*/
 create table forum.forumcontent_edited_reply engine = myisam
 select subjectid, userid, postdate, contenttype ,substr(postdate,1,7) as postmonth, substr(postdate,1,10) as postday
-from forum_temp.forumcontent
+from forum.forumcontent
 where contenttype = 1;/*回文*/
 
 /*計算發文/回文/推文的次數 by月份*/
@@ -231,9 +232,9 @@ group by postyear, postmonth1, board, boardtype;
 -- ======================================================================================
 use prediction;
 
-create table prediction.prediction_201410 engine = myisam
+create table prediction.prediction_201411 engine = myisam
 SELECT * FROM plsport_playsport.prediction
-where date(createon) between '2014-10-01' and '2014-10-31';
+where date(createon) between '2014-11-01' and '2014-11-30';
 
 create table p_201401 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201401;
@@ -255,6 +256,8 @@ create table p_201409 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201409;
 create table p_201410 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201410;
+create table p_201411 engine = myisam
+select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201411;
 
         /*====使用者分群專用的====*/
         create table prediction.p_recently engine = myisam select * from prediction.p_201405; /*近4個月預測資料, 看使用者分群要篩至多久前的記錄*/
@@ -286,6 +289,7 @@ select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as c
                     insert ignore into prediction.p_2014 select * from prediction.p_201408;
                     insert ignore into prediction.p_2014 select * from prediction.p_201409;
                     insert ignore into prediction.p_2014 select * from prediction.p_201410;
+                    insert ignore into prediction.p_2014 select * from prediction.p_201411;
 
 create table prediction.p_main engine = myisam select * from prediction.p_2012;
 insert ignore into prediction.p_main select * from prediction.p_2013;
@@ -400,7 +404,7 @@ create table _pcash_log engine = myisam
 select userid, amount, date(date) as c_date, month(date) as c_month, year(date) as c_year, substr(date,1,7) as ym, id_this_type
 from pcash_log
 where payed = 1 and type = 1
-and date between '2012-01-01 00:00:00' and '2014-10-01 23:59:59';
+and date between '2012-01-01 00:00:00' and '2014-11-30 23:59:59';
 
 /*計算每人每月的累積購買預測金額*/
 create table _pcash_log_calculate engine = myisam
@@ -453,7 +457,7 @@ create table _order_data engine = myisam
 SELECT userid, amount as redeem, date, substr(date,1,7) as ym, year(date) as y, substr(date,6,2) as m 
 FROM pcash_log
 where payed = 1 and type in (3,4)
-and date between '2012-01-01 00:00:00' and '2014-10-31 23:59:59';
+and date between '2012-01-01 00:00:00' and '2014-11-30 23:59:59';
 
 # 計算每個月有多少人儲值
 select a.ym, count(a.userid) as c
