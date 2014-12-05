@@ -23,6 +23,15 @@ ALTER TABLE plsport_playsport.xxxxx convert to character set utf8 collate utf8_g
 ALTER DATABASE plsport_playsport character set utf8 collate utf8_general_ci;
 ```
 
+PURGE BINARY LOGS Syntax
+-------------------------
+```sh
+PURGE BINARY LOGS BEFORE '2014-12-31 00:00:00';
+```
+
+
+
+
 actionlog_uri mapping
 -------------------------
 
