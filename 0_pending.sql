@@ -7777,11 +7777,37 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._full_list_forum_web_user);
 
 
+# 2014-12-08所做的修正, 阿達發現名單有問題, 因為討論區的行為要扣掉APP的行為才是純討論區的行為
+create table _sharer_post engine = myisam
+SELECT * 
+FROM csv_db.sharer
+where post >0;
+
+create table _sharer_reply engine = myisam
+SELECT * 
+FROM csv_db.sharer
+where reply >0;
+
+create table csv_db._sharer_post_with_percentile engine = myisam
+select userid, post, round((cnt-rank+1)/cnt,2) as post_percentile
+from (SELECT userid, post, @curRank := @curRank + 1 AS rank
+	  FROM csv_db._sharer_post, (SELECT @curRank := 0) r
+	  order by post desc) as dt,
+	 (select count(distinct userid) as cnt from csv_db._sharer_post) as ct;
+
+create table csv_db._sharer_reply_with_percentile engine = myisam
+select userid, reply, round((cnt-rank+1)/cnt,2) as reply_percentile
+from (SELECT userid, reply, @curRank := @curRank + 1 AS rank
+	  FROM csv_db._sharer_reply, (SELECT @curRank := 0) r
+	  order by reply desc) as dt,
+	 (select count(distinct userid) as cnt from csv_db._sharer_reply) as ct;
 
 
 
-
+# =================================================================================================
 # 要製作新的台灣經計研究, 增加(1)討論區pv (2)即時比分pv (3)台灣運彩營收 2014-12-03
+# 計算跑太久, 等新硬碟來了再處理這個任務
+# =================================================================================================
 
 create table actionlog._u_livescore engine = myisam
 SELECT * FROM actionlog.action_201401 where uri like '%/livescore%';
@@ -7810,17 +7836,48 @@ insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_201410 wher
 insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_20141130 where uri like '%/forum%';
 
 
+# =================================================================================================
+# 任務: [201408-B-4]優化討論區手機版發文功能-手機發文介面ABtesting [新建]
+# 
+# 說明
+# 目的：了解新版手機發文介面是否吸引使用者
+# 目標：1.發文數增加2.問卷滿意度達4
+#  
+# 內容
+# - 測試時間：12/5~12/24
+# - 設定測試組別
+# - 觀察指標：發文數與問卷滿意度
+# - 報告時間：12/31
+# =================================================================================================
 
+# 以下是檢察a/b tesing分組的部分, 結果如下
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=3925&projectId=11
+create table plsport_playsport._forum engine = myisam
+SELECT a.subjectid, a.subject, a.postuser, a.posttime, b.post_from
+FROM plsport_playsport.forum a left join plsport_playsport.abtesting_forum_post_enhanced b on a.subjectid = b.subjectid
+where b.post_from is not null;
 
+create table plsport_playsport._forum_1 engine = myisam
+SELECT a.subjectid, a.subject, (b.id%20)+1 as g, a.postuser, a.posttime, a.post_from 
+FROM plsport_playsport._forum a left join plsport_playsport.member b on a.postuser = b.userid;
 
+create table plsport_playsport._forum_2 engine = myisam
+SELECT subjectid, subject, g, (case when (g<11) then 'a' else 'b' end) as abtest, postuser, posttime , post_from  
+FROM plsport_playsport._forum_1;
 
+		# 統計
+		SELECT abtest, post_from, count(postuser) as c 
+		FROM plsport_playsport._forum_2
+		group by abtest, post_from;
 
+			SELECT * FROM plsport_playsport._forum_2
+			where abtest = 'a' and post_from = '1';
 
-
-
-
-
-
+		select a.postuser, count(a.g) as c
+		from (
+			SELECT * FROM plsport_playsport._forum_2
+			where abtest = 'a' and post_from = '1') as a
+		group by a.postuser;
 
 
 
