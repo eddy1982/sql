@@ -4094,7 +4094,7 @@ from (
     SELECT userid, subjectid, allianceid, date(got_time) as d, substr(got_time,1,7) as m, year(got_time) as y
     FROM plsport_playsport.analysis_king
     where allianceid = 3 # NBA 
-    and got_time between '2014-10-30 00:00:00' and '2014-11-26 23:59:59') as a
+    and got_time between '2014-11-25 00:00:00' and '2014-12-08 23:59:59') as a
 group by a.d, a.allianceid;
 
 select a.d, a.allianceid, count(a.subjectid) as ana_post_count
@@ -4103,7 +4103,7 @@ from (
     FROM plsport_playsport.forum
     where gametype = 1 # 分析文
     and allianceid = 3 # NBA 
-    and posttime between '2014-10-30 00:00:00' and '2014-11-26 23:59:59'
+    and posttime between '2014-11-25 00:00:00' and '2014-12-08 23:59:59'
     order by posttime) as a
 group by a.d, a.allianceid;
 
@@ -5518,6 +5518,80 @@ from (
     SELECT userid, date(createon) as d, hour(createon) as h, price 
     FROM plsport_playsport._order_data_second_discount) a
 group by a.d, a.h;
+
+#-----------------------------------------------------
+# 5.三個月後，分析有得到優惠的消費者的arpu，是否較沒有得到優惠的使用者高
+# (可以參考4/1號的任務)
+#-----------------------------------------------------
+
+create table plsport_playsport._who_use_offer engine = myisam
+select a.userid, (case when (a.userid is not null) then 'yes' else '' end) as accept_offer
+from (
+	SELECT userid, createon, price, payway, create_from
+	FROM plsport_playsport.order_data
+	where sellconfirm = 1 and create_from = 8
+	and createon between '2014-09-09 12:00:00' and '2014-09-10 12:00:00') as a
+group by a.userid;
+
+create table plsport_playsport._everyone engine = myisam
+select a.userid
+from (
+	SELECT userid, createon, price, payway, create_from
+	FROM plsport_playsport.order_data
+	where sellconfirm = 1 and payway in (1,2,3,4,5,6,9)
+	and createon between '2014-09-04 00:00:00' and '2014-09-15 23:59:59') as a
+group by a.userid;
+
+create table plsport_playsport._who_dont_use_offer engine = myisam
+SELECT a.userid, (case when (a.userid is not null) then 'no' else '' end) as accept_offer
+FROM plsport_playsport._everyone a left join plsport_playsport._who_use_offer b on a.userid = b.userid
+where b.userid is null;
+
+create table plsport_playsport._list_0 engine = myisam
+select * from plsport_playsport._who_use_offer;
+insert ignore into plsport_playsport._list_0 
+select * from plsport_playsport._who_dont_use_offer;
+
+
+create table plsport_playsport._full_revenue_0 engine = myisam
+SELECT userid, createon, price, payway, create_from
+FROM plsport_playsport.order_data
+where sellconfirm = 1 and payway in (1,2,3,4,5,6,9)
+and createon between '2014-09-16 00:00:00' and '2014-12-07 23:59:59';
+
+create table plsport_playsport._full_revenue_1 engine = myisam
+SELECT userid, sum(price) as total_redeem
+FROM plsport_playsport._full_revenue_0
+group by userid;
+
+create table plsport_playsport._list_1 engine = myisam
+SELECT a.userid, b.total_redeem, a.accept_offer 
+FROM plsport_playsport._list_0 a left join plsport_playsport._full_revenue_1 b on a.userid = b.userid;
+
+
+SELECT accept_offer, sum(total_redeem) as all_total_redeem, count(userid) as all_user_count 
+FROM plsport_playsport._list_1
+group by accept_offer;
+
+
+SELECT accept_offer, sum(total_redeem) as all_total_redeem, count(userid) as all_user_count 
+FROM plsport_playsport._list_1
+where total_redeem is not null
+group by accept_offer;
+
+create table plsport_playsport._list_2 engine = myisam
+select * from plsport_playsport._list_1
+where total_redeem is not null;
+
+
+
+SELECT 'userid', 'total_redeem', 'accept_offer' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_list_2.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list_2);
+
+
 
 
 
