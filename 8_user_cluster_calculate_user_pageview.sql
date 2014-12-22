@@ -2,38 +2,40 @@ use actionlog_users_pv;
 
 /* 每個月計算pv的處理, 要每月手動新增*/
 # (1)pv
-create table actionlog_users_pv.action_201409_users_pv engine = myisam
+create table actionlog_users_pv.action_201411_users_pv engine = myisam
 select a.userid, a.act_date, count(a.userid) as pv
-from ( SELECT userid, date(time) as act_date FROM actionlog.action_201409) as a group by a.userid, a.act_date;
+from ( SELECT userid, date(time) as act_date FROM actionlog.action_201411) as a group by a.userid, a.act_date;
 # (2)討論區
-create table actionlog_users_pv.action_201409_users_pv_forum engine = myisam
+create table actionlog_users_pv.action_201411_users_pv_forum engine = myisam
 select a.userid, a.act_date, count(a.userid) as pv_forum
-from (SELECT userid, date(time) as act_date FROM actionlog.action_201409 where userid <> '' and uri like '%/forum%') as a group by a.userid, a.act_date;
+from (SELECT userid, date(time) as act_date FROM actionlog.action_201411 where userid <> '' and uri like '%/forum%') as a group by a.userid, a.act_date;
 # (3)即時比分
-create table actionlog_users_pv.action_201409_users_pv_livescore engine = myisam
+create table actionlog_users_pv.action_201411_users_pv_livescore engine = myisam
 select a.userid, a.act_date, count(a.userid) as pv_livescore
-from (SELECT userid, date(time) as act_date FROM actionlog.action_201409 where userid <> '' and uri like '%/livescore%') as a group by a.userid, a.act_date;
+from (SELECT userid, date(time) as act_date FROM actionlog.action_201411 where userid <> '' and uri like '%/livescore%') as a group by a.userid, a.act_date;
 # (4)購牌專區
-create table actionlog_users_pv.action_201409_users_pv_buy_predict engine = myisam
+create table actionlog_users_pv.action_201411_users_pv_buy_predict engine = myisam
 select a.userid, a.act_date, count(a.userid) as pv_buy_predict
-from (SELECT userid, date(time) as act_date FROM actionlog.action_201409 where userid <> '' and uri like '%/buy_predict%') as a group by a.userid, a.act_date;
+from (SELECT userid, date(time) as act_date FROM actionlog.action_201411 where userid <> '' and uri like '%/buy_predict%') as a group by a.userid, a.act_date;
 # (5)排行主推榜
-create table actionlog_users_pv.action_201409_users_pv_billboard engine = myisam
+create table actionlog_users_pv.action_201411_users_pv_billboard engine = myisam
 select a.userid, a.act_date, count(a.userid) as pv_billboard
-from (SELECT userid, date(time) as act_date FROM actionlog.action_201409 where userid <> '' and uri like '%/billboard%') as a group by a.userid, a.act_date;
+from (SELECT userid, date(time) as act_date FROM actionlog.action_201411 where userid <> '' and uri like '%/billboard%') as a group by a.userid, a.act_date;
 
 
 /* 異常userid, 有需要再執行*/
-delete from actionlog_users_pv.action_201409_users_pv             where userid like '%.php%'; /*8月有問題的userid, 駭客*/
-delete from actionlog_users_pv.action_201409_users_pv_billboard   where userid like '%.php%'; /*8月有問題的userid, 駭客*/
-delete from actionlog_users_pv.action_201409_users_pv_buy_predict where userid like '%.php%'; /*8月有問題的userid, 駭客*/
-delete from actionlog_users_pv.action_201409_users_pv_forum       where userid like '%.php%'; /*8月有問題的userid, 駭客*/
-delete from actionlog_users_pv.action_201409_users_pv_livescore   where userid like '%.php%'; /*8月有問題的userid, 駭客*/
-delete from actionlog_users_pv.action_201409_users_pv             where userid = ''; 		  /*11月沒登入的visitor*/
-delete from actionlog_users_pv.action_201409_users_pv_billboard   where userid = ''; 		  /*11月沒登入的visitor*/
-delete from actionlog_users_pv.action_201409_users_pv_buy_predict where userid = ''; 		  /*11月沒登入的visitor*/
-delete from actionlog_users_pv.action_201409_users_pv_forum       where userid = ''; 		  /*11月沒登入的visitor*/
-delete from actionlog_users_pv.action_201409_users_pv_livescore   where userid = ''; 		  /*11月沒登入的visitor*/
+delete from actionlog_users_pv.action_201411_users_pv             where userid like '%.php%'; /*8月有問題的userid, 駭客*/
+delete from actionlog_users_pv.action_201411_users_pv_billboard   where userid like '%.php%'; /*8月有問題的userid, 駭客*/
+delete from actionlog_users_pv.action_201411_users_pv_buy_predict where userid like '%.php%'; /*8月有問題的userid, 駭客*/
+delete from actionlog_users_pv.action_201411_users_pv_forum       where userid like '%.php%'; /*8月有問題的userid, 駭客*/
+delete from actionlog_users_pv.action_201411_users_pv_livescore   where userid like '%.php%'; /*8月有問題的userid, 駭客*/
+delete from actionlog_users_pv.action_201411_users_pv             where userid = ''; 		  /*11月沒登入的visitor*/
+delete from actionlog_users_pv.action_201411_users_pv_billboard   where userid = ''; 		  /*11月沒登入的visitor*/
+delete from actionlog_users_pv.action_201411_users_pv_buy_predict where userid = ''; 		  /*11月沒登入的visitor*/
+delete from actionlog_users_pv.action_201411_users_pv_forum       where userid = ''; 		  /*11月沒登入的visitor*/
+delete from actionlog_users_pv.action_201411_users_pv_livescore   where userid = ''; 		  /*11月沒登入的visitor*/
+
+
 
 /* 先新增, _users_daily_pv是每日活動表格, 從201308開始加*/
 create table actionlog_users_pv._users_daily_pv             engine = myisam select * from actionlog_users_pv.action_201405_users_pv;
