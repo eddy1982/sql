@@ -8087,7 +8087,7 @@ group by p, question04;
 
 # =================================================================================================
 # 任務: [201404-B-3] 手機網頁版header優化-MVP測試名單 [新建] (靜怡) 2014-12-18
-# 
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4004&projectId=11
 # 提供測試名單
 #  
 # 需求
@@ -8144,7 +8144,7 @@ group by userid;
 
 		insert ignore into actionlog._forum
 		SELECT userid, uri, time, platform_type as p
-		FROM actionlog.action_20141218 where userid <> '' and uri like '%/forum%';
+		FROM actionlog.action_20141222 where userid <> '' and uri like '%/forum%';
 
 		create table actionlog._forum_0 engine = myisam
 		SELECT userid, uri, time, (case when (p<2) then 'pc' else 'mobile' end) as p
@@ -8180,13 +8180,13 @@ group by userid;
 #   (2) 討論區PV前80% 
 #   (3) 最近登入時間一個月內
 
-ALTER TABLE plsport_playsport.member convert to character set utf8 collate utf8_general_ci;
-ALTER TABLE actionlog._forum_4 convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE plsport_playsport.member convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE actionlog._forum_4 convert to character set utf8 collate utf8_general_ci;
 
 create table plsport_playsport._list_1 engine = myisam
 SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.pc, a.mobile 
 FROM actionlog._forum_4 a left join plsport_playsport.member b on a.userid = b.userid
-where a.pv_percentile >= 0.6;
+where a.pv_percentile >= 0.2;
 
 create table plsport_playsport._list_2 engine = myisam
 select c.userid, c.nickname, c.redeem_total, d.redeem_total as redeem_in_three_month, c.pv, c.pv_percentile, c.pc, c.mobile 
@@ -8196,12 +8196,18 @@ from (
     left join plsport_playsport._redeem_in_three_month d on c.userid = d.userid;
 
 create table plsport_playsport._list_3 engine = myisam
-SELECT * FROM plsport_playsport._list_2
-where redeem_in_three_month > 1;
+SELECT * FROM plsport_playsport._list_2;
+# where redeem_in_three_month > 1;
+
+		ALTER TABLE plsport_playsport._list_3 ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._last_time_login ADD INDEX (`userid`);
 
 create table plsport_playsport._list_4 engine = myisam
 SELECT a.userid, a.nickname, a.redeem_total, a.redeem_in_three_month, a.pv, a.pv_percentile, a.pc, a.mobile, date(b.signin_time) as signin_time
 FROM plsport_playsport._list_3 a left join plsport_playsport._last_time_login b on a.userid = b.userid;
+
+		ALTER TABLE plsport_playsport._list_4 ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._buypredict_least_day ADD INDEX (`userid`);
 
 create table plsport_playsport._list_5 engine = myisam
 SELECT a.userid, a.nickname, a.redeem_total, a.redeem_in_three_month, date(b.buy_least_day) as buy_least_day, a.pv, a.pv_percentile, a.pc, a.mobile, a.signin_time
@@ -8211,10 +8217,15 @@ create table plsport_playsport._list_6 engine = myisam
 SELECT * FROM plsport_playsport._list_5
 where signin_time between subdate(now(),31) and now();
 
+# 要跑居住地名單 line:1715
+
+		ALTER TABLE plsport_playsport._list_6 ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._city_info_ok_with_chinese ADD INDEX (`userid`);
+
 create table plsport_playsport._list_7 engine = myisam
 SELECT a.userid, a.nickname, a.redeem_total, a.redeem_in_three_month, a.buy_least_day, a.pv, a.pv_percentile, a.pc, a.mobile, a.signin_time, b.city1
-FROM plsport_playsport._list_6 a left join plsport_playsport._city_info_ok_with_chinese b on a.userid = b.userid
-where a.redeem_in_three_month >= 199;
+FROM plsport_playsport._list_6 a left join plsport_playsport._city_info_ok_with_chinese b on a.userid = b.userid;
+# where a.redeem_in_three_month >= 199;
 
 
 # - 需求欄位:暱稱、ID、總儲值金額、近三個月儲值金額、最近購買預測時間、討論區PV、電腦與手機使用比率、最近登入時間
