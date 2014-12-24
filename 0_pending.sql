@@ -4018,7 +4018,7 @@ group by buyerid);
 
 
 # =================================================================================================
-# 任務: 撈取分析文與最讚分析文數量 [新建](柔雅)
+# 任務: 撈取分析文與最讚分析文數量 [新建]  (柔雅) 
 # 麻煩你，協助撈取以下時間(2014年)內的:
 # a.分析文(亮分析標籤的)數量
 # b.最讚分析文(有被工友選上的)數量
@@ -4073,7 +4073,8 @@ group by a.d, a.allianceid;
 
 
 # =================================================================================================
-# 任務: 協助撈取分析文資料 [新建](柔雅) 2014-11-25 此任務類似上面的
+# 任務: 協助撈取分析文資料 [新建](學文) 2014-11-25 此任務類似上面的
+#       本來是柔雅->變學文在負責 2014-12-23
 #       http://pm.playsport.cc/index.php/tasksComments?tasksId=3875&projectId=11
 # EDDY:
 # 麻煩請你提供:
@@ -4089,21 +4090,23 @@ group by a.d, a.allianceid;
 #     (2) forum
 # =================================================================================================
 
+# (1)最讚分析文數量
 select a.d, a.allianceid, count(a.subjectid) as best_ana_post_count
 from (
     SELECT userid, subjectid, allianceid, date(got_time) as d, substr(got_time,1,7) as m, year(got_time) as y
     FROM plsport_playsport.analysis_king
     where allianceid = 3 # NBA 
-    and got_time between '2014-11-25 00:00:00' and '2014-12-08 23:59:59') as a
+    and got_time between '2014-12-09 00:00:00' and '2014-12-22 23:59:59') as a
 group by a.d, a.allianceid;
 
+# (2)分析文總數
 select a.d, a.allianceid, count(a.subjectid) as ana_post_count
 from (
     SELECT subjectid, posttime, allianceid, date(posttime) as d, substr(posttime,1,7) as m, year(posttime) as y 
     FROM plsport_playsport.forum
     where gametype = 1 # 分析文
     and allianceid = 3 # NBA 
-    and posttime between '2014-11-25 00:00:00' and '2014-12-08 23:59:59'
+    and posttime between '2014-12-09 00:00:00' and '2014-12-22 23:59:59'
     order by posttime) as a
 group by a.d, a.allianceid;
 
@@ -7918,8 +7921,8 @@ insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_20141130 wh
 # 內容
 # - 測試時間：12/5~12/24
 # - 設定測試組別
-# - 觀察指標：發文數與問卷滿意度
-# - 報告時間：12/31
+# - 觀察指標：(1)發文數 (2)問卷滿意度http://www.playsport.cc/questionnaire.php?question=forumPostMobile&action=statistics
+# - 報告時間：12/31(提前1天)
 # =================================================================================================
 
 # 以下是檢察a/b tesing分組的部分, 結果如下
@@ -7950,6 +7953,53 @@ FROM plsport_playsport._forum_1;
 			SELECT * FROM plsport_playsport._forum_2
 			where abtest = 'a' and post_from = '1') as a
 		group by a.postuser;
+
+# .....................................................	
+# TO EDDY
+# 補充說明
+# - 因手機版有提供電腦版的連結，所以該狀況在統計時晴排除
+# - 另提供從手機版點電腦版的狀況
+# .....................................................	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # =================================================================================================
@@ -8086,7 +8136,7 @@ group by p, question04;
 
 
 # =================================================================================================
-# 任務: [201404-B-3] 手機網頁版header優化-MVP測試名單 [新建] (靜怡) 2014-12-18
+# 任務: [201404-B-3] 手機網頁版header優化-MVP測試名單手機網頁版header優化-MVP測試名單 [新建] (靜怡) 2014-12-18
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4004&projectId=11
 # 提供測試名單
 #  
@@ -8173,12 +8223,9 @@ group by userid;
 				order by pv desc) as dt,
 				(select count(distinct userid) as cnt from actionlog._forum_3) as ct;
 
-# - 需求欄位:暱稱、ID、總儲值金額、近三個月儲值金額、最近購買預測時間、討論區PV、電腦與手機使用比率、最近登入時間
-#                                                                       ^^^可以補上佔前幾%
-# 條件:
-#   (1) 近三個月儲值金額>0 (不要此條件)
-#   (2) 討論區PV前80% 
-#   (3) 最近登入時間一個月內
+# ............................................................................
+# ............................................................................
+# 以下才是實際的名單產出過程
 
 		ALTER TABLE plsport_playsport.member convert to character set utf8 collate utf8_general_ci;
 		ALTER TABLE actionlog._forum_4 convert to character set utf8 collate utf8_general_ci;
@@ -8255,6 +8302,51 @@ FROM plsport_playsport._list_7);
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # 任務: [201404-C-9]優化APP版標-Android即時比分ABtesting分組工程 [等候確認]
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=3892&projectId=1
 # 12/17星期三要觀察
@@ -8273,6 +8365,39 @@ SELECT abtestgroup, count(deviceid) as c
 FROM plsport_playsport._app_action_log_1
 group by abtestgroup;
 
+# 2014-12-24 寫的分組觀察SQL
+create table plsport_playsport._app_action_log engine = myisam
+SELECT * FROM plsport_playsport.app_action_log
+where app = 1 and os = 1 and substr(appversion,5,1) in (4,5,6,7,8); 
+#                                                       ver2.2.4~2.2.8都是用新的log
+
+# 排除掉重覆送出的log, 小呆已修正此問題, 但之後撈app_action_log都還是要執行一下此段SQL
+create table plsport_playsport._app_action_log_0 engine = myisam
+SELECT appversion, userid, action, remark, datetime, deviceid, abtestgroup, devicemodel, deviceosversion 
+FROM plsport_playsport._app_action_log
+group by appversion, userid, action, remark, datetime, deviceid, devicemodel, deviceosversion;
+
+# 查詢
+select a.abtestgroup, count(deviceid) as a
+from (
+	SELECT deviceid, abtestgroup, count(action) as c 
+	FROM plsport_playsport._app_action_log_0
+	where abtestgroup <> 0 # 除了0不用看, 看1~20組
+	group by deviceid, abtestgroup) as a
+group by a.abtestgroup;
+
+
+
+
+
+
+
+
+
+
+
+
+
 # 任務: [201401-J-8] 強化購買後推薦專區 - A/B testing及追蹤報告 [進行中]
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=2567&projectId=11
 # another task
@@ -8285,7 +8410,6 @@ SELECT position, sum(buy_price) as total_revenue
 FROM plsport_playsport._test
 group by position
 order by position;
-
 
 create table plsport_playsport._test_1 engine = myisam
 SELECT * 
@@ -8323,29 +8447,6 @@ group by abtest, p;
 
 SELECT * FROM plsport_playsport._test_6
 where abtest = 'a' and substr(p,6,1) = 'C';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
