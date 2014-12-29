@@ -7921,8 +7921,9 @@ insert ignore into actionlog._u_forum SELECT * FROM actionlog.action_20141130 wh
 # 內容
 # - 測試時間：12/5~12/24
 # - 設定測試組別
-# - 觀察指標：(1)發文數 (2)問卷滿意度http://www.playsport.cc/questionnaire.php?question=forumPostMobile&action=statistics
-# - 報告時間：12/31(提前1天)
+# - 觀察指標：(1)發文數 (2)問卷滿意度
+#                          http://www.playsport.cc/questionnaire.php?question=forumPostMobile&action=statistics
+# - 報告時間：12/31(提前1天至30日)
 # =================================================================================================
 
 # 以下是檢察a/b tesing分組的部分, 結果如下
@@ -7939,6 +7940,8 @@ FROM plsport_playsport._forum a left join plsport_playsport.member b on a.postus
 create table plsport_playsport._forum_2 engine = myisam
 SELECT subjectid, subject, g, (case when (g<11) then 'a' else 'b' end) as abtest, postuser, posttime , post_from  
 FROM plsport_playsport._forum_1;
+
+# 最後一次撈是完整的12/5~12/29
 
 		# 統計
 		SELECT abtest, post_from, count(postuser) as c 
@@ -7961,45 +7964,105 @@ FROM plsport_playsport._forum_1;
 # - 另提供從手機版點電腦版的狀況
 # .....................................................	
 
+# 先dump以下:
+#   (1)forum
+#   (2)abtesting_forum_post_enhanced
+#   (3)member
+
+# 先跑上面的跑到_forum_2完成
+
+	# 2組各有多人有po過文? a:918 b:909
+	select a.abtest, count(a.postuser) as poster_count
+	from (
+		SELECT abtest, postuser, count(subjectid) as c 
+		FROM plsport_playsport._forum_2
+		group by abtest, postuser) as a
+	group by a.abtest;
+
+			# a組有多少人用新界面回文 353
+			select count(a.postuser)
+			from (
+				SELECT abtest, postuser
+				FROM plsport_playsport._forum_2
+				where abtest = 'a' and post_from = 2
+				group by abtest, postuser) as a;
+
+			# a組有多少人用舊界面回文 72
+			select count(a.postuser)
+			from (
+				SELECT abtest, postuser
+				FROM plsport_playsport._forum_2
+				where abtest = 'a' and post_from = 1
+				group by abtest, postuser) as a;
+
+			# b組有多少人用舊界面回文 388
+			select count(a.postuser)
+			from (
+				SELECT abtest, postuser
+				FROM plsport_playsport._forum_2
+				where abtest = 'b' and post_from = 1
+				group by abtest, postuser) as a;
+
+# 有多少人用了新版也用了舊版? 28
+select count(a.postuser)
+from (SELECT abtest, postuser
+	  FROM plsport_playsport._forum_2
+	  where abtest = 'a' and post_from = 2
+	  group by abtest, postuser) as a inner join 
+			(SELECT abtest, postuser
+			FROM plsport_playsport._forum_2
+			where abtest = 'a' and post_from = 1
+			group by abtest, postuser) as b on a.postuser = b.postuser;
+
+# a組共有幾個人發過文? 397
+SELECT abtest, postuser
+FROM plsport_playsport._forum_2
+where abtest = 'a' and post_from > 0
+group by abtest, postuser;
 
 
+# 製作名單1 
+# (1) 先撈出a組用新版發文界面的人
+		create table plsport_playsport._list_1 engine = myisam
+		SELECT abtest, postuser, count(subjectid) as post_count
+		FROM plsport_playsport._forum_2
+		where abtest = 'a' and post_from = 2 # 新版
+		group by abtest, postuser;
+# (2) 再insert b組用舊版發文界面的人
+		insert ignore into plsport_playsport._list_1
+		SELECT abtest, postuser, count(subjectid) as post_count
+		FROM plsport_playsport._forum_2
+		where abtest = 'b' and post_from = 1 # 舊版
+		group by abtest, postuser;
+
+# 輸出給.txt給R用
+SELECT 'abtest', 'postuser', 'post_count' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_list_1.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list_1);
 
 
+# 製作名單2
+# (1) 先撈出a組用新版發文界面的人
+		create table plsport_playsport._list_2 engine = myisam
+		SELECT abtest, postuser, count(subjectid) as post_count
+		FROM plsport_playsport._forum_2
+		where abtest = 'a' and post_from in (1,2)# 不論新版還舊版
+		group by abtest, postuser;
+# (2) 再insert b組用舊版發文界面的人
+		insert ignore into plsport_playsport._list_2
+		SELECT abtest, postuser, count(subjectid) as post_count
+		FROM plsport_playsport._forum_2
+		where abtest = 'b' and post_from = 1 # 舊版
+		group by abtest, postuser;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# 輸出給.txt給R用
+SELECT 'abtest', 'postuser', 'post_count' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_list_2.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list_2);
 
 
 # =================================================================================================
@@ -8398,6 +8461,10 @@ group by a.abtestgroup;
 
 
 
+
+
+
+
 # 任務: [201401-J-8] 強化購買後推薦專區 - A/B testing及追蹤報告 [進行中]
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=2567&projectId=11
 # another task
@@ -8427,17 +8494,17 @@ SELECT * FROM plsport_playsport._test_2
 where uri like '%BRC%';
 
 create table plsport_playsport._test_4 engine = myisam
-SELECT userid, substr(uri,locate('rp=',uri)+3,length(uri)) as p, uri, time
+SELECT userid, substr(uri,locate('rp=',uri)+3,length(uri)) as p, uri,
+ time
 FROM plsport_playsport._test_3;
-
 
 ALTER TABLE plsport_playsport._test_4 convert to character set utf8 collate utf8_general_ci;
 
-create table plsport_playsport._test_5 engine = myisam
+create table plsport_playsport._test_5 engine = myisam 
 SELECT (b.id%20)+1 as g, a.userid, a.p, a.uri, a.time 
 FROM plsport_playsport._test_4 a left join plsport_playsport.member b on a.userid = b.userid;
 
-create table plsport_playsport._test_6 engine = myisam
+create table plsport_playsport._test_6 engine = myisam 
 SELECT (case when (g>13) then 'a' else 'b' end) as abtest, g, userid, p, uri, time 
 FROM plsport_playsport._test_5;
 
@@ -8452,5 +8519,28 @@ where abtest = 'a' and substr(p,6,1) = 'C';
 
 
 
+
+
+
+
+
+
+
+create table plsport_playsport._check engine = myisam
+SELECT * FROM plsport_playsport.go_top_or_latest_log
+where log_time between '2014-12-25 10:00:00' and now();
+
+create table plsport_playsport._check_1 engine = myisam
+SELECT (b.id%20)+1 as g, a.userid, a.click, a.log_time 
+FROM plsport_playsport._check a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._check_2 engine = myisam
+SELECT (case when (g>10) then 'a' else 'b' end) as abtest, g, userid, click, log_time 
+FROM plsport_playsport._check_1;
+
+
+SELECT abtest, click, count(userid) as c
+FROM plsport_playsport._check_2
+group by abtest, click;
 
 
