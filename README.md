@@ -23,6 +23,19 @@ ALTER TABLE plsport_playsport.xxxxx convert to character set utf8 collate utf8_g
 ALTER DATABASE plsport_playsport character set utf8 collate utf8_general_ci;
 ```
 
+calculate percentile in mysql
+-----------------------------
+```
+create table plsport_playsport._xxxxx engine = myisam
+select userid, reply, round((cnt-rank+1)/cnt,2) as reply_percentile
+from (SELECT userid, reply, @curRank := @curRank + 1 AS rank
+	  FROM plsport_playsport._yyyyy, (SELECT @curRank := 0) r
+	  order by reply desc) as dt,
+	 (select count(distinct userid) as cnt from plsport_playsport._yyyyy) as ct;
+
+```
+
+
 PURGE BINARY LOGS Syntax
 -------------------------
 ```sh
