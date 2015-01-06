@@ -32,7 +32,6 @@ from (SELECT userid, reply, @curRank := @curRank + 1 AS rank
 	  FROM plsport_playsport._yyyyy, (SELECT @curRank := 0) r
 	  order by reply desc) as dt,
 	 (select count(distinct userid) as cnt from plsport_playsport._yyyyy) as ct;
-
 ```
 
 

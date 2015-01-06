@@ -261,14 +261,14 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2014-11-01' and '2014-11-30') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2014-12-01' and '2014-12-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
 
 ALTER TABLE _signin_list ADD INDEX (`userid`); 
 ALTER TABLE _existed_list ADD INDEX (`userid`);
 
 /*--------------------------------------------
-  排除1:
+  排除1: 上月份的名單, 但排除掉之前有做過問卷的人
 ---------------------------------------------*/
 ALTER TABLE questionnaire._existed_list CHANGE `userid` `userid` VARCHAR(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 create table questionnaire._list engine = myisam /*上月份的名單, 但排除掉之前有做過問卷的人*/

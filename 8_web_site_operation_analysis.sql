@@ -237,9 +237,9 @@ group by postyear, postmonth1, board, boardtype;
 -- ======================================================================================
 use prediction;
 
-create table prediction.prediction_201411 engine = myisam
+create table prediction.prediction_201412 engine = myisam
 SELECT * FROM plsport_playsport.prediction
-where date(createon) between '2014-11-01' and '2014-11-30';
+where date(createon) between '2014-12-01' and '2014-12-31';
 
 create table p_201401 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201401;

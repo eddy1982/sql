@@ -70,5 +70,3 @@ group by id;
 
 drop table plsport_playsport._problem_members_1;
 ALTER TABLE plsport_playsport._problem_members ADD INDEX (`userid`);
-
-

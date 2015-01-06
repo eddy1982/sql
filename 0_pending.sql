@@ -2026,13 +2026,14 @@ from (
 group by a.m, a.abtest_group;
 
 # ==================NEW任務==================
-# 簡訊流失客延任務 (柔雅) 2014-10-15
+# 簡訊流失客延任務 (柔雅) 2014-10-15 任務: [201311-E] 簡訊追蹤與短網址 [進行中]
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=2269&projectId=11
 # TO EDDY
 # 
 # 下次流失客簡訊發送日期為10/2號，
 # 測試的方向為: (1)重覆發送4000(2000/2000) + (2)殺手報牌2000(1000/1000)
-# (1)重覆發送: 與上次相同的名單，發送相同的內容，追蹤成效。
-# (2)殺手報牌: 重新撈一組名單(需排除與"重覆發送"相同名單)，
+# (1)重覆發送(11/03): 與上次相同的名單，發送相同的內容，追蹤成效。
+# (2)殺手報牌(10/31): 重新撈一組名單(需排除與"重覆發送"相同名單)，
 #                  簡訊內容:發送日當天，選擇MLB板標前幾名的殺手，提供殺手免費的預測給流失客。
 # 煩請EDDY提供名單與後續的追蹤。
 # 名單篩選條件
@@ -2065,12 +2066,180 @@ FROM textcampaign._list6);
 # 一定要設定為big編碼, 
 
 
+# ---------------------------------------------------------------------
+# 任務: [201311-E] 簡訊追蹤與短網址 [進行中] (柔雅) 2014-12-30
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=2269&projectId=11
+# 目的：
+# 第一階段：對象是買牌客，讓流失客知道還有一個網站叫玩運彩，有空要回來
+# 第二階段：讓流失客付錢
+#  
+# 目標：
+# 第一階段：三個月後，瞭解他們有沒有回到網站，重新登入。
+# 第二階段：三個月後，有沒有付錢。
+# ----------------------------------------------------------------------
+
+# database: textcampaign
+# (1)第一次6月發送的名單:retention_201406_full_list_dont_delete
+# (2)第二次10月31日發送的名單: _list6 (殺手報牌)
+# (3)拿(1)的名單再於11月3日發送一次   (重覆轟炸)
+
+use textcampaign;
+
+create table textcampaign.retention_20141031_full_list_dont_delete
+SELECT * FROM textcampaign._list6;
+
+
+create table textcampaign._tracklist_0 engine = myisam
+SELECT phone, id, text_campaign, abtest_group 
+FROM textcampaign.retention_201406_full_list_dont_delete;
+
+insert ignore into textcampaign._tracklist_0
+SELECT phone, id, text_campaign, abtest_group 
+FROM textcampaign.retention_20141031_full_list_dont_delete;
+
+create table textcampaign._tracklist_1 engine = myisam
+SELECT a.phone, a.id, b.userid, a.text_campaign, a.abtest_group, (case when (a.abtest_group=1) then 'sent' else 'hold' end) as abtest
+FROM textcampaign._tracklist_0 a left join plsport_playsport.member b on a.id = b.id;
+
+		# 每個人最後一次登入是何日
+		create table textcampaign._last_time_login engine = myisam
+		SELECT userid, date(max(signin_time)) as last_time_login
+		FROM plsport_playsport.member_signin_log_archive
+        where signin_time between '2014-06-02 00:00:00' and '2014-12-31 23:59:59'
+		group by userid;
+
+		# 儲值金額
+		create table textcampaign._order_data engine = myisam
+		select userid, sum(redeem) as total_redeem
+		from (
+			SELECT userid, amount as redeem, date, substr(date,1,7) as ym, year(date) as y, substr(date,6,2) as m 
+			FROM plsport_playsport.pcash_log
+			where payed = 1 and type in (3,4)
+			and date between '2014-06-02 00:00:00' and '2014-12-31 23:59:59') as a
+		group by a.userid;
+
+		ALTER TABLE textcampaign._tracklist_1     ADD INDEX (`userid`);
+		ALTER TABLE textcampaign._last_time_login ADD INDEX (`userid`);
+		ALTER TABLE textcampaign._order_data      ADD INDEX (`userid`);
+
+create table textcampaign._tracklist_2 engine = myisam
+SELECT a.phone, a.id, a.userid, a.text_campaign, a.abtest_group, a.abtest, b.total_redeem
+FROM textcampaign._tracklist_1 a left join textcampaign._order_data b on a.userid = b.userid;
+
+create table textcampaign._tracklist_3 engine = myisam
+SELECT a.phone, a.id, a.userid, a.text_campaign, a.abtest_group, a.abtest, a.total_redeem, b.last_time_login
+FROM textcampaign._tracklist_2 a left join textcampaign._last_time_login b on a.userid = b.userid;
+
+SELECT text_campaign, abtest, sum(total_redeem) 
+FROM textcampaign._tracklist_3
+group by text_campaign, abtest;
+
+
+# 另一種名單
+		# 儲值金額
+		create table textcampaign._order_data_1 engine = myisam
+		select a.userid, a.d, sum(redeem) as total_redeem
+		from (
+			SELECT userid, amount as redeem, date, substr(date,1,10) as d
+			FROM plsport_playsport.pcash_log
+			where payed = 1 and type in (3,4)
+			and date between '2014-06-02 00:00:00' and '2014-12-31 23:59:59') as a
+		group by a.userid, a.d;
+
+
+create table textcampaign._tracklist_4_by_date engine = myisam
+SELECT a.userid, a.d, a.total_redeem, b.text_campaign, b.abtest
+FROM textcampaign._order_data_1 a left join textcampaign._tracklist_1 b on a.userid = b.userid
+where b.text_campaign is not null;
+
+create table textcampaign._tracklist_4_by_date_1 engine = myisam
+SELECT text_campaign, abtest, d, substr(d,1,7) as m, sum(total_redeem)  as redeem
+FROM textcampaign._tracklist_4_by_date
+where userid not in ( # 排除掉儲值大戶
+					select a.userid  
+					from (
+						SELECT userid, sum(total_redeem) as total_redeem 
+						FROM textcampaign._tracklist_4_by_date
+						group by userid) as a
+					where a.total_redeem > 20000
+					order by a.total_redeem desc)
+group by text_campaign, abtest, d;
+
+SELECT 'text', 'abtest', 'd' ,'m', 'redeem' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/text_campaign.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM textcampaign._tracklist_4_by_date_1);
+
+
+		# 每個人的登入次數-10月後
+		create table textcampaign._login_count_after_10 engine = myisam
+		SELECT userid, count(signin_time) as login_count
+		FROM plsport_playsport.member_signin_log_archive
+        where signin_time between '2014-10-30 00:00:00' and '2014-12-31 23:59:59' # 只看發送簡訊之後的登入數
+		group by userid;
+
+		# 每個人的登入次數-6月後
+		create table textcampaign._login_count_after_6 engine = myisam
+		SELECT userid, count(signin_time) as login_count
+		FROM plsport_playsport.member_signin_log_archive
+        where signin_time between '2014-06-02 00:00:00' and '2014-12-31 23:59:59' # 只看發送簡訊之後的登入數
+		group by userid;
+
+		ALTER TABLE textcampaign._login_count_after_6      ADD INDEX (`userid`);
+		ALTER TABLE textcampaign._login_count_after_10     ADD INDEX (`userid`);
+
+		create table textcampaign._login_count engine = myisam
+		SELECT a.userid, a.login_count as login_c_6, b.login_count as login_c_10
+		FROM textcampaign._login_count_after_6 a left join textcampaign._login_count_after_10 b on a.userid = b.userid;
+
+		create table textcampaign._login_count_1 engine = myisam
+		SELECT userid, login_c_6, (case when ( login_c_10 is null) then 0 else login_c_10 end) as login_c_10
+		FROM textcampaign._login_count;
+
+		ALTER TABLE textcampaign._login_count_1     ADD INDEX (`userid`);
+
+create table textcampaign._tracklist_1_user_login_count engine = myisam 
+SELECT a.phone, a.id, a.userid, a.text_campaign, a.abtest_group, a.abtest, b.login_c_6, b.login_c_10
+FROM textcampaign._tracklist_1 a left join textcampaign._login_count_1 b on a.userid = b.userid;
+
+
+		# 儲值金額-6月後
+		create table textcampaign._order_data_6 engine = myisam
+		select a.userid, sum(redeem) as total_redeem
+		from (
+			SELECT userid, amount as redeem, date, substr(date,1,10) as d
+			FROM plsport_playsport.pcash_log
+			where payed = 1 and type in (3,4)
+			and date between '2014-06-02 00:00:00' and '2014-12-31 23:59:59') as a
+		group by a.userid;
+
+		# 儲值金額-10月後
+		create table textcampaign._order_data_10 engine = myisam
+		select a.userid, sum(redeem) as total_redeem
+		from (
+			SELECT userid, amount as redeem, date, substr(date,1,10) as d
+			FROM plsport_playsport.pcash_log
+			where payed = 1 and type in (3,4)
+			and date between '2014-10-30 00:00:00' and '2014-12-31 23:59:59') as a
+		group by a.userid;
+
+		create table textcampaign._order_data_all engine = myisam
+		SELECT a.userid, a.total_redeem as redeem_6, b.total_redeem as redeem_10
+		FROM textcampaign._order_data_6 a left join textcampaign._order_data_10 b on a.userid = b.userid;
+
+create table textcampaign._tracklist_1_user_login_count1 engine = myisam 
+SELECT a.phone, a.id, a.userid, a.text_campaign, a.abtest_group, a.abtest, a.login_c_6, a.login_c_10, b.redeem_6, b.redeem_10
+FROM textcampaign._tracklist_1_user_login_count a left join textcampaign._order_data_all b on a.userid = b.userid;
 
 
 
 
-
-
+SELECT 'id','text','abtest','login_6','login_10','redeem_6','redeem_10'  union (
+SELECT id, text_campaign, abtest, login_c_6, login_c_10, redeem_6, redeem_10
+into outfile 'C:/Users/1-7_ASUS/Desktop/_tracklist_1_user_login_count.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM textcampaign._tracklist_1_user_login_count1);
 
 
 
@@ -8353,35 +8522,140 @@ FROM plsport_playsport._list_7);
 
 
 
+# =================================================================================================
+# 任務: 預測擂台賽名單分組 [新建] (學文) 2015-01-05
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4048&projectId=11
+# To eddy
+# 
+# 討論區接下來會辦一個預測擂台賽的活動
+# 1/5會有報名名單出來
+# 需要請您幫我們分類
+# 
+# 目前分類條件：申請帳號未滿一年、申請帳號一年以上
+# （可能還會再修改）
+# 
+# 需求日期：1/6
+# =================================================================================================
+
+# 程式都不見了....
+# 程式都不見了....
+# 程式都不見了....
+
+# 如果要 重跑名單的話, 要重寫_list_1之前的部分
+
+create table plsport_playsport._list_1 engine = myisam
+SELECT a.userid, a.nickname, a.join_date, b.post_count_percentile
+FROM plsport_playsport._list a left join plsport_playsport._post_count1 b on a.userid = b.postuser;
+
+create table plsport_playsport._list_2 engine = myisam
+SELECT a.userid, a.nickname, a.join_date, a.post_count_percentile, b.reply_count_percentile
+FROM plsport_playsport._list_1 a left join plsport_playsport._reply_count1 b on a.userid = b.userid;
+
+create table plsport_playsport._list_3 engine = myisam
+SELECT a.userid, a.nickname, a.join_date, a.post_count_percentile, a.reply_count_percentile, b.like_count_percentile
+FROM plsport_playsport._list_2 a left join plsport_playsport._like_count1 b on a.userid = b.userid;
+
+create table plsport_playsport._list_4 engine = myisam
+SELECT userid, nickname, join_date, post_count_percentile, reply_count_percentile, like_count_percentile 
+FROM plsport_playsport._list_3
+group by userid, nickname, join_date, post_count_percentile, reply_count_percentile, like_count_percentile;
+
+create table plsport_playsport._list_5 engine = myisam
+SELECT userid, nickname, join_date, (case when (post_count_percentile is null) then 0 else post_count_percentile end) as post,
+                                    (case when (reply_count_percentile is null) then 0 else reply_count_percentile end) as reply,
+                                    (case when (like_count_percentile is null) then 0 else like_count_percentile end) as like_
+FROM plsport_playsport._list_4;
+
+
+#(1)討論後，我們想要的權重為
+#
+#    看文:0
+#    貼文:7
+#    回文:4
+#    推文:1
+create table plsport_playsport._list_6 engine = myisam
+SELECT userid, nickname, join_date, post, reply, like_, round(((post*7 + reply*4 + like_*4)*10),0) as score
+FROM plsport_playsport._list_5;
+
+create table plsport_playsport._list_7 engine = myisam
+select *
+from (
+	SELECT userid, nickname, join_date, post, reply, like_, score, round((datediff(now(), join_date)/365),2) as y
+	FROM plsport_playsport._list_6) as a
+order by a.score desc, a.y desc;
+
+update plsport_playsport._list_7 set nickname  = replace(nickname, ' ','');
+update plsport_playsport._list_7 set nickname  = replace(nickname, ';','');
+update plsport_playsport._list_7 set nickname  = replace(nickname, ',','');
+update plsport_playsport._list_7 set nickname  = replace(nickname, '.','');
+
+# 232筆, 直接貼到文章上即可
+# https://docs.google.com/a/playsport.cc/spreadsheets/d/1p13jZzzKSjy2fuoAeXzAFSr77cs-JV3lvleCcHtYJyQ/edit?usp=sharing
 
 
 
+# =================================================================================================
+# 任務: [201401-J-8] 強化購買後推薦專區 - A/B testing及追蹤報告 [進行中] (阿達) 2015-01-06
+# 第四階段優化 (新增國際大小推薦)  
+# 
+# 測試時間：12/11 ~ 12/31
+# 
+# 1. 提供測試名單
+# 2. 測試報告
+#    觀察指標為購買預測營業額、各區塊點擊/購買數 (分成殺手、非殺手)
+# 3. 追蹤報告
+# 
+# =================================================================================================
 
+# 任務: [201401-J-8] 強化購買後推薦專區 - A/B testing及追蹤報告 [進行中]
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=2567&projectId=11
+# another task
+create table plsport_playsport._test engine = myisam
+SELECT * FROM plsport_playsport._predict_buyer_with_cons
+where date(buy_date) between '2014-12-11' and '2014-12-15'
+and substr(position,1,3) = 'BRC';
 
+SELECT position, sum(buy_price) as total_revenue 
+FROM plsport_playsport._test
+group by position
+order by position;
 
+create table plsport_playsport._test_1 engine = myisam
+SELECT * 
+FROM actionlog._action_201412
+where date(time) between '2014-12-12' and '2014-12-15'
+and userid <> ''
+and uri like '%rp=%';
 
+create table plsport_playsport._test_2 engine = myisam
+SELECT userid, uri, time 
+FROM plsport_playsport._test_1;
 
+create table plsport_playsport._test_3 engine = myisam
+SELECT * FROM plsport_playsport._test_2
+where uri like '%BRC%';
 
+create table plsport_playsport._test_4 engine = myisam
+SELECT userid, substr(uri,locate('rp=',uri)+3,length(uri)) as p, uri,
+ time
+FROM plsport_playsport._test_3;
 
+ALTER TABLE plsport_playsport._test_4 convert to character set utf8 collate utf8_general_ci;
 
+create table plsport_playsport._test_5 engine = myisam 
+SELECT (b.id%20)+1 as g, a.userid, a.p, a.uri, a.time 
+FROM plsport_playsport._test_4 a left join plsport_playsport.member b on a.userid = b.userid;
 
+create table plsport_playsport._test_6 engine = myisam 
+SELECT (case when (g>13) then 'a' else 'b' end) as abtest, g, userid, p, uri, time 
+FROM plsport_playsport._test_5;
 
+SELECT abtest, p, count(userid) as c 
+FROM plsport_playsport._test_6
+group by abtest, p;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+SELECT * FROM plsport_playsport._test_6
+where abtest = 'a' and substr(p,6,1) = 'C';
 
 
 
@@ -8448,99 +8722,3 @@ from (
 	where abtestgroup <> 0 # 除了0不用看, 看1~20組
 	group by deviceid, abtestgroup) as a
 group by a.abtestgroup;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 任務: [201401-J-8] 強化購買後推薦專區 - A/B testing及追蹤報告 [進行中]
-# http://pm.playsport.cc/index.php/tasksComments?tasksId=2567&projectId=11
-# another task
-create table plsport_playsport._test engine = myisam
-SELECT * FROM plsport_playsport._predict_buyer_with_cons
-where date(buy_date) between '2014-12-11' and '2014-12-15'
-and substr(position,1,3) = 'BRC';
-
-SELECT position, sum(buy_price) as total_revenue 
-FROM plsport_playsport._test
-group by position
-order by position;
-
-create table plsport_playsport._test_1 engine = myisam
-SELECT * 
-FROM actionlog._action_201412
-where date(time) between '2014-12-12' and '2014-12-15'
-and userid <> ''
-and uri like '%rp=%';
-
-create table plsport_playsport._test_2 engine = myisam
-SELECT userid, uri, time 
-FROM plsport_playsport._test_1;
-
-create table plsport_playsport._test_3 engine = myisam
-SELECT * FROM plsport_playsport._test_2
-where uri like '%BRC%';
-
-create table plsport_playsport._test_4 engine = myisam
-SELECT userid, substr(uri,locate('rp=',uri)+3,length(uri)) as p, uri,
- time
-FROM plsport_playsport._test_3;
-
-ALTER TABLE plsport_playsport._test_4 convert to character set utf8 collate utf8_general_ci;
-
-create table plsport_playsport._test_5 engine = myisam 
-SELECT (b.id%20)+1 as g, a.userid, a.p, a.uri, a.time 
-FROM plsport_playsport._test_4 a left join plsport_playsport.member b on a.userid = b.userid;
-
-create table plsport_playsport._test_6 engine = myisam 
-SELECT (case when (g>13) then 'a' else 'b' end) as abtest, g, userid, p, uri, time 
-FROM plsport_playsport._test_5;
-
-SELECT abtest, p, count(userid) as c 
-FROM plsport_playsport._test_6
-group by abtest, p;
-
-SELECT * FROM plsport_playsport._test_6
-where abtest = 'a' and substr(p,6,1) = 'C';
-
-
-
-
-
-
-
-
-
-
-
-
-create table plsport_playsport._check engine = myisam
-SELECT * FROM plsport_playsport.go_top_or_latest_log
-where log_time between '2014-12-25 10:00:00' and now();
-
-create table plsport_playsport._check_1 engine = myisam
-SELECT (b.id%20)+1 as g, a.userid, a.click, a.log_time 
-FROM plsport_playsport._check a left join plsport_playsport.member b on a.userid = b.userid;
-
-create table plsport_playsport._check_2 engine = myisam
-SELECT (case when (g>10) then 'a' else 'b' end) as abtest, g, userid, click, log_time 
-FROM plsport_playsport._check_1;
-
-
-SELECT abtest, click, count(userid) as c
-FROM plsport_playsport._check_2
-group by abtest, click;
-
-
