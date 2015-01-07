@@ -8607,6 +8607,7 @@ update plsport_playsport._list_7 set nickname  = replace(nickname, '.','');
 # 
 # =================================================================================================
 
+# 以下是觀察的部分
 # 任務: [201401-J-8] 強化購買後推薦專區 - A/B testing及追蹤報告 [進行中]
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=2567&projectId=11
 # another task
@@ -8656,6 +8657,116 @@ group by abtest, p;
 
 SELECT * FROM plsport_playsport._test_6
 where abtest = 'a' and substr(p,6,1) = 'C';
+
+# 以下是分析的部分-------------------------------------------------------
+
+# (1)先把資料捉出來
+create table actionlog._visitmember_rp engine = myisam
+SELECT userid, uri, time
+FROM actionlog.action_201412
+where uri like '%rp=%'
+and userid <> ''
+and time between '2014-12-11 15:26:00' and '2015-01-06 12:00:00';
+
+insert ignore into actionlog._visitmember_rp
+SELECT userid, uri, time
+FROM actionlog.action_201501
+where uri like '%rp=%'
+and userid <> ''
+and time between '2014-12-11 15:26:00' and '2015-01-06 12:00:00';
+
+# (2)篩出購買後推廌專區的的點擊
+create table actionlog._visitmember_rp_1 engine = myisam
+SELECT userid, uri, time 
+FROM actionlog._visitmember_rp
+where uri like '%rp=BRC%';
+
+# (3)捉出BRC的字串
+create table actionlog._visitmember_rp_2 engine = myisam
+SELECT userid, uri, time, (case when (locate('rp=',uri)>0) then substr(uri,locate('rp=',uri)+3, length(uri)) else '' end) as p
+FROM actionlog._visitmember_rp_1;
+
+		SELECT p, count(userid)  
+		FROM actionlog._visitmember_rp_2
+		group by p;
+
+		ALTER TABLE actionlog._visitmember_rp_2 convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE actionlog._visitmember_rp_2 ADD INDEX (`userid`);
+
+# (4)參加實驗的組別是14,15,16,17,18,19,20 (35%的測試者)
+create table actionlog._visitmember_rp_3 engine = myisam
+select (case when (c.g>13) then 'a' else 'b' end) as abtest, c.g, c.userid, c.time, c.p
+from (
+	SELECT (b.id%20)+1 as g, a.userid, a.time, a.p 
+	FROM actionlog._visitmember_rp_2 a left join plsport_playsport.member b on a.userid = b.userid) as c;
+
+        # 沒有排除誤擊的版本
+		SELECT abtest, p, count(userid) as c 
+		FROM actionlog._visitmember_rp_3
+		group by abtest, p;
+
+create table actionlog._visitmember_rp_4 engine = myisam
+SELECT abtest, g, userid, time, p, concat(abtest,'_',p) as c 
+FROM actionlog._visitmember_rp_3;
+
+create table actionlog._visitmember_rp_5 engine = myisam
+SELECT abtest, g, userid, time, p 
+FROM actionlog._visitmember_rp_4
+where c not in ('a_BRC1_C','a_BRC2_C','a_BRC3_C','a_BRC4_C'); # 誤擊的情況
+
+        # 有排除誤擊的版本
+		SELECT p, count(userid) as pv 
+		FROM actionlog._visitmember_rp_5
+		group by p;
+
+#------------------------------------------以上是pv的觀察
+
+# 先篩出透過購買後推廌專區購買的交易
+create table plsport_playsport._predict_buyer_with_cons_1 engine = myisam
+SELECT buyerid, buy_date, buy_price, position 
+FROM plsport_playsport._predict_buyer_with_cons
+where buy_date between '2014-12-11 15:26:00' and '2015-01-06 12:00:00'
+and substr(position,1,3) = 'BRC';
+
+create table plsport_playsport._predict_buyer_with_cons_2 engine = myisam
+select (case when (c.g>13) then 'a' else 'b' end) as abtest, c.userid, c.date, c.price, c.p
+from (
+	SELECT (id%20)+1 as g, buyerid as userid, buy_date as date, buy_price as price, position as p 
+	FROM plsport_playsport._predict_buyer_with_cons_1 a left join plsport_playsport.member b on a.buyerid = b.userid) as c;
+
+create table plsport_playsport._predict_buyer_with_cons_3 engine = myisam
+select *
+from (
+	SELECT abtest, userid, price, p, concat(abtest,'_',p) as c 
+	FROM plsport_playsport._predict_buyer_with_cons_2) as a
+where a.c not in ('a_BRC1_C','a_BRC2_C','a_BRC3_C','a_BRC4_C');# 誤擊的情況
+
+# 推廌專區購買金額
+create table plsport_playsport._predict_buyer_with_cons_4 engine = myisam
+SELECT abtest, userid, sum(price) as spent
+FROM plsport_playsport._predict_buyer_with_cons_3
+group by abtest, userid;
+
+# 全站購買金額
+create table plsport_playsport._predict_buyer_with_cons_all engine = myisam
+select a.buyerid, sum(a.buy_price) as total_spent
+from (
+	SELECT buyerid, buy_date, buy_price, position  
+	FROM plsport_playsport._predict_buyer_with_cons
+	where buy_date between '2014-12-11 15:26:00' and '2015-01-06 12:00:00') as a
+group by a.buyerid;
+
+# 完成名單
+create table plsport_playsport._predict_buyer_with_cons_5 engine = myisam
+SELECT a.abtest, a.userid, a.spent, b.total_spent
+FROM plsport_playsport._predict_buyer_with_cons_4 a left join plsport_playsport._predict_buyer_with_cons_all b on a.userid = b.buyerid;
+
+# 輸出txt給R
+SELECT 'abtest', 'userid', 'spent', 'total_spent' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_predict_buyer_with_cons_5.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._predict_buyer_with_cons_5);
 
 
 
@@ -8722,3 +8833,59 @@ from (
 	where abtestgroup <> 0 # 除了0不用看, 看1~20組
 	group by deviceid, abtestgroup) as a
 group by a.abtestgroup;
+
+
+
+
+
+
+
+
+
+
+
+# 任務: [201406-A-8] 個人預測頁左下欄位改成戰績 - A/B testing [新建]
+# 
+# 說明
+# 執此任務 A/B testing
+# 負責人：Eddy
+# 時間：
+# 提供測試名單    12/31
+# 測試報告 2/4
+
+# 以下是檢查的部分
+
+create table actionlog.action_201501_check engine = myisam
+SELECT * 
+FROM actionlog.action_201501
+where time between '2015-01-05 12:00:00' and '2015-01-06 18:00:00'
+and uri like '%visit_member.php%';
+
+create table actionlog.action_201501_check1 engine = myisam
+SELECT userid, uri, time
+FROM actionlog.action_201501_check
+where userid <> ''
+and ((uri like '%post_from%') or (uri like '%click_from%'));
+
+create table actionlog.action_201501_check2 engine = myisam
+SELECT userid, uri, time, (case when (locate('click_from=',uri)>0) then substr(uri,locate('click_from=',uri)+11, length(uri)) else '' end) as click,
+                          (case when (locate('post_from=' ,uri)>0) then substr(uri,locate('post_from=' ,uri)+10, length(uri)) else '' end) as post
+FROM actionlog.action_201501_check1;
+
+create table actionlog.action_201501_check3 engine = myisam
+SELECT userid, uri, time, concat(click,post) as c
+FROM actionlog.action_201501_check2;
+
+		ALTER TABLE actionlog.action_201501_check3 convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE actionlog.action_201501_check3 ADD INDEX (`userid`);
+
+create table actionlog.action_201501_check4 engine = myisam
+select (case when (c.g<7) then 'a' else 'b' end) as abtest, c.g, c.userid, c.uri, c.time, c.c 
+from (
+	SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time, a.c 
+	FROM actionlog.action_201501_check3 a left join plsport_playsport.member b on a.userid = b.userid) as c;
+
+SELECT abtest, c, count(userid) as click_count 
+FROM actionlog.action_201501_check4 
+group by abtest, c;
+
