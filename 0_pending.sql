@@ -8843,9 +8843,49 @@ group by d;
 
 
 # =================================================================================================
+# 任務: [201408-A-7]開發回文推功能-發文推ABtesting(介面改變) [新建] (靜怡) 2015-01-12
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4029&projectId=11
+# 說明
+#  
+# 目的：了解新的發文推介面是否吸引使用者
+# 目標：發文推點擊率提升
+#  
+# 內容
+#  - 測試時間：12/25~1/8
+#  - 設定測試組別
+#  - 觀察指標：發文推點擊次數
+#  - 報告時間：1/13
+#  - 統計目前站上發文推使用率(僅限有使用討論區者)--此為上面的任務, 已完成
+# =================================================================================================
+
+create table plsport_playsport._forum_like engine = myisam
+SELECT * 
+FROM plsport_playsport.forum_like
+where create_date between '2014-12-25 10:00:00' and '2015-01-20 00:00:00';
+
+create table plsport_playsport._forum_like1 engine = myisam
+SELECT userid, count(subject_id) as like_count 
+FROM plsport_playsport._forum_like
+group by userid;
+
+create table plsport_playsport._forum_like2 engine = myisam
+select c.g, (case when (c.g>10) then 'a' else 'b' end) as abtest, c.userid, c.like_count
+from (
+	SELECT (b.id%20)+1 as g, a.userid, a.like_count
+	FROM plsport_playsport._forum_like1 a left join plsport_playsport.member b on a.userid = b.userid) as c;
+
+
+SELECT 'g', 'abtest', 'userid', 'like_count' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_like2.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_like2);
+
+
+
+# =================================================================================================
 # 新增專案: 行銷企劃 - 1月nba分析王活動表格 [任務](學文) 2015-01-07
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4108&projectId=11
-# 
 # =================================================================================================
 
 use wa;
