@@ -1880,7 +1880,7 @@ from (
     SELECT userid, phone, createon, price 
     FROM plsport_playsport.order_data
     where sellconfirm = 1 and payway in (1,2,3,4,5,6)
-    and createon between subdate(now(),720) and now()) as a
+    and createon between subdate(now(),550) and now()) as a # 一年半內有儲值過
 where length(phone) = 10 and substr(phone,1,2) = '09' and phone regexp '^[[:digit:]]{10}$'
 group by a.userid
 order by a.userid;
@@ -1900,7 +1900,7 @@ select a.userid, count(a.userid) as c, (case when (a.userid is not null) then 'y
 from (
     SELECT * 
     FROM plsport_playsport.member_signin_log_archive
-    where signin_time between subdate(now(),31) and now() # 設定為3個月(如果人數很多的話, 視情況可修改為近1個月, 預設31)
+    where signin_time between subdate(now(),91) and now() # 設定為3個月
     order by signin_time) as a
 group by a.userid;
 
@@ -1910,10 +1910,10 @@ SELECT userid, date(max(signin_time)) as last_time_login
 FROM plsport_playsport.member_signin_log_archive
 group by userid;
 
-    ALTER TABLE `_list1` CHANGE `userid` `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-    ALTER TABLE `_recent_login` CHANGE `userid` `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-    ALTER TABLE `_last_time_login` CHANGE `userid` `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-    ALTER TABLE _last_time_login ADD INDEX (`userid`);
+    ALTER TABLE textcampaign._list1 CHANGE `userid` `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+    ALTER TABLE textcampaign._recent_login CHANGE `userid` `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+    ALTER TABLE textcampaign._last_time_login CHANGE `userid` `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+    ALTER TABLE textcampaign._last_time_login ADD INDEX (`userid`);
 
 # 主名單: 加入誰近3個月內有登入
 create table textcampaign._list2 engine = myisam
@@ -2203,7 +2203,6 @@ create table textcampaign._tracklist_1_user_login_count engine = myisam
 SELECT a.phone, a.id, a.userid, a.text_campaign, a.abtest_group, a.abtest, b.login_c_6, b.login_c_10
 FROM textcampaign._tracklist_1 a left join textcampaign._login_count_1 b on a.userid = b.userid;
 
-
 		# 儲值金額-6月後
 		create table textcampaign._order_data_6 engine = myisam
 		select a.userid, sum(redeem) as total_redeem
@@ -2233,13 +2232,47 @@ SELECT a.phone, a.id, a.userid, a.text_campaign, a.abtest_group, a.abtest, a.log
 FROM textcampaign._tracklist_1_user_login_count a left join textcampaign._order_data_all b on a.userid = b.userid;
 
 
-
-
 SELECT 'id','text','abtest','login_6','login_10','redeem_6','redeem_10'  union (
 SELECT id, text_campaign, abtest, login_c_6, login_c_10, redeem_6, redeem_10
 into outfile 'C:/Users/1-7_ASUS/Desktop/_tracklist_1_user_login_count.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM textcampaign._tracklist_1_user_login_count1);
+
+
+# ----------------------------------------------------------------------
+# 流失客領取兌換券 (柔雅) 2015-01-12
+# TO EDDY
+# 麻煩請於下周二(1/13號)提供下一次流失客的名單，預計1/14發送。
+# 發送方向為: 流失客領取兌換券
+# 
+# 篩選條件:
+# 	1.約前一年半的時間內，曾經儲值過
+# 	2.已有三個月未登入、購買、儲值
+# 	3.依照儲值總金額排序，越高的優先發送
+# 	4.每次最多2000筆，匯出csv或txt(供yoyo8發送)
+# 	5.每一筆有效號碼，不要連續傳送，相隔一個月以上
+# 	ps.請另外提供一份有id的名單，給工程套入程式使用。
+# 任務狀態: 進行中
+# ----------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8793,7 +8826,6 @@ SELECT d, count(userid) as forum_user
 FROM actionlog._only_forum_1
 group by d;
 
-
 create table plsport_playsport._forum_like engine = myisam
 SELECT subject_id as subjectid, userid, date(create_date) as d 
 FROM plsport_playsport.forum_like
@@ -8937,7 +8969,6 @@ SELECT *
 FROM actionlog._gamedata
 where time between subdate(now(),65) and now();
 
-
 create table actionlog._livescore_2 engine = myisam
 select a.userid, a.uri, a.time, (case when (locate('&',a.t)=0) then a.t else substr(a.t,1,locate('&',a.t)-1) end) as p
 from (
@@ -9010,7 +9041,6 @@ group by userid;
 
 		ALTER TABLE actionlog._livescore_list convert to character set utf8 collate utf8_general_ci;
 
-
 create table actionlog._list_1 engine = myisam
 SELECT a.userid, b.nickname, a.livesocre_pv, a.livescore_percentile 
 FROM actionlog._livescore_list a left join plsport_playsport.member b on a.userid = b.userid
@@ -9037,7 +9067,7 @@ FROM actionlog._list_2 a left join actionlog._gamedata_list b on a.userid = b.us
 		create table plsport_playsport._question_list engine = myisam
 		SELECT userid, question04
 		FROM plsport_playsport.questionnaire_livescorenbaviewimprovement_answer
-		where question04 in (4,5); # 問卷第四題回答需要或非常需要
+		where question04 in (1,2,3,4,5); # 問卷第四題回答需要或非常需要
 
 		ALTER TABLE plsport_playsport._last_login_time convert to character set utf8 collate utf8_general_ci;
 		ALTER TABLE plsport_playsport._question_list convert to character set utf8 collate utf8_general_ci;
@@ -9051,17 +9081,16 @@ FROM actionlog._list_3 a left join plsport_playsport._question_list b on a.useri
 		ALTER TABLE actionlog._list_4 ADD INDEX (`userid`);
 		ALTER TABLE plsport_playsport._last_login_time ADD INDEX (`userid`);
 
-
 create table actionlog._list_5 engine = myisam
 SELECT a.userid, a.nickname, a.livesocre_pv, a.livescore_percentile, a.nextday_pv, a.nextday_pv_percentile, a.gamedata_pv, a.gamedata_percentile,
        a.question04, date(b.last_login) as last_login
 FROM actionlog._list_4 a left join plsport_playsport._last_login_time b on a.userid = b.userid;
 
-
-
-
-
-
+SELECT 'userid', 'nickname', '即時比分pv', '佔全站前n%', '點擊隔天pv', '佔全站前n%', '看數據pv', '佔全站前n%', '問卷第四題答案', '最後登入時間' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_list_5.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._list_5);
 
 
 
