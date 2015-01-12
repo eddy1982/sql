@@ -4265,7 +4265,7 @@ from (
     SELECT userid, subjectid, allianceid, date(got_time) as d, substr(got_time,1,7) as m, year(got_time) as y
     FROM plsport_playsport.analysis_king
     where allianceid = 3 # NBA 
-    and got_time between '2014-12-09 00:00:00' and '2014-12-22 23:59:59') as a
+    and got_time between '2014-12-23 00:00:00' and '2015-01-06 23:59:59') as a
 group by a.d, a.allianceid;
 
 # (2)分析文總數
@@ -4275,7 +4275,7 @@ from (
     FROM plsport_playsport.forum
     where gametype = 1 # 分析文
     and allianceid = 3 # NBA 
-    and posttime between '2014-12-09 00:00:00' and '2014-12-22 23:59:59'
+    and posttime between '2014-12-23 00:00:00' and '2015-01-06 23:59:59'
     order by posttime) as a
 group by a.d, a.allianceid;
 
@@ -8770,19 +8770,292 @@ FROM plsport_playsport._predict_buyer_with_cons_5);
 
 
 
+# =================================================================================================
+# 任務: [201408-A-7]開發回文推功能-發文推ABtesting(介面改變) [新建] (靜怡) 2015-01-07
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4029&projectId=11
+# 
+# - 統計目前站上發文推使用率(僅限有使用討論區者)
+# =================================================================================================
+
+create table actionlog._only_forum engine = myisam
+SELECT userid, uri, date(time) as d 
+FROM actionlog.action_201412
+where time between '2014-12-15 00:00:00' and '2014-12-31 23:59:59'
+and uri like '%/forum%'
+and userid <> '';
+
+create table actionlog._only_forum_1 engine = myisam
+SELECT userid, d, count(uri) as v 
+FROM actionlog._only_forum
+group by userid, d;
+
+SELECT d, count(userid) as forum_user 
+FROM actionlog._only_forum_1
+group by d;
+
+
+create table plsport_playsport._forum_like engine = myisam
+SELECT subject_id as subjectid, userid, date(create_date) as d 
+FROM plsport_playsport.forum_like
+where create_date between '2014-12-15 00:00:00' and '2014-12-31 23:59:59';
+
+create table plsport_playsport._forum_like_1 engine = myisam
+SELECT d, userid, count(subjectid) as push 
+FROM plsport_playsport._forum_like
+group by d, userid;
+
+SELECT d, count(userid) as push 
+FROM plsport_playsport._forum_like_1
+group by d;
 
 
 
+# =================================================================================================
+# 新增專案: 行銷企劃 - 1月nba分析王活動表格 [任務](學文) 2015-01-07
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4108&projectId=11
+# 
+# =================================================================================================
+
+use wa;
+
+DROP TABLE IF EXISTS wa._wa_forum;
+DROP TABLE IF EXISTS wa._wa_score;
+DROP TABLE IF EXISTS wa._wa_forum_1;
+DROP TABLE IF EXISTS wa._wa_forum_ok;
+
+create table wa._wa_forum engine = myisam
+SELECT subjectid, gametype, subject, postuser, posttime
+FROM plsport_playsport.forum
+where date(posttime) = '2015-01-08'
+and gametype = 1
+and allianceid = 3
+and isdelete = 0;
+
+create table wa._wa_score engine = myisam
+SELECT subjectid, count(userid) as user_count, sum(score) as total_score
+FROM plsport_playsport.forum_analysis_score
+where datetime between '2015-01-08 00:00:00' and '2015-01-09 13:00:00'
+group by subjectid;
+
+# today當天
+create table wa._wa_forum_1 engine = myisam
+select c.subjectid, c.subject, c.postuser, d.nickname, c.posttime, c.user_count, c.total_score 
+from (
+	SELECT a.subjectid, a.subject, a.postuser, a.posttime, b.user_count, b.total_score 
+	FROM wa._wa_forum a left join wa._wa_score b on a.subjectid = b.subjectid) as c 
+    left join plsport_playsport.member as d on c.postuser = d.userid
+order by c.user_count desc;
+
+        # 第一天
+		create table wa._wa_forum_2 engine = myisam
+		select * from wa._wa_forum_1;
+        
+        create table wa._forumbackup_20150108
+        select * from wa._wa_forum_1;
+
+        # 之後的每一天
+		insert ignore into wa._wa_forum_2
+		select * from wa._wa_forum_1;
+
+        update wa._wa_forum_2 set subject = replace(subject, ' ','');
+        update wa._wa_forum_2 set subject = replace(subject, '　','');
+        update wa._wa_forum_2 set subject = replace(subject, '\\','');
+        update wa._wa_forum_2 set subject = replace(subject, ',','');
+        update wa._wa_forum_2 set subject = replace(subject, ';','');
+        update wa._wa_forum_2 set subject = replace(subject, '\n','');
+        update wa._wa_forum_2 set subject = replace(subject, '\r','');
+        update wa._wa_forum_2 set subject = replace(subject, '\t','');
+
+		SELECT 'subjectid', 'subject', 'userid', 'nickname', '貼文時間', '評分人數', '得分' union (
+		SELECT *
+		into outfile 'C:/Users/1-7_ASUS/Dropbox/playsport/2015-01-08.csv'
+		fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+		FROM wa._wa_forum_2);
+
+# all_day
+create table wa._wa_forum_ok engine = myisam
+select *
+from (
+	select  a.postuser, a.nickname, a.post_count, a.user_count, a.total_score, (a.total_score/a.user_count) as avg_score
+	from (
+		SELECT postuser, nickname, count(subjectid) as post_count, sum(user_count) as user_count, sum(total_score) as total_score
+		FROM wa._wa_forum_2
+		group by postuser) as a) as b
+order by b.user_count desc;
+
+		SELECT 'postuser', 'nickname', '累計文章篇數', '累計評分人數', '累計總分', '平均分數' union (
+		SELECT *
+		into outfile 'C:/Users/1-7_ASUS/Dropbox/playsport/2015-01-08_result.csv'
+		fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+		FROM wa._wa_forum_ok);
 
 
 
+# =================================================================================================
+# 任務: [201412-E-3] NBA即時比分新增團隊數據 - MVP測試名單 [新建] (阿達) 2015-01-09
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4095&projectId=11
+# 提供此任務 MVP測試名單
+# 負責人：Eddy
+# 時間：1/12(一) 
+# 內容
+# 1. MVP測試名單
+# 時間：近兩個月
+# 
+# 條件：
+# 	a. NBA即時比分PV前50%
+# 	b. 問卷第四題回答需要或非常需要
+# 欄位：
+# 	a. 帳號
+# 	b. 暱稱
+# 	c. 近兩個月NBA即時比分pv及全站佔比
+# 	d. 近兩個月點選NBA隔日的次數
+# 	e. 問卷第四題答案
+# 	f. 近兩個月點選對戰資訊/球隊資訊總pv(games_data.php)
+# =================================================================================================
+
+create table actionlog._livescore engine = myisam
+SELECT userid, uri, time FROM actionlog.action_201411 where uri like '%/livescore%' and userid <> '';
+insert ignore into actionlog._livescore
+SELECT userid, uri, time FROM actionlog.action_201412 where uri like '%/livescore%' and userid <> '';
+insert ignore into actionlog._livescore
+SELECT userid, uri, time FROM actionlog.action_201501 where uri like '%/livescore%' and userid <> '';
+
+create table actionlog._gamedata engine = myisam
+SELECT userid, uri, time FROM actionlog.action_201411 where uri like '%/games_data.php%' and userid <> '';
+insert ignore into actionlog._gamedata
+SELECT userid, uri, time FROM actionlog.action_201412 where uri like '%/games_data.php%' and userid <> '';
+insert ignore into actionlog._gamedata
+SELECT userid, uri, time FROM actionlog.action_201501 where uri like '%/games_data.php%' and userid <> '';
+
+create table actionlog._livescore_1 engine = myisam
+SELECT * 
+FROM actionlog._livescore
+where time between subdate(now(),65) and now();
+
+create table actionlog._gamedata_1 engine = myisam
+SELECT * 
+FROM actionlog._gamedata
+where time between subdate(now(),65) and now();
 
 
+create table actionlog._livescore_2 engine = myisam
+select a.userid, a.uri, a.time, (case when (locate('&',a.t)=0) then a.t else substr(a.t,1,locate('&',a.t)-1) end) as p
+from (
+	SELECT userid, uri, time, (case when (locate('aid=',uri)=0) then 3 else substr(uri, locate('aid=',uri)+4, length(uri)) end) as t
+	FROM actionlog._livescore_1) as a;
+
+create table actionlog._livescore_3 engine = myisam
+SELECT * 
+FROM actionlog._livescore_2
+where length(p) in (1,2)
+and p = 3;
+
+create table actionlog._livescore_4 engine = myisam
+SELECT userid, count(uri) as livesocre_pv
+FROM actionlog._livescore_3
+group by userid;
+
+		create table actionlog._livescore_list engine = myisam
+		select userid, livesocre_pv, round((cnt-rank+1)/cnt,2) as livescore_percentile
+		from (SELECT userid, livesocre_pv, @curRank := @curRank + 1 AS rank
+			  FROM actionlog._livescore_4, (SELECT @curRank := 0) r
+			  order by livesocre_pv desc) as dt,
+			 (select count(distinct userid) as cnt from actionlog._livescore_4) as ct;
+
+create table actionlog._gamedata_2 engine = myisam
+SELECT userid, count(uri) as gamedata_pv 
+FROM actionlog._gamedata_1
+group by userid;
+
+		create table actionlog._gamedata_list engine = myisam
+		select userid, gamedata_pv, round((cnt-rank+1)/cnt,2) as gamedata_percentile
+		from (SELECT userid, gamedata_pv, @curRank := @curRank + 1 AS rank
+			  FROM actionlog._gamedata_2, (SELECT @curRank := 0) r
+			  order by gamedata_pv desc) as dt,
+			 (select count(distinct userid) as cnt from actionlog._livescore_4) as ct;
+
+create table actionlog._livescore_nextday_1 engine = myisam
+select a.userid, a.uri, a.time, a.p, substr(a.c,1,8) as nextday
+from (
+	SELECT userid, uri, time, p, (case when (locate('gamedate=', uri)=0) then "" else substr(uri,locate('gamedate=', uri)+9,length(uri)) end) as c
+	FROM actionlog._livescore_3) as a;
+
+create table actionlog._livescore_nextday_2 engine = myisam
+SELECT userid, uri, date(time) as today, str_to_date(nextday, '%Y%m%d') as nextday, p, datediff(str_to_date(nextday, '%Y%m%d'), date(time)) as s
+FROM actionlog._livescore_nextday_1
+where nextday <> '';
+        
+        # 看看大家都是點那幾天
+		SELECT s, count(userid) 
+		FROM actionlog._livescore_nextday_2
+		group by s;
+
+#抽出點選明天的人
+create table actionlog._livescore_nextday_3 engine = myisam
+SELECT * FROM actionlog._livescore_nextday_2
+where s = 1;
+
+create table actionlog._livescore_nextday_4 engine = myisam
+SELECT userid, count(uri) as nextday_pv 
+FROM actionlog._livescore_nextday_3
+group by userid;
+
+		create table actionlog._livescore_nextday_list engine = myisam
+		select userid, nextday_pv, round((cnt-rank+1)/cnt,2) as nextday_pv_percentile
+		from (SELECT userid, nextday_pv, @curRank := @curRank + 1 AS rank
+			  FROM actionlog._livescore_nextday_4, (SELECT @curRank := 0) r
+			  order by nextday_pv desc) as dt,
+			 (select count(distinct userid) as cnt from actionlog._livescore_nextday_4) as ct;
 
 
+		ALTER TABLE actionlog._livescore_list convert to character set utf8 collate utf8_general_ci;
 
 
+create table actionlog._list_1 engine = myisam
+SELECT a.userid, b.nickname, a.livesocre_pv, a.livescore_percentile 
+FROM actionlog._livescore_list a left join plsport_playsport.member b on a.userid = b.userid
+where livescore_percentile > 0.49; # NBA即時比分PV前50%
 
+		ALTER TABLE actionlog._livescore_nextday_list convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._list_2 engine = myisam
+SELECT a.userid, a.nickname, a.livesocre_pv, a.livescore_percentile, b.nextday_pv, b.nextday_pv_percentile
+FROM actionlog._list_1 a left join actionlog._livescore_nextday_list b on a.userid = b.userid;
+
+		ALTER TABLE actionlog._gamedata_list convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._list_3 engine = myisam
+SELECT a.userid, a.nickname, a.livesocre_pv, a.livescore_percentile, a.nextday_pv, a.nextday_pv_percentile, b.gamedata_pv, b.gamedata_percentile
+FROM actionlog._list_2 a left join actionlog._gamedata_list b on a.userid = b.userid;
+
+		# 最近一次的登入時間
+		create table plsport_playsport._last_login_time engine = myisam
+		SELECT userid, max(signin_time) as last_login
+		FROM plsport_playsport.member_signin_log_archive
+		group by userid;
+
+		create table plsport_playsport._question_list engine = myisam
+		SELECT userid, question04
+		FROM plsport_playsport.questionnaire_livescorenbaviewimprovement_answer
+		where question04 in (4,5); # 問卷第四題回答需要或非常需要
+
+		ALTER TABLE plsport_playsport._last_login_time convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE plsport_playsport._question_list convert to character set utf8 collate utf8_general_ci;
+
+
+create table actionlog._list_4 engine = myisam
+SELECT a.userid, a.nickname, a.livesocre_pv, a.livescore_percentile, a.nextday_pv, a.nextday_pv_percentile, a.gamedata_pv, a.gamedata_percentile,
+       b.question04
+FROM actionlog._list_3 a left join plsport_playsport._question_list b on a.userid = b.userid;
+
+		ALTER TABLE actionlog._list_4 ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._last_login_time ADD INDEX (`userid`);
+
+
+create table actionlog._list_5 engine = myisam
+SELECT a.userid, a.nickname, a.livesocre_pv, a.livescore_percentile, a.nextday_pv, a.nextday_pv_percentile, a.gamedata_pv, a.gamedata_percentile,
+       a.question04, date(b.last_login) as last_login
+FROM actionlog._list_4 a left join plsport_playsport._last_login_time b on a.userid = b.userid;
 
 
 
