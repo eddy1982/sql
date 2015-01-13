@@ -1880,7 +1880,7 @@ from (
     SELECT userid, phone, createon, price 
     FROM plsport_playsport.order_data
     where sellconfirm = 1 and payway in (1,2,3,4,5,6)
-    and createon between subdate(now(),550) and now()) as a # 一年半內有儲值過
+    and createon between subdate(now(),570) and now()) as a # 一年半內有儲值過
 where length(phone) = 10 and substr(phone,1,2) = '09' and phone regexp '^[[:digit:]]{10}$'
 group by a.userid
 order by a.userid;
@@ -1900,7 +1900,7 @@ select a.userid, count(a.userid) as c, (case when (a.userid is not null) then 'y
 from (
     SELECT * 
     FROM plsport_playsport.member_signin_log_archive
-    where signin_time between subdate(now(),91) and now() # 設定為3個月
+    where signin_time between subdate(now(),90) and now() # 設定為3個月
     order by signin_time) as a
 group by a.userid;
 
@@ -2255,29 +2255,40 @@ FROM textcampaign._tracklist_1_user_login_count1);
 # 任務狀態: 進行中
 # ----------------------------------------------------------------------
 
+# 先跑list1~list4
+
+# 主名單: 完整版(加入使用者id, 和最近一次登入日期)
+create table textcampaign._list5 engine = myisam
+select c.phone, d.id, c.userid, c.total_redeem, c.last_time_login, 
+       (case when (d.id is not null) then 'retention_20150114' end) as text_campaign, ((d.id%10)+1) as abtest_group
+from (
+    SELECT a.userid, a.phone, a.total_redeem, b.last_time_login
+    FROM textcampaign._list4 a left join textcampaign._last_time_login b on a.userid = b.userid) as c 
+left join plsport_playsport.member as d on c.userid = d.userid; 
 
 
+create table textcampaign._list6 engine = myisam
+SELECT phone, id, userid, total_redeem, last_time_login, text_campaign, abtest_group, 
+       (case when (abtest_group>6) then 'hold' else 'sent' end) as status # 60:40 發送/不發
+FROM textcampaign._list5;
 
 
+		# 給yoyo8簡訊發送
+		select 'phone', '使用者編號id', '簡訊行銷' union (
+		SELECT phone, id, text_campaign
+		into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150114_for_yoyo8.csv'
+		CHARACTER SET big5 fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
+		FROM textcampaign._list6
+		where status = 'sent'); # 只撈出有要發送的
+		# 一定要設定為big編碼, yoyo8規定的
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		# 給工程部匯入兌換券發送系統
+		select '使用者編號id', 'userid' union (
+		SELECT id, userid
+		into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150114_for_software_team.csv'
+		fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
+		FROM textcampaign._list6
+		where status = 'sent'); # 只撈出有要發送的
 
 
 
