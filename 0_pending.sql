@@ -258,7 +258,7 @@ from (
     SELECT userid, createon, name, price
     FROM plsport_playsport.order_data
     where createon between '2014-04-01 00:00:00' and '2014-04-01 23:59:59'
-    and payway in (1,2,3,4,5,6) and sellconfirm = 1) as a
+    and payway in (1,2,3,4,5,6,9,10) and sellconfirm = 1) as a
 group by a.userid;
 
 create table plsport_playsport._who_redeem_before_apr1 engine = myisam
@@ -267,7 +267,7 @@ from (
     SELECT userid, createon, name, price
     FROM plsport_playsport.order_data
     where createon between '2012-01-01 00:00:00' and '2014-03-31 23:59:59'
-    and payway in (1,2,3,4,5,6) and sellconfirm = 1) as a
+    and payway in (1,2,3,4,5,6,9,10) and sellconfirm = 1) as a
 group by a.userid;
 
 create table plsport_playsport._who_redeem_after_apr1 engine = myisam
@@ -276,7 +276,7 @@ from (
     SELECT userid, createon, name, price
     FROM plsport_playsport.order_data
     where createon between '2014-04-02 00:00:00' and '2014-04-30 23:59:59'
-    and payway in (1,2,3,4,5,6) and sellconfirm = 1) as a
+    and payway in (1,2,3,4,5,6,9,10) and sellconfirm = 1) as a
 group by a.userid;
 
     ALTER TABLE plsport_playsport._who_redeem_in_apr1 ADD INDEX (`userid`);
@@ -346,13 +346,13 @@ and redeem_apr1 not in (199,228,699,803); #不含儲值999以下的人
     SELECT userid, createon, name, price
     FROM plsport_playsport.order_data
     where createon between '2012-01-01 00:00:00' and '2014-03-31 23:59:59'
-    and payway in (1,2,3,4,5,6) and sellconfirm = 1;
+    and payway in (1,2,3,4,5,6,9,10) and sellconfirm = 1;
     #who_redeem_after_apr1  4/1之後的儲值
     create table plsport_playsport._who_redeem_after_apr1_nogroup engine = myisam 
     SELECT userid, createon, name, price
     FROM plsport_playsport.order_data
     where createon between '2014-04-02 00:00:00' and '2014-04-30 23:59:59'
-    and payway in (1,2,3,4,5,6) and sellconfirm = 1;
+    and payway in (1,2,3,4,5,6,9,10) and sellconfirm = 1;
 
     ALTER TABLE plsport_playsport._who_redeem_before_apr1_nogroup ADD INDEX (`userid`);
     ALTER TABLE plsport_playsport._who_redeem_after_apr1_nogroup ADD INDEX (`userid`);
@@ -838,7 +838,7 @@ select a.userid, sum(a.price) as redeem_total
 from (
     SELECT userid, price, substr(createon,1,7) as m
     FROM plsport_playsport.order_data
-    where sellconfirm = 1 and payway in (1,2,3,4,5,6)
+    where sellconfirm = 1 and payway in (1,2,3,4,5,6,9,10)
     and createon between '2014-02-01 00:00:00' and '2014-04-30 23:59:59') as a 
 group by a.userid;
 
@@ -848,7 +848,7 @@ select a.userid, sum(a.price) as redeem_total
 from (
     SELECT userid, price, substr(createon,1,7) as m
     FROM plsport_playsport.order_data
-    where sellconfirm = 1 and payway in (1,2,3,4,5,6)) as a 
+    where sellconfirm = 1 and payway in (1,2,3,4,5,6,9,10)) as a 
 group by a.userid;
 
     ALTER TABLE plsport_playsport._order_data_feb_apr  ADD INDEX (userid); 
@@ -1443,7 +1443,7 @@ select a.userid, a.y, a.m, sum(price) as redeem
 from (
     SELECT userid, createon, substr(createon,1,4) as y, substr(createon,1,7) as m, price, payway
     FROM plsport_playsport.order_data
-    where payway in (1,2,3,4,5,6) 
+    where payway in (1,2,3,4,5,6,9,10) 
     and sellconfirm = 1) as a
 group by a.userid, a.y, a.m;
 
@@ -1530,7 +1530,7 @@ from (
     from (
         SELECT userid, createon, substr(createon,1,4) as y, substr(createon,1,7) as m, price, payway
         FROM plsport_playsport.order_data
-        where payway in (1,2,3,4,5,6) 
+        where payway in (1,2,3,4,5,6,9,10) 
         and sellconfirm = 1
         and createon between subdate(now(),356) and now() ) as a
     group by a.userid, a.y, a.m) as b
@@ -1542,7 +1542,7 @@ ALTER TABLE  `_order_data_redeem_within_one_year` CHANGE  `userid`  `userid` VAR
 create table plsport_playsport._order_data_redeem_max_and_min engine = myisam
 SELECT userid, min(price) as min_redeem, max(price) as max_redeem
 FROM plsport_playsport.order_data
-where payway in (1,2,3,4,5,6) 
+where payway in (1,2,3,4,5,6,9,10) 
 and sellconfirm = 1
 group by userid;
 
@@ -1599,7 +1599,7 @@ FROM plsport_playsport._order_data_redeem_full_list);
 create table plsport_playsport._order_data_card_user engine = myisam
 SELECT userid, createon, substr(createon,1,4) as y, substr(createon,1,7) as m, price, payway
 FROM plsport_playsport.order_data
-where payway in (1,2,3,4,5,6) 
+where payway in (1,2,3,4,5,6,9,10) 
 and sellconfirm = 1
 and createon between '2012-01-01 00:00:00' and '2014-04-30 23:59:59';
 
@@ -1879,7 +1879,7 @@ select a.userid, a.phone, sum(a.price) as total_redeem
 from (
     SELECT userid, phone, createon, price 
     FROM plsport_playsport.order_data
-    where sellconfirm = 1 and payway in (1,2,3,4,5,6)
+    where sellconfirm = 1 and payway in (1,2,3,4,5,6,9,10)
     and createon between subdate(now(),570) and now()) as a # 一年半內有儲值過
 where length(phone) = 10 and substr(phone,1,2) = '09' and phone regexp '^[[:digit:]]{10}$'
 group by a.userid
@@ -2351,7 +2351,7 @@ group by buyerid;
 create table plsport_playsport._list_order_data engine = myisam # 總儲值金額
 SELECT userid, sum(price) as total_redeem 
 FROM plsport_playsport.order_data
-where payway in (1,2,3,4,5,6) 
+where payway in (1,2,3,4,5,6,9,10) 
 and sellconfirm = 1
 group by userid;
 
@@ -2409,7 +2409,6 @@ FROM plsport_playsport._list_2 as a left join plsport_playsport._last_signin as 
         SELECT a.phone, a.id, a.text_campaign, a.abtest_group, b.text_campaign 
         FROM textcampaign._list6 a left join textcampaign.retention_201406_full_list_dont_delete b on a.id = b.id
         where b.text_campaign is not null;
-
 
 
 
@@ -2495,8 +2494,6 @@ SELECT a.buyerid, a.nickname, a.join_date, a.total_redeem, a.total_paid, a.pay_i
 into outfile 'C:/Users/1-7_ASUS/Desktop/survey_list_20140603.csv'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
 FROM plsport_playsport._list_2 as a left join plsport_playsport._last_signin as b on a.buyerid = b.userid);
-
-
 
 
 
@@ -3332,7 +3329,7 @@ select a.create_from, a.m, sum(a.price) as total_redeem
 from (
     SELECT userid, name, substr(createon,1,7) as m, price, create_from 
     FROM plsport_playsport.order_data
-    where payway in (1,2,3,4,5,6) and sellconfirm = 1
+    where payway in (1,2,3,4,5,6,9,10) and sellconfirm = 1
     and createon between '2013-01-01 00:00:00' and '2014-12-31 23:59:59'
     order by createon desc) as a
 group by a.create_from, a.m ;
@@ -3341,7 +3338,7 @@ select a.create_from, a.m, count(a.price) as total_redeem_count
 from (
     SELECT userid, name, substr(createon,1,7) as m, price, create_from 
     FROM plsport_playsport.order_data
-    where payway in (1,2,3,4,5,6) and sellconfirm = 1
+    where payway in (1,2,3,4,5,6,9,10) and sellconfirm = 1
     and createon between '2013-01-01 00:00:00' and '2014-12-31 23:59:59'
     order by createon desc) as a
 group by a.create_from, a.m ;
@@ -3355,7 +3352,7 @@ from (
     from (
         SELECT userid, name, substr(createon,1,7) as m, price, create_from 
         FROM plsport_playsport.order_data
-        where payway in (1,2,3,4,5,6) and sellconfirm = 1
+        where payway in (1,2,3,4,5,6,9,10) and sellconfirm = 1
         and createon between '2014-04-01 00:00:00' and '2014-04-30 23:59:59'
         and create_from = 3
         order by createon desc) as a
@@ -3535,14 +3532,14 @@ FROM plsport_playsport._list_1 a left join plsport_playsport._last_login_time b 
         create table plsport_playsport._total_redeem engine = myisam
         SELECT userid, sum(price) as total_redeem 
         FROM plsport_playsport.order_data
-        where payway in (1,2,3,4,5,6) and sellconfirm = 1
+        where payway in (1,2,3,4,5,6,9,10) and sellconfirm = 1
         group by userid;
 
         # 近3個月的儲值金額
         create table plsport_playsport._total_redeem_in_three_month engine = myisam
         SELECT userid, sum(price) as redeem_3_months
         FROM plsport_playsport.order_data
-        where payway in (1,2,3,4,5,6) and sellconfirm = 1
+        where payway in (1,2,3,4,5,6,9,10) and sellconfirm = 1
         and createon between subdate(now(),93) and now() #近3個月
         group by userid;
 
@@ -3808,7 +3805,7 @@ from (
     FROM plsport_playsport.order_data
     where sellconfirm = 1
     and create_from in (0,1,2,3,4,5,6) # 記得要把0算進去
-    and payway in (1,2,3,4,5,6)) as a
+    and payway in (1,2,3,4,5,6,9,10)) as a
 group by a.userid;
 
 ALTER TABLE  `_total_redeem_every_one` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
@@ -5712,14 +5709,14 @@ group by a.payway, a.platform_type;
 create table plsport_playsport._order_data_first_discount engine = myisam
 SELECT userid, createon, price 
 FROM plsport_playsport.order_data
-where payway in (1,2,3,4,5,6)
+where payway in (1,2,3,4,5,6,9,10)
 and sellconfirm = 1
 and date(createon) between '2014-03-30' and '2014-04-05';
 
 create table plsport_playsport._order_data_second_discount engine = myisam
 SELECT userid, createon, price 
 FROM plsport_playsport.order_data
-where payway in (1,2,3,4,5,6)
+where payway in (1,2,3,4,5,6,9,10)
 and sellconfirm = 1
 and date(createon) between '2014-09-07' and '2014-09-13';
 
@@ -6297,7 +6294,7 @@ group by g, p;
 create table plsport_playsport._order_data_2014 engine = myisam
 SELECT userid, createon, price
 FROM plsport_playsport.order_data
-where payway in (1,2,3,4,5,6)
+where payway in (1,2,3,4,5,6,9,10)
 and sellconfirm = 1
 and year(createon) = 2014;
 
@@ -6320,7 +6317,7 @@ select a.h, sum(a.price) as redeem
 from (
     SELECT userid, date(createon) as d, hour(createon) as h, price 
     FROM plsport_playsport.order_data
-    where payway in (1,2,3,4,5,6)
+    where payway in (1,2,3,4,5,6,9,10)
     and sellconfirm = 1
     and date(createon) between '2014-08-01' and '2014-09-28') as a
 group by a.h;
@@ -7106,7 +7103,7 @@ create table plsport_playsport._order_data_2014 engine = myisam
 SELECT userid, createon, ordernumber, price, payway  
 FROM plsport_playsport.order_data
 where sellconfirm = 1
-and payway in (1,2,3,4,5,6)
+and payway in (1,2,3,4,5,6,9,10)
 and year(createon) = 2014
 order by id desc;
 
@@ -7400,7 +7397,7 @@ from (
     SELECT userid, createon, ordernumber, price, payway
     FROM plsport_playsport.order_data
     where sellconfirm = 1
-    and payway in (1,2,3,4,5,6)
+    and payway in (1,2,3,4,5,6,9,10)
     and createon between subdate(now(),90) and now()) as a # 近三個月
 group by a.userid;
 
@@ -9145,32 +9142,48 @@ FROM actionlog._list_5);
 
 
 
-
-
-
+# =================================================================================================
 # 任務: [201404-C-9]優化APP版標-Android即時比分ABtesting分組工程 [等候確認]
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=3892&projectId=1
 # 12/17星期三要觀察
+# 任務: [201404-C-11]優化APP版標-Android即時比分ABtesting [新建] (靜怡) 2015-01-16
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4041&projectId=11
+# 
+# 說明
+#  
+# 目的:了解使用者喜愛哪組版標
+# 
+# - 測試方法
+#  
+#     同時進行二種版標測試
+#     由20組分成二大組
+#     依據點擊次數進行評估
+#     進行二周
+# 
+# - 分組:EDDY提供組別
+# - 測試時間:1/15~1/31
+# - 觀察指標:1.兩組點擊狀況2.各版標類型點擊狀況
+# - 報告時間:2/3
+# - 目前APP版本:2.2.4(含)
+# =================================================================================================
 
-create table plsport_playsport._app_action_log engine = myisam
-SELECT * FROM plsport_playsport.app_action_log
-where date(datetime) between '2014-12-12' and '2014-12-17'
-and os = 1 and app = 1;
+# 要先匯入app_actioin_log
 
-create table plsport_playsport._app_action_log_1 engine = myisam
-SELECT deviceid, abtestgroup, devicemodel, count(id) as c 
-FROM plsport_playsport._app_action_log
-group by deviceid, abtestgroup, devicemodel;
+create table plsport_playsport._app_action_log engine=myisam 
+SELECT * FROM
+    plsport_playsport.app_action_log
+where
+    app = 1 and os = 1 #app=1即時比分, os=1是andriod 
+        and appversion in ( '2.2.4', 
+							'2.2.5',
+							'2.2.6',
+							'2.2.7',
+							'2.2.8',
+							'2.2.9',
+							'2.3.0',
+							'2.3.1'); # ver2.2.4~2.2.8都是用新的log
 
-SELECT abtestgroup, count(deviceid) as c 
-FROM plsport_playsport._app_action_log_1
-group by abtestgroup;
-
-# 2014-12-24 寫的分組觀察SQL
-create table plsport_playsport._app_action_log engine = myisam
-SELECT * FROM plsport_playsport.app_action_log
-where app = 1 and os = 1 and substr(appversion,5,1) in (4,5,6,7,8); 
-#                                                       ver2.2.4~2.2.8都是用新的log
+		ALTER TABLE plsport_playsport._app_action_log ADD INDEX (`userid`,`datetime`,`deviceid`,`devicemodel`);
 
 # 排除掉重覆送出的log, 小呆已修正此問題, 但之後撈app_action_log都還是要執行一下此段SQL
 create table plsport_playsport._app_action_log_0 engine = myisam
@@ -9186,6 +9199,38 @@ from (
 	where abtestgroup <> 0 # 除了0不用看, 看1~20組
 	group by deviceid, abtestgroup) as a
 group by a.abtestgroup;
+
+create table plsport_playsport._app_action_log_1 engine = myisam
+SELECT * FROM plsport_playsport._app_action_log_0
+where action = 'clicktitle'
+and datetime between '2015-01-15 09:30:00' and now() # ab testing開始時間
+order by datetime desc;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9242,3 +9287,36 @@ SELECT abtest, c, count(userid) as click_count
 FROM actionlog.action_201501_check4 
 group by abtest, c;
 
+
+# 任務: 紅陽金流程式串接 - A/B testing [新建]
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4145&projectId=11
+# 要先匯入
+#    (1) member
+#    (2) order_data
+
+create table plsport_playsport._order_data_check engine = myisam
+SELECT id, userid, createon, ordernumber, price, payway, sellconfirm, create_from, platform_type 
+FROM plsport_playsport.order_data
+where createon between '2015-01-14 15:12:00' and now()
+and platform_type in (2,3)
+and payway in (1,10)
+and userid <> 'a9991';
+
+create table plsport_playsport._order_data_check_1 engine = myisam
+SELECT a.id, (b.id%20)+1 as g, a.userid, b.nickname, a.createon, a.ordernumber, a.price, a.payway, a.sellconfirm, a.create_from, a.platform_type 
+FROM plsport_playsport._order_data_check a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._order_data_check_2 engine = myisam
+SELECT id, g, (case when (g in (7,8,9,10,11,12)) then 'redsun' else 'bluestar' end) as paymethon, 
+       userid, nickname, date(createon) as d, ordernumber, price, payway, sellconfirm, create_from, platform_type 
+FROM plsport_playsport._order_data_check_1
+order by g;
+
+create table plsport_playsport._order_data_check_3 engine = myisam
+SELECT g, paymethon, userid, nickname, d, payway, sellconfirm
+FROM plsport_playsport._order_data_check_2
+group by g, paymethon, userid, nickname, d, payway, sellconfirm;
+
+SELECT paymethon, sellconfirm, count(userid) as c
+FROM plsport_playsport._order_data_check_3
+group by paymethon, sellconfirm;
