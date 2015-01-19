@@ -312,16 +312,16 @@ insert ignore into prediction.p_main select * from prediction.p_2014;
 
                 create table prediction.p_main_edited engine = myisam
                 SELECT userid, gameid, allianceid, 
-						(case when (allianceid=1) then  'MLB' /*只分出主要熱門聯盟*/
-							  when (allianceid=2) then  '日棒'
-							  when (allianceid=3) then  'NBA'
-							  when (allianceid=4) then  '足球'
-							  when (allianceid=6) then  '中華職棒'
-							  when (allianceid=9) then  '韓棒'
-							  when (allianceid=91) then 'NHL'
-							  when (allianceid=92) then '韓籃'
-							  when (allianceid=97) then '日籃'
-							  else '其它' end) as alliance, gametype, createon, createMonth, createDay
+                        (case when (allianceid=1) then  'MLB' /*只分出主要熱門聯盟*/
+                              when (allianceid=2) then  '日棒'
+                              when (allianceid=3) then  'NBA'
+                              when (allianceid=4) then  '足球'
+                              when (allianceid=6) then  '中華職棒'
+                              when (allianceid=9) then  '韓棒'
+                              when (allianceid=91) then 'NHL'
+                              when (allianceid=92) then '韓籃'
+                              when (allianceid=97) then '日籃'
+                              else '其它' end) as alliance, gametype, createon, createMonth, createDay
                 FROM prediction.p_main;
 
                 create table prediction.p_main_edited_1 engine = myisam
@@ -418,7 +418,7 @@ group by ym;
 create table _order_data engine = myisam
 SELECT userid, amount as redeem, date, substr(date,1,7) as ym, year(date) as y, substr(date,6,2) as m 
 FROM pcash_log
-where payed = 1 and type in (3,4)
+where payed = 1 and type in (3,4,16) # 16是紅陽
 and date between '2012-01-01 00:00:00' and '2014-12-31 23:59:59';
 
 # 計算每個月有多少人儲值
@@ -528,79 +528,3 @@ where b.g is not null;
 SELECT g, sum(redeem_amount) as total, count(userid) as user_count
 FROM revenue._redeem_amount_with_cluster
 group by g;
-
-
-# ======================================================================================
-#    
-#    AARRR
-#
-# ======================================================================================
-select a.m, count(a.userid) as c
-from (
-    SELECT a.userid, substr(a.createon,1,7) as m 
-    FROM plsport_playsport.member a left join plsport_playsport._problem_members b on a.userid = b.userid
-    where b.userid is null) as a
-group by a.m;
-
-
-# ======================================================================================
-#    2014/3/6 柔雅開的任務
-#    D2,D3最近3個月有買過預測的人,電話有多少
-#
-# ======================================================================================
-use revenue;
-create table revenue._spent_amount_within_90_days engine = myisam /*最近90天(3個月內)有購買預測的人*/
-select a.userid, sum(a.amount) as total_spent
-from (
-    SELECT * 
-    FROM revenue._pcash_log
-    where c_date between subdate(now(),90) and now()
-    order by c_date) as a
-group by a.userid;
-
-ALTER TABLE revenue._from_r_with_real_userid ADD INDEX (`userid`);
-ALTER TABLE revenue._spent_amount_within_90_days ADD INDEX (`userid`);
-
-create table revenue._from_r_with_real_userid_with_spent engine = myisam
-SELECT a.userid, a.g, b.total_spent 
-FROM revenue._from_r_with_real_userid a left join revenue._spent_amount_within_90_days b on a.userid = b.userid
-where b.total_spent is not null;
-
-create table revenue._order_data_phone engine = myisam
-SELECT userid, name, phone, max(createon) as d, count(userid) as c
-FROM revenue.order_data
-where sellconfirm = 1 and name <> ' '
-group by userid, name ;
-
-ALTER TABLE revenue._from_r_with_real_userid_with_spent ADD INDEX (`userid`);
-ALTER TABLE revenue._order_data_phone ADD INDEX (`userid`);
-
-create table revenue._from_r_with_real_userid_with_spent_ok engine = myisam
-SELECT a.userid, b.name, a.g, a.total_spent, b.phone 
-FROM revenue._from_r_with_real_userid_with_spent a left join revenue._order_data_phone b on a.userid = b.userid;
-
-update revenue._from_r_with_real_userid_with_spent_ok set name = replace(name, '&','');
-update revenue._from_r_with_real_userid_with_spent_ok set name = replace(name, '#','');
-update revenue._from_r_with_real_userid_with_spent_ok set name = replace(name, ';','');
-update revenue._from_r_with_real_userid_with_spent_ok set name = replace(name, ' ','');
-
-select 'userid', 'name', 'group', 'total_spent', 'phone' union(
-SELECT *
-into outfile 'C:/Users/1-7_ASUS/Desktop/text_message_campaign_201403.csv' 
-fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
-FROM revenue._from_r_with_real_userid_with_spent_ok);
-
-
-# 2014/6/6 action_log計算每個log的平台的次數(造訪裝置的佔比)
-create table actionlog.action_201312_platform_type
-SELECT platform_type, count(id) as c FROM actionlog.action_201312 group by platform_type;
-create table actionlog.action_201401_platform_type
-SELECT platform_type, count(id) as c FROM actionlog.action_201401 group by platform_type;
-create table actionlog.action_201402_platform_type
-SELECT platform_type, count(id) as c FROM actionlog.action_201402 group by platform_type;
-create table actionlog.action_201403_platform_type
-SELECT platform_type, count(id) as c FROM actionlog.action_201403 group by platform_type;
-create table actionlog.action_201404_platform_type
-SELECT platform_type, count(id) as c FROM actionlog.action_201404 group by platform_type;
-create table actionlog.action_201405_platform_type
-SELECT platform_type, count(id) as c FROM actionlog.action_201405 group by platform_type;
