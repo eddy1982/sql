@@ -4306,7 +4306,7 @@ from (
     SELECT userid, subjectid, allianceid, date(got_time) as d, substr(got_time,1,7) as m, year(got_time) as y
     FROM plsport_playsport.analysis_king
     where allianceid = 3 # NBA 
-    and got_time between '2014-12-23 00:00:00' and '2015-01-06 23:59:59') as a
+    and got_time between '2015-01-07 00:00:00' and '2015-01-20 23:59:59') as a
 group by a.d, a.allianceid;
 
 # (2)分析文總數
@@ -4316,7 +4316,7 @@ from (
     FROM plsport_playsport.forum
     where gametype = 1 # 分析文
     and allianceid = 3 # NBA 
-    and posttime between '2014-12-23 00:00:00' and '2015-01-06 23:59:59'
+    and posttime between '2015-01-07 00:00:00' and '2015-01-20 23:59:59'
     order by posttime) as a
 group by a.d, a.allianceid;
 
@@ -4362,7 +4362,7 @@ from (
 create table actionlog._forumdetail_2 engine = myisam
 SELECT userid, uri, time, s as subjectid 
 FROM actionlog._forumdetail_1
-where ss=15;
+where ss=15; # 只撈取正確的subjectid, 有很多subjectid都怪怪的, 長度15是標準的
 
 create table actionlog._forumdetail_3 engine = myisam
 SELECT userid, date(time) as d, subjectid 
@@ -4404,21 +4404,21 @@ SELECT a.subjectid, a.userid, a.score, a.datetime
 FROM plsport_playsport.forum_analysis_score a inner join plsport_playsport._nba_analysis_post b on a.subjectid = b.subjectid;
 
 
-# 區間內看分析文的人數
-select count(a.userid)
-from (
-	SELECT userid, count(userid)
-	FROM actionlog._forumdetail_5
-	where d between '2014-11-24' and '2014-12-10'
-	group by userid) as a;
+			# 區間內看分析文的人數
+			select count(a.userid)
+			from (
+				SELECT userid, count(userid)
+				FROM actionlog._forumdetail_5
+				where d between '2014-11-24' and '2014-12-10'
+				group by userid) as a;
 
-# 區間內看分析文的人數又有評分的人數
-select count(a.userid)
-from (
-	SELECT userid, count(userid) 
-	FROM plsport_playsport._score_on_nba_analysis_post
-	where date(datetime) between '2014-11-24' and '2014-12-10'
-	group by userid) as a;
+			# 區間內看分析文的人數又有評分的人數
+			select count(a.userid)
+			from (
+				SELECT userid, count(userid) 
+				FROM plsport_playsport._score_on_nba_analysis_post
+				where date(datetime) between '2014-11-24' and '2014-12-10'
+				group by userid) as a;
 
 # 每日看分析文的人數
 select a.d, count(a.userid) as user_count
@@ -5659,8 +5659,6 @@ FROM plsport_playsport._medal_fire_basketball_int_ok a left join plsport_playspo
 where b.userid is null;
 
 
-
-
 # =================================================================================================
 # 任務: 發文推點擊偵測 [新建] (靜怡)
 # 
@@ -5719,7 +5717,6 @@ group by b.d;
 # #top
 # pushit_bottom
 # pushit_top
-
 
 
 # =================================================================================================
@@ -5883,7 +5880,6 @@ create table plsport_playsport._list_0 engine = myisam
 select * from plsport_playsport._who_use_offer;
 insert ignore into plsport_playsport._list_0 
 select * from plsport_playsport._who_dont_use_offer;
-
 
 create table plsport_playsport._full_revenue_0 engine = myisam
 SELECT userid, createon, price, payway, create_from
@@ -9322,8 +9318,215 @@ order by datetime desc;
 
 
 
+#APP的pv檢察-阿達看到即時比分app人數好像少很多
+
+create table plsport_playsport._app_action_log_check_1 engine = myisam
+SELECT action, remark, deviceid,datetime, substr(datetime,9,2) as d, substr(datetime,12,2) as h 
+FROM plsport_playsport._app_action_log_0
+where month(datetime)=1;
+
+create table plsport_playsport._app_action_log_check_2 engine = myisam
+SELECT deviceid, d, h, count(action) as c 
+FROM plsport_playsport._app_action_log_check_1
+group by deviceid, d, h;
+
+SELECT d, h, count(deviceid) as device_count 
+FROM plsport_playsport._app_action_log_check_2
+group by d, h;
 
 
+
+
+# =================================================================================================
+# 任務: 研究月底業績趨向 [新建] (阿達) 2015-01-19
+# 說明
+# 
+# 研究月底( 21~30)跟其他時段是否有差異，如果有差異，可考慮調整單殺規則
+# 負責人：Eddy
+#  
+# 研究內容
+#  
+# 1. 整體業績
+# 2. 單場殺手、雙重殺手販售額
+# =================================================================================================
+
+# 此任務主要應觀察購買預測金額, 而不是儲值噱幣, 應撈pcash_log
+
+use revenue;
+
+/*處理pcash_log, 會員購買預測的相關資訊*/
+create table _pcash_log engine = myisam
+select userid, amount, date(date) as c_date, month(date) as c_month, year(date) as c_year, substr(date,1,7) as ym, id_this_type
+from pcash_log
+where payed = 1 and type = 1
+and date between '2012-01-01 00:00:00' and now();
+
+create table revenue._predict_seller_with_medal engine = myisam
+SELECT id, sellerid, mode, sale_allianceid, sale_gameid, sale_date, substr(sale_date,1,7) as m, substr(sale_date,1,10) as d, sale_price, buyer_count, rank, rank_sk, selltype,
+       (case when (selltype = 1) then '莊殺'
+             when (selltype = 2) then '單殺'
+             when (selltype = 3) then '雙殺' end ) as killtype,
+       (case when (rank <11 and selltype = 1) then '金牌'
+             when (rank <31 and selltype = 1) then '銀牌'
+             when (rank <52 and selltype = 1) then '銅牌'
+             when (rank_sk< 11 and selltype = 2) then '金牌'
+             when (rank_sk< 31 and selltype = 2) then '銀牌'
+             when (rank_sk< 52 and selltype = 2) then '銅牌'
+             when (rank < 11 and selltype = 3) then '金牌'
+             when (rank_sk < 11 and selltype = 3) then '金牌' else '銀牌' end) as killmedal     
+FROM revenue.predict_seller /*最好是指定精確的日期區間*/
+where sale_date between '2011-12-15 00:00:00' and now(); /*<====記得要改*/
+
+create table revenue._alliance engine = myisam
+SELECT allianceid, alliancename
+FROM revenue.alliance;
+
+		ALTER TABLE  _pcash_log ADD INDEX (`id_this_type`);       /*index*/
+		ALTER TABLE  _predict_seller_with_medal ADD INDEX (`id`); /*index*/
+		ALTER TABLE  _alliance ADD INDEX (`allianceid`);          /*index*/
+
+create table _pcash_log_with_detailed_info engine = myisam
+select c.userid, c.amount, c.c_date, c.c_month, c.c_year, c.ym,
+       c.id, c.sellerid, c.sale_allianceid, d.alliancename, c.sale_date, c.sale_price, c.killtype, c.killmedal
+from (
+    SELECT a.userid, a.amount, a.c_date, a.c_month, a.c_year, a.ym, 
+           b.id, b.sellerid, b.sale_allianceid, b.sale_date, b.sale_price, b.killtype, b.killmedal
+    FROM revenue._pcash_log a left join revenue._predict_seller_with_medal b on a.id_this_type = b.id) as c
+left join _alliance as d on c.sale_allianceid = d.allianceid;
+
+create table _pcash_log_with_detailed_info_1 engine = myisam
+SELECT userid, amount, c_date as date, substr(c_date,1,7) as m, substr(c_date,9,2) as d, sellerid, sale_allianceid, alliancename, killtype, killmedal  
+FROM revenue._pcash_log_with_detailed_info;
+
+create table _pcash_log_with_detailed_info_2 engine = myisam
+SELECT userid, amount, date, m, d, 
+       (case when (d<11) then 'early' when (d<21) then 'mid' else 'late' end) as p,
+       sellerid, sale_allianceid, alliancename, killtype, killmedal
+FROM revenue._pcash_log_with_detailed_info_1;
+
+# 全體業績
+SELECT m, p, sum(amount) as sale 
+FROM revenue._pcash_log_with_detailed_info_2
+group by m, p;
+
+# 分組業績 - 單場殺手
+SELECT m, p, sum(amount) as sale 
+FROM revenue._pcash_log_with_detailed_info_2
+where killtype = '單殺'
+group by m, p;
+
+SELECT m, p, sum(amount) as sale 
+FROM revenue._pcash_log_with_detailed_info_2
+where killtype = '莊殺'
+group by m, p;
+
+SELECT m, p, sum(amount) as sale 
+FROM revenue._pcash_log_with_detailed_info_2
+where killtype = '雙殺'
+group by m, p;
+
+
+# =================================================================================================
+# 任務: [201411-D-3]開發討論區會員等級-工程測試名單撈取 [新建] (靜怡) 2015-01-22
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4199&projectId=11
+# 提供測試名單
+# 內容
+#  
+# - 撈取在討論區活躍的使用者20名
+#     發文、回文、推數高者
+#     撰寫分析文高者
+# 
+# - 提供時間:1/22
+# =================================================================================================
+
+create table plsport_playsport._post_count engine = myisam
+SELECT postuser, count(subjectid) as post_count 
+FROM plsport_playsport.forum
+where postuser <> ''
+group by postuser;
+
+create table plsport_playsport._reply_count engine = myisam
+SELECT userid, count(subjectid) as reply_count 
+FROM plsport_playsport.forumcontent
+where userid <> ''
+group by userid;
+
+create table plsport_playsport._like_count engine = myisam
+SELECT postuser, sum(pushcount) as got_like 
+FROM plsport_playsport.forum
+where postuser <> ''
+group by postuser;
+
+create table plsport_playsport._analysis_count engine = myisam
+select postuser, count(subjectid) as analysis_count
+FROM plsport_playsport.forum
+where gametype = 1
+and postuser <> ''
+group by postuser;
+
+create table plsport_playsport._post_count_1 engine = myisam
+select postuser, post_count, round((cnt-rank+1)/cnt,2) as post_p
+from (SELECT postuser, post_count, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._post_count, (SELECT @curRank := 0) r
+      order by post_count desc) as dt,
+     (select count(distinct postuser) as cnt from plsport_playsport._post_count) as ct;
+
+create table plsport_playsport._reply_count_1 engine = myisam
+select userid, reply_count, round((cnt-rank+1)/cnt,2) as reply_p
+from (SELECT userid, reply_count, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._reply_count, (SELECT @curRank := 0) r
+      order by reply_count desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._reply_count) as ct;
+
+create table plsport_playsport._like_count_1 engine = myisam
+select postuser, got_like, round((cnt-rank+1)/cnt,2) as like_p
+from (SELECT postuser, got_like, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._like_count, (SELECT @curRank := 0) r
+      order by got_like desc) as dt,
+     (select count(distinct postuser) as cnt from plsport_playsport._like_count) as ct;
+
+create table plsport_playsport._analysis_count_1 engine = myisam
+select postuser, analysis_count, round((cnt-rank+1)/cnt,2) as analysis_p
+from (SELECT postuser, analysis_count, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._analysis_count, (SELECT @curRank := 0) r
+      order by analysis_count desc) as dt,
+     (select count(distinct postuser) as cnt from plsport_playsport._analysis_count) as ct;
+
+		ALTER TABLE plsport_playsport._post_count_1 ADD INDEX (`postuser`);   /*index*/
+		ALTER TABLE plsport_playsport._reply_count_1 ADD INDEX (`userid`);   /*index*/
+		ALTER TABLE plsport_playsport._like_count_1 ADD INDEX (`postuser`);   /*index*/
+		ALTER TABLE plsport_playsport._analysis_count_1 ADD INDEX (`postuser`);   /*index*/
+
+create table plsport_playsport._list1 engine = myisam
+SELECT a.userid, a.nickname, b.post_count, b.post_p
+FROM plsport_playsport.member a left join plsport_playsport._post_count_1 b on a.userid = b.postuser;
+
+create table plsport_playsport._list2 engine = myisam
+SELECT a.userid, a.nickname, a.post_count, a.post_p, b.reply_count, b.reply_p
+FROM plsport_playsport._list1 a left join plsport_playsport._reply_count_1 b on a.userid = b.userid
+where b.reply_count is not null;
+
+create table plsport_playsport._list3 engine = myisam
+SELECT a.userid, a.nickname, a.post_count, a.post_p, a.reply_count, a.reply_p, b.got_like, b.like_p
+FROM plsport_playsport._list2 a left join plsport_playsport._like_count_1 b on a.userid = b.postuser;
+
+create table plsport_playsport._list4 engine = myisam
+SELECT a.userid, a.nickname, a.post_count, a.post_p, a.reply_count, a.reply_p, a.got_like, a.like_p, b.analysis_count, b.analysis_p
+FROM plsport_playsport._list3 a left join plsport_playsport._analysis_count_1 b on a.userid = b.postuser;
+
+create table plsport_playsport._list5 engine = myisam
+SELECT * 
+FROM plsport_playsport._list4
+where post_count is not null
+and post_p > 0.98     # 發文需在前98%
+and analysis_count is not null
+order by analysis_count desc;
+
+SELECT 'userid', 'nickname', '貼文', '%','回文','%','得到推','%','分析文','%' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/forum_level_simulator.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list5);
 
 
 
