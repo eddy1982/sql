@@ -8671,7 +8671,6 @@ FROM plsport_playsport._list_6 a left join plsport_playsport._city_info_ok_with_
 
 # 2015-01-23 要再新增"預測點擊天數"
 
-
         ALTER TABLE prediction.p_recently ADD INDEX (`userid`, `createday`);
 
 create table plsport_playsport._list_7_prediction engine = myisam
