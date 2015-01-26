@@ -244,9 +244,9 @@ group by postyear, postmonth1, board, boardtype;
 -- ======================================================================================
 use prediction;
 
-create table prediction.prediction_201412 engine = myisam
+create table prediction.prediction_201501 engine = myisam
 SELECT * FROM plsport_playsport.prediction
-where date(createon) between '2014-12-01' and '2014-12-31';
+where date(createon) between '2015-01-01' and '2015-01-25';
 
 create table p_201401 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201401;
@@ -272,13 +272,15 @@ create table p_201411 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201411;
 create table p_201412 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201412;
+create table p_201501 engine = myisam
+select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201501;
 
         /*====使用者分群專用的====*/
-        create table prediction.p_recently engine = myisam select * from prediction.p_201405; /*近4個月預測資料, 看使用者分群要篩至多久前的記錄*/
-        insert ignore into prediction.p_recently select * from prediction.p_201406;
-        insert ignore into prediction.p_recently select * from prediction.p_201407;
-        insert ignore into prediction.p_recently select * from prediction.p_201408;
-        insert ignore into prediction.p_recently select * from prediction.p_201409;
+        create table prediction.p_recently engine = myisam select * from prediction.p_201409; /*近4個月預測資料, 看使用者分群要篩至多久前的記錄*/
+        insert ignore into prediction.p_recently select * from prediction.p_201410;
+        insert ignore into prediction.p_recently select * from prediction.p_201411;
+        insert ignore into prediction.p_recently select * from prediction.p_201412;
+        insert ignore into prediction.p_recently select * from prediction.p_201501;
 
                     create table prediction.p_2013 engine = myisam select * from prediction.p_201301;
                     insert ignore into prediction.p_2013 select * from prediction.p_201302;
