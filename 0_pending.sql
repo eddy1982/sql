@@ -2272,7 +2272,6 @@ SELECT phone, id, userid, total_redeem, last_time_login, text_campaign, abtest_g
        (case when (abtest_group>6) then 'hold' else 'sent' end) as status # 60:40 發送/不發
 FROM textcampaign._list5;
 
-
         # 給yoyo8簡訊發送
         select 'phone', '使用者編號id', '簡訊行銷' union (
         SELECT phone, id, text_campaign
@@ -2289,6 +2288,102 @@ FROM textcampaign._list5;
         fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
         FROM textcampaign._list6
         where status = 'sent'); # 只撈出有要發送的
+        
+create table textcampaign.retention_20150114_full_list_dont_delete engine = myisam
+SELECT * FROM textcampaign._list6;        
+
+
+# 以下是追蹤的部分 2015-01-26
+
+# 先匯入billrec_playsport_1422255478_簡訊發送結果.txt
+use textcampaign;
+
+create table textcampaign._text_sent_status engine = myisam
+SELECT concat('0',one) as phone, type, stas, date 
+FROM textcampaign.text_sent_status;
+
+create table textcampaign._list1 engine = myisam
+SELECT a.phone,  a.id,  a.userid,  a.total_redeem,  a.last_time_login,  a.text_campaign,  a.abtest_group,  a.status, b.stas
+FROM textcampaign.retention_20150114_full_list_dont_delete a left join textcampaign._text_sent_status b on a.phone = b.phone;
+
+# 發送佔比
+SELECT abtest_group, status, count(phone) as c 
+FROM textcampaign.retention_20150114_full_list_dont_delete
+group by abtest_group, status;
+
+# 1	sent	358
+# 2	sent	392
+# 3	sent	362
+# 4	sent	363
+# 5	sent	363
+# 6	sent	364
+# 7	hold	355
+# 8	hold	317
+# 9	hold	342
+# 10	hold	351
+
+SELECT status, count(phone) as c 
+FROM textcampaign.retention_20150114_full_list_dont_delete
+group by status;
+
+# hold	1365
+# sent	2202 (494失敗)
+
+# 發送狀況檢察
+SELECT status, stas, count(phone) as c 
+FROM textcampaign._list1
+group by status, stas;
+
+
+create table textcampaign._list2 engine = myisam # 1708名
+SELECT * 
+FROM textcampaign._list1
+where status = 'sent'
+and stas is null;
+
+
+
+create table textcampaign._coupon_window_pop_up engine = myisam
+SELECT userid, outflowMember, (case when (outflowMember is not null) then 'see_pop' else '' end) as see
+FROM plsport_playsport.showmessage
+where outflowmember is not null
+order by outflowMember;
+
+create table textcampaign._list3 engine = myisam
+SELECT a.phone,  a.id,  a.userid,  a.total_redeem,  a.last_time_login,  a.text_campaign,  a.abtest_group,  a.status, a.stas, b.see
+FROM textcampaign._list2 a left join textcampaign._coupon_window_pop_up b on a.userid = b.userid;
+
+create table textcampaign._receive_coupon engine = myisam
+SELECT tou, title, date, remarks 
+FROM plsport_playsport.mailpcash_list
+where title like '%恭喜獲得兌換券%';
+
+create table textcampaign._list4 engine = myisam
+SELECT a.phone,  a.id,  a.userid,  a.total_redeem,  a.last_time_login,  a.text_campaign,  a.abtest_group,  a.status, a.stas, a.see, b.remarks
+FROM textcampaign._list3 a left join textcampaign._receive_coupon b on a.userid = b.tou;
+
+create table textcampaign._spent engine = myisam
+SELECT userid, sum(amount) as spent 
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date between '2015-01-14 18:00:00' and '2015-01-26 18:00:00'
+group by userid;
+
+create table textcampaign._list5 engine = myisam
+SELECT a.userid, a.text_campaign,  a.abtest_group,  a.status, a.stas, a.see, a.remarks, b.spent
+FROM textcampaign._list4 a left join textcampaign._spent b on a.userid = b.userid;
+
+
+create table textcampaign._list5_hold engine = myisam
+SELECT a.userid, a.text_campaign,  a.abtest_group, a.status, a.stas, b.spent
+FROM textcampaign._list1 a left join textcampaign._spent b on a.userid = b.userid
+where a.status = 'hold';
+
+
+
+
+
+
 
 
 
@@ -2776,7 +2871,6 @@ FROM actionlog._action_position_3
 group by rp;
 
 
-
 # 這個部分才開始做任務的研究
 
 create table actionlog._action_position_3_HT_only engine = myisam
@@ -2838,33 +2932,13 @@ SELECT g, userid, version, sum(buy_price) as spent
 FROM plsport_playsport._predict_buyer_with_cons_only_ht_revenue
 group by g, userid, version;
 
-
-
-
 SELECT version, count(userid), sum(click)  
 FROM actionlog._action_position_3_ht_only_click_count
 group by version;
 
-
 SELECT version, count(userid), sum(spent) 
 FROM plsport_playsport._predict_buyer_with_cons_only_ht_revenue_ok
 group by version;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
