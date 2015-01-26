@@ -9666,17 +9666,6 @@ FROM plsport_playsport._list5);
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 # 任務: [201406-A-8] 個人預測頁左下欄位改成戰績 - A/B testing [新建]
 # 
 # 說明
