@@ -2342,7 +2342,7 @@ where status = 'sent'
 and stas is null;
 
 
-
+# 回網站跳出訊息
 create table textcampaign._coupon_window_pop_up engine = myisam
 SELECT userid, outflowMember, (case when (outflowMember is not null) then 'see_pop' else '' end) as see
 FROM plsport_playsport.showmessage
@@ -2353,6 +2353,7 @@ create table textcampaign._list3 engine = myisam
 SELECT a.phone,  a.id,  a.userid,  a.total_redeem,  a.last_time_login,  a.text_campaign,  a.abtest_group,  a.status, a.stas, b.see
 FROM textcampaign._list2 a left join textcampaign._coupon_window_pop_up b on a.userid = b.userid;
 
+# 個人信箱獲得兌換券派送訊息
 create table textcampaign._receive_coupon engine = myisam
 SELECT tou, title, date, remarks 
 FROM plsport_playsport.mailpcash_list
@@ -2369,21 +2370,52 @@ where payed = 1 and type = 1
 and date between '2015-01-14 18:00:00' and '2015-01-26 18:00:00'
 group by userid;
 
+# (1)有發送的
 create table textcampaign._list5 engine = myisam
 SELECT a.userid, a.text_campaign,  a.abtest_group,  a.status, a.stas, a.see, a.remarks, b.spent
 FROM textcampaign._list4 a left join textcampaign._spent b on a.userid = b.userid;
 
-
+# (2)沒有發送的
 create table textcampaign._list5_hold engine = myisam
 SELECT a.userid, a.text_campaign,  a.abtest_group, a.status, a.stas, b.spent
 FROM textcampaign._list1 a left join textcampaign._spent b on a.userid = b.userid
 where a.status = 'hold';
 
 
+# 星期二下午柔雅要求要補充的資訊
+# 想要了解說，收到簡訊->回來領券->使用兌換券，的使用者的比例是多少，
+# 若兌換券對他們而言是有吸引力的，那他們應該會依照上面的步驟進行，
+# 請查詢，他們回來領完券後，一天內，是否有使用兌換券，而這個的比例是多少?
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=2269&projectId=11
 
+# 匯入coupon_used_detail
 
+# 在區間內使用抵用兌的記錄
+create table textcampaign._coupon_used engine = myisam
+SELECT userid, count(id) as coupon_used_count 
+FROM plsport_playsport.coupon_used_detail
+where type = 1
+and date between '2015-01-14 18:00:00' and '2015-01-26 18:00:00'
+group by userid;
 
+# 完成
+SELECT a.userid, text_campaign, abtest_group, status, stas, see, remarks, spent, coupon_used_count
+FROM textcampaign._list5 a left join textcampaign._coupon_used b on a.userid = b.userid;
 
+# 社群會議後, 福利班補充要了解有多少人點擊了簡訊中的連結
+# 文案:【限時獨享】立即登入玩運彩，送您金牌兌換券、免費看殺手預測《限量100份，先領先贏》 http://playsport.cc/ad/16
+# http://www.playsport.cc/forum.php?ft=0&s=a&ft=0&utm_source=phone&utm_medium=text&utm_content=retention_a_20150114&utm_campaign=retention_a_20150114
+
+create table textcampaign._who_click_link_in_text engine = myisam
+SELECT userid, uri, time, platform_type, cookie_stamp, user_agent
+FROM actionlog.action_201501
+where uri like '%utm_content=retention_a_20150114%'
+and time between '2015-01-14 18:00:00' and '2015-01-26 18:00:00';
+
+SELECT userid, uri, cookie_stamp, date(min(time)) as time # 排除掉cookie重覆的記錄, 可以分析了
+FROM textcampaign._who_click_link_in_text
+group by userid, uri, cookie_stamp
+order by time;
 
 
 
@@ -9409,6 +9441,8 @@ where
     app = 1 and os = 1 #app=1即時比分, os=1是andriod 
         and appversion in ( '2.2.4','2.2.5','2.2.6','2.2.7',
                             '2.2.8','2.2.9','2.3.0','2.3.1'); # ver2.2.4~2.3.1都是用新的log
+                            
+# 2.3.2 新增記錄坐標功能 (update:2015/1/27)
 
         ALTER TABLE plsport_playsport._app_action_log ADD INDEX (`userid`,`datetime`,`deviceid`,`devicemodel`);
 
@@ -9564,6 +9598,7 @@ SELECT postuser, count(subjectid) as post_count
 FROM plsport_playsport.forum
 where postuser <> ''
 group by postuser;
+
 
 create table plsport_playsport._reply_count engine = myisam
 SELECT userid, count(subjectid) as reply_count 
@@ -9722,25 +9757,59 @@ create table plsport_playsport._order_data_check engine = myisam
 SELECT id, userid, createon, ordernumber, price, payway, sellconfirm, create_from, platform_type 
 FROM plsport_playsport.order_data
 where createon between '2015-01-14 15:12:00' and now()
-and platform_type in (2,3)
-and payway in (1,10)
-and userid <> 'a9991';
+and platform_type in (2,3) # 手機/平板
+and payway in (1,10)       # 1: 一般信用卡, 2:紅陽
+and userid <> 'a9991';     # 這個是測試帳號
 
-create table plsport_playsport._order_data_check_1 engine = myisam
+create table plsport_playsport._order_data_check_1 engine = myisam # 補上nickname
 SELECT a.id, (b.id%20)+1 as g, a.userid, b.nickname, a.createon, a.ordernumber, a.price, a.payway, a.sellconfirm, a.create_from, a.platform_type 
 FROM plsport_playsport._order_data_check a left join plsport_playsport.member b on a.userid = b.userid;
 
 create table plsport_playsport._order_data_check_2 engine = myisam
-SELECT id, g, (case when (g in (7,8,9,10,11,12)) then 'redsun' else 'bluestar' end) as paymethon, 
+SELECT id, g, (case when (g in (7,8,9,10,11,12)) then 'redsun' else 'bluestar' end) as paymethon, # 30%的人是用紅陽, 其它是藍新
        userid, nickname, date(createon) as d, ordernumber, price, payway, sellconfirm, create_from, platform_type 
 FROM plsport_playsport._order_data_check_1
 order by g;
 
-create table plsport_playsport._order_data_check_3 engine = myisam
+create table plsport_playsport._order_data_check_3 engine = myisam # 排除掉重覆在送出訂單前點擊的人
 SELECT g, paymethon, userid, nickname, d, payway, sellconfirm
 FROM plsport_playsport._order_data_check_2
 group by g, paymethon, userid, nickname, d, payway, sellconfirm;
 
-SELECT paymethon, sellconfirm, count(userid) as c
+SELECT paymethon, sellconfirm, count(userid) as c # 可以用a/b testing計算機來算了
 FROM plsport_playsport._order_data_check_3
 group by paymethon, sellconfirm;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SELECT * FROM plsport_playsport.app_action_log
+where app = 1 and os = 1 #app=1即時比分, os=1是andriod 
+and appversion in ('2.3.2');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
