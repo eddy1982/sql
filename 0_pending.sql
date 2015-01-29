@@ -9157,6 +9157,186 @@ FROM plsport_playsport._forum_like2);
 
 
 # =================================================================================================
+# 任務: [201408-A-10]開發回文推功能-使用狀況報告 [新建] (靜怡) 2015-01-29
+# 目的:了解使用者對回文推的使用狀況
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4192&projectId=11
+# 內容
+# - 觀察時間:1/15~1/29
+# - 觀察指標
+#     使用率達16%以上(有看討論區的使用者)
+#     滿意度問卷4分以上
+#     回文數
+# 
+# - 報告時間:1/30 
+# =================================================================================================
+
+# 先匯入 (1)forum_reply_like 回文推
+#        (2)forum_like 發文推
+
+# (1)誰看過討論區
+create table actionlog._who_visit_forum engine = myisam
+SELECT userid, uri, date(time) as d 
+FROM actionlog.action_201501
+where time between '2015-01-15 14:00:00' and '2015-01-28 23:59:59'
+and uri like '%/forum%'
+and userid <> '';
+
+# (2)發文推
+create table plsport_playsport._forum_like engine = myisam
+SELECT subject_id as subjectid, userid, date(create_date) as d 
+FROM plsport_playsport.forum_like
+where create_date between '2015-01-15 14:00:00' and '2015-01-28 23:59:59';
+
+# (3)回文推
+create table plsport_playsport._forum_reply_like engine = myisam
+SELECT subjectid, userid, date(create_date) as d 
+FROM plsport_playsport.forum_reply_like
+where create_date between '2015-01-15 14:00:00' and '2015-01-28 23:59:59';
+
+
+create table actionlog._who_visit_forum_1 engine = myisam
+SELECT d, userid, count(uri) as c 
+FROM actionlog._who_visit_forum
+group by d, userid;
+
+create table actionlog._who_visit_forum_2 engine = myisam
+SELECT d, count(userid) as forum_visit_user_count 
+FROM actionlog._who_visit_forum_1
+group by d;
+
+create table plsport_playsport._forum_like_1 engine = myisam
+select a.d, count(a.userid) as post_user_count 
+from (
+    SELECT userid, d, count(subjectid) as post_like_count 
+    FROM plsport_playsport._forum_like
+    group by userid, d) as a
+group by a.d;
+
+create table plsport_playsport._forum_reply_like_1 engine = myisam
+select a.d, count(a.userid) as reply_user_count
+from (
+    SELECT d, userid, count(subjectid) as c 
+    FROM plsport_playsport._forum_reply_like
+    group by d, userid) as a
+group by a.d;
+
+
+# 分析發文者、回文者、觀看者的問卷填寫結果
+# 
+# 問卷結果：http://www.playsport.cc/questionnaire.php?question=replyLike&action=statistics
+# 詳細結果下載：http://www.playsport.cc/questionnaire.php?question=replyLike&action=getCsv
+
+# 匯入 (1) forum
+#      (2) forumcontent
+#      (3) member
+
+create table actionlog._forum_pv engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._who_visit_forum
+group by userid;
+
+create table plsport_playsport._user_post engine = myisam
+SELECT postuser as userid, count(subjectid) as post_count
+FROM plsport_playsport.forum
+where posttime between '2015-01-15 14:00:00' and '2015-01-28 23:59:59'
+group by postuser;
+
+create table plsport_playsport._user_reply engine = myisam
+SELECT userid, count(subjectid) as reply_count
+FROM plsport_playsport.forumcontent
+where postdate between '2015-01-15 14:00:00' and '2015-01-28 23:59:59'
+group by userid;
+
+create table actionlog._forum_pv_1 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._forum_pv, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._forum_pv) as ct;
+
+create table plsport_playsport._user_post_1 engine = myisam
+select userid, post_count, round((cnt-rank+1)/cnt,2) as post_p
+from (SELECT userid, post_count, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._user_post, (SELECT @curRank := 0) r
+      order by post_count desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._user_post) as ct;
+
+create table plsport_playsport._user_reply_1 engine = myisam
+select userid, reply_count, round((cnt-rank+1)/cnt,2) as reply_p
+from (SELECT userid, reply_count, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._user_reply, (SELECT @curRank := 0) r
+      order by reply_count desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._user_reply) as ct;
+
+        ALTER TABLE actionlog._forum_pv_1 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._user_post_1 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._user_reply_1 convert to character set utf8 collate utf8_general_ci;
+
+        ALTER TABLE actionlog._forum_pv_1 ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._user_post_1  ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._user_reply_1 ADD INDEX (`userid`);
+
+create table plsport_playsport._list_1 engine = myisam 
+SELECT a.userid, a.nickname, b.pv, b.pv_p
+FROM plsport_playsport.member a left join actionlog._forum_pv_1 b on a.userid = b.userid;
+
+create table plsport_playsport._list_2 engine = myisam 
+SELECT a.userid, a.nickname, a.pv, a.pv_p, b.post_count, b.post_p
+FROM plsport_playsport._list_1 a left join plsport_playsport._user_post_1 b on a.userid = b.userid;
+
+create table plsport_playsport._list_3 engine = myisam 
+SELECT a.userid, a.nickname, a.pv, a.pv_p, a.post_count, a.post_p, b.reply_count, b.reply_p
+FROM plsport_playsport._list_2 a left join plsport_playsport._user_reply_1 b on a.userid = b.userid;
+
+create table plsport_playsport._list_4 engine = myisam 
+SELECT userid, nickname, pv_p, post_p, reply_p
+FROM plsport_playsport._list_3
+where pv is not null
+order by pv_p desc;
+
+create table plsport_playsport._list_5 engine = myisam
+select a.userid, a.nickname, a.pv_p, a.post_p, a.reply_p, (a.post_lv+a.reply_lv) as act, (case when (a.pv_p>0.79) then 1 else 0 end) as see
+from (
+    SELECT userid, nickname, pv_p, post_p, reply_p, (case when (post_p>0.79) then 1 else 0 end) as post_lv, 
+                                                    (case when (reply_p>0.79) then 1 else 0 end) as reply_lv
+    FROM plsport_playsport._list_4) as a;
+
+create table plsport_playsport._list_6 engine = myisam
+select a.userid, a.nickname, a.act, a.see, concat(a.act,a.see) as p
+from (
+    SELECT userid, nickname, (case when (act>0) then 1 else 0 end) as act, see
+    FROM plsport_playsport._list_5) as a;
+
+# 首先我先將討論區的使用者分為4種類型, 簡稱ABCD
+# 
+#     D: 通常在討論常發回文(前20%)的人, 也常看文(前20%)的人, 稱重度使用者
+#     C: 常在討論區看文(前20%), 但較少互動的人(後80%), 稱潛水者
+#     B: 常在討論區互動(前20%), 但又很少在看文, 這群人行為較特別, 人數只佔2%
+#     A: 不常發回文(後80%)且不常看文(後80%), 稱一般討論區使用者
+    
+create table plsport_playsport._list_7 engine = myisam
+SELECT userid, nickname, (case when (p=11) then 'vip' # D
+                               when (p=01) then 'see' # C
+                               when (p=10) then 'say' # B
+                               when (p=00) then 'nor' else 'XXX' end) as stat # A
+FROM plsport_playsport._list_6;
+
+create table plsport_playsport._list_8 engine = myisam
+SELECT a.userid, a.score, b.stat, a.recommend
+FROM plsport_playsport.questionnaire_replylike_answer a left join plsport_playsport._list_7 b on a.userid = b.userid
+where a.userid <> '';
+
+SELECT stat, avg(score) 
+FROM plsport_playsport._list_8
+group by stat;
+
+SELECT stat, score, count(userid) as c 
+FROM plsport_playsport._list_8
+group by stat, score;
+
+
+
+# =================================================================================================
 # 新增專案: 行銷企劃 - 1月nba分析王活動表格 [任務](學文) 2015-01-07
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4108&projectId=11
 # =================================================================================================
@@ -9466,8 +9646,6 @@ SELECT * FROM plsport_playsport._app_action_log_0
 where action = 'clicktitle'
 and datetime between '2015-01-15 09:30:00' and now() # ab testing開始時間
 order by datetime desc;
-
-
 
 
 
@@ -9783,33 +9961,27 @@ group by paymethon, sellconfirm;
 
 
 
+# 2015-01-29 
+# 用google map反查使用者位置, 需使用python
+# 
 
-
-
-
-
-
-
-
-
-
-
-
-
+create table plsport_playsport._user_location engine = myisam 
 SELECT * FROM plsport_playsport.app_action_log
 where app = 1 and os = 1 #app=1即時比分, os=1是andriod 
-and appversion in ('2.3.2');
+and appversion in ('2.3.2') and latitude is not null;
 
+create table plsport_playsport._user_location_1 engine = myisam 
+select a.deviceid, a.ip, a.latitude, a.longitude
+from (
+    SELECT deviceid, ip, latitude, longitude, max(datetime) as datetime, count(deviceid) as c
+    FROM plsport_playsport._user_location
+    group by deviceid, ip) as a
+limit 0, 50;
 
-
-
-
-
-
-
-
-
-
-
-
+# 單純輸出csv檔, 準備批次處理反向地理查
+SELECT 'deviceid', 'ip', 'latitude', 'longitude' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/user_location_1.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._user_location_1);
 
