@@ -5,36 +5,13 @@
 use actionlog;
 
 /*(1)簡化table*/
-create table _action_201401 engine = myisam select userid, uri, time from action_201401;
-create table _action_201402 engine = myisam select userid, uri, time from action_201402;
-create table _action_201403 engine = myisam select userid, uri, time from action_201403;
-create table _action_201404 engine = myisam select userid, uri, time from action_201404;
-create table _action_201405 engine = myisam select userid, uri, time from action_201405;
-create table _action_201406 engine = myisam select userid, uri, time from action_201406;
-create table _action_201407 engine = myisam select userid, uri, time from action_201407;
-create table _action_201408 engine = myisam select userid, uri, time from action_201408;
 create table _action_201409 engine = myisam select userid, uri, time from action_201409;
 create table _action_201410 engine = myisam select userid, uri, time from action_201410;
 create table _action_201411 engine = myisam select userid, uri, time from action_201411;
 create table _action_201412 engine = myisam select userid, uri, time from action_201412;
+create table _action_201501 engine = myisam select userid, uri, time from action_201501;
 
 /*(2)計算每個月的登入人數, 排除重覆的人*/
-create table __action_201401_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201401 group by userid;
-create table __action_201402_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201402 group by userid;
-create table __action_201403_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201403 group by userid;
-create table __action_201404_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201404 group by userid;
-create table __action_201405_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201405 group by userid;
-create table __action_201406_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201406 group by userid;
-create table __action_201407_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201407 group by userid;
-create table __action_201408_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201408 group by userid;
 create table __action_201409_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201409 group by userid;
 create table __action_201410_usercount engine = myisam
@@ -43,38 +20,21 @@ create table __action_201411_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201411 group by userid;
 create table __action_201412_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201412 group by userid;
+create table __action_201501_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from _action_201501 group by userid;
 -- note: 算完就可以drop, 要不然很佔空間
 
 -- 2014/1/2新增, 排除異常名單, 機器人
-ALTER TABLE  actionlog.__action_201401_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  actionlog.__action_201402_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  actionlog.__action_201403_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  actionlog.__action_201404_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  actionlog.__action_201405_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  actionlog.__action_201406_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  actionlog.__action_201407_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  actionlog.__action_201408_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  actionlog.__action_201409_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  actionlog.__action_201410_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  actionlog.__action_201411_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-ALTER TABLE  actionlog.__action_201412_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 -- 先執行 8_user_find_the robot_register
 
-ALTER TABLE  plsport_playsport._problem_members CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+        ALTER TABLE  actionlog.__action_201501_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+        ALTER TABLE  plsport_playsport._problem_members CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 
-select count(a.userid) from actionlog.__action_201401_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201402_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201403_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201404_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201405_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201406_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201407_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201408_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201409_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201410_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201411_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201412_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-
+select count(a.userid) from actionlog.__action_201501_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 
 -- ======================================================================================
 --  準備其它資料表
@@ -105,20 +65,22 @@ drop table if exists forum.forum_edited_export_1;
 
 create table forum.forum engine = myisam /*直接把匯入的移到forum裡*/
 select * from plsport_playsport.forum
-where date(posttime) between '2012-01-01' and '2014-12-31'
+where date(posttime) between '2012-01-01' and '2015-01-31'
 and postuser not like '%xiaojita%'; # 2014-11-13洗版po文機器人
 
-drop table if exists forum_temp.forumcontent_2014_;
+drop table if exists forum_temp.forumcontent_2015_;
 drop table if exists forum_temp.forumcontent;
 
-create table forum_temp.forumcontent_2014_ engine = myisam /*dump這個比較久, 只有這個是新的*/
+create table forum_temp.forumcontent_2015_ engine = myisam /*dump這個比較久, 只有這個是新的*/
 select * from plsport_playsport.forumcontent
-where date(postdate) between '2014-01-01' and '2014-12-31';
+where date(postdate) between '2015-01-01' and '2015-01-31';
 
 create table forum.forumcontent engine = myisam /*重新merge這2年內的forumcontent, 只更新最近的, 再把3個檔merge起來*/
 select * from forum_temp.forumcontent_2012;
 insert ignore into forum.forumcontent select * from forum_temp.forumcontent_2013;
-insert ignore into forum.forumcontent select * from forum_temp.forumcontent_2014_;
+insert ignore into forum.forumcontent select * from forum_temp.forumcontent_2014;
+insert ignore into forum.forumcontent select * from forum_temp.forumcontent_2015_;
+
 
 /*主要討論區主版*/
 create table plsport_playsport._alliance engine = myisam
@@ -181,7 +143,7 @@ order by a.posttime desc;
 create table forum.forumcontent_edited_reply engine = myisam
 select subjectid, userid, postdate, contenttype ,substr(postdate,1,7) as postmonth, substr(postdate,1,10) as postday
 from forum.forumcontent
-where contenttype = 1;/*回文*/
+where contenttype = 1; /*回文*/
 
 /*計算發文/回文/推文的次數 by月份*/
 select postmonth, count(subjectid) as newPostCount, sum(replyCount) as replyCount, sum(pushcount) as pushCount
@@ -244,26 +206,10 @@ group by postyear, postmonth1, board, boardtype;
 -- ======================================================================================
 use prediction;
 
-create table prediction.prediction_201501 engine = myisam
+create table prediction.prediction_201502 engine = myisam
 SELECT * FROM plsport_playsport.prediction
-where date(createon) between '2015-01-01' and '2015-01-25';
+where date(createon) between '2015-02-01' and '2015-02-31';
 
-create table p_201401 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201401;
-create table p_201402 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201402;
-create table p_201403 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201403;
-create table p_201404 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201404;
-create table p_201405 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201405;
-create table p_201406 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201406;
-create table p_201407 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201407;
-create table p_201408 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201408;
 create table p_201409 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201409;
 create table p_201410 engine = myisam
@@ -274,6 +220,8 @@ create table p_201412 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201412;
 create table p_201501 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201501;
+create table p_201502 engine = myisam
+select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201502;
 
         /*====使用者分群專用的====*/
         create table prediction.p_recently engine = myisam select * from prediction.p_201409; /*近4個月預測資料, 看使用者分群要篩至多久前的記錄*/
@@ -282,68 +230,19 @@ select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as c
         insert ignore into prediction.p_recently select * from prediction.p_201412;
         insert ignore into prediction.p_recently select * from prediction.p_201501;
 
-                    create table prediction.p_2013 engine = myisam select * from prediction.p_201301;
-                    insert ignore into prediction.p_2013 select * from prediction.p_201302;
-                    insert ignore into prediction.p_2013 select * from prediction.p_201303;
-                    insert ignore into prediction.p_2013 select * from prediction.p_201304;
-                    insert ignore into prediction.p_2013 select * from prediction.p_201305;
-                    insert ignore into prediction.p_2013 select * from prediction.p_201306;
-                    insert ignore into prediction.p_2013 select * from prediction.p_201307;
-                    insert ignore into prediction.p_2013 select * from prediction.p_201308;
-                    insert ignore into prediction.p_2013 select * from prediction.p_201309;
-                    insert ignore into prediction.p_2013 select * from prediction.p_201310;
-                    insert ignore into prediction.p_2013 select * from prediction.p_201311;
-                    insert ignore into prediction.p_2013 select * from prediction.p_201312;
-
-                    create table prediction.p_2014 engine = myisam select * from prediction.p_201401;
-                    insert ignore into prediction.p_2014 select * from prediction.p_201402;
-                    insert ignore into prediction.p_2014 select * from prediction.p_201403;
-                    insert ignore into prediction.p_2014 select * from prediction.p_201404;
-                    insert ignore into prediction.p_2014 select * from prediction.p_201405;
-                    insert ignore into prediction.p_2014 select * from prediction.p_201406;
-                    insert ignore into prediction.p_2014 select * from prediction.p_201407;
-                    insert ignore into prediction.p_2014 select * from prediction.p_201408;
-                    insert ignore into prediction.p_2014 select * from prediction.p_201409;
-                    insert ignore into prediction.p_2014 select * from prediction.p_201410;
-                    insert ignore into prediction.p_2014 select * from prediction.p_201411;
-                    insert ignore into prediction.p_2014 select * from prediction.p_201412;
-
+        create table prediction.p_2015 engine = myisam select * from prediction.p_201501;
+        insert ignore into prediction.p_2015 select * from prediction.p_201502;                    
+                    
 create table prediction.p_main engine = myisam select * from prediction.p_2012;
 insert ignore into prediction.p_main select * from prediction.p_2013;
 insert ignore into prediction.p_main select * from prediction.p_2014;
+insert ignore into prediction.p_main select * from prediction.p_2015;
 
-                create table prediction.p_main_edited engine = myisam
-                SELECT userid, gameid, allianceid, 
-                        (case when (allianceid=1) then  'MLB' /*只分出主要熱門聯盟*/
-                              when (allianceid=2) then  '日棒'
-                              when (allianceid=3) then  'NBA'
-                              when (allianceid=4) then  '足球'
-                              when (allianceid=6) then  '中華職棒'
-                              when (allianceid=9) then  '韓棒'
-                              when (allianceid=91) then 'NHL'
-                              when (allianceid=92) then '韓籃'
-                              when (allianceid=97) then '日籃'
-                              else '其它' end) as alliance, gametype, createon, createMonth, createDay
-                FROM prediction.p_main;
-
-                create table prediction.p_main_edited_1 engine = myisam
-                SELECT userid, createMonth as m, allianceid, alliance, count(userid) as user_count
-                FROM prediction.p_main_edited
-                group by allianceid, createMonth, userid;
-
-                drop table prediction.p_main, prediction.p_main_edited; 
-                rename table prediction.p_main_edited_1 to prediction.p_main;
-
-                /*各聯盟預測人數*/
-                SELECT createMonth, allianceid, count(userid) as user_count
-                FROM prediction.p_main
-                group by createMonth, allianceid;
-
-/*每月預測人數*/
+/*每月預測人數<-要修改月份!!*/
 select a.createMonth, count(a.userid) as u
 from (
     SELECT createMonth, userid, sum(userid) as p
-    FROM prediction.p_201411
+    FROM prediction.p_201412
     group by createMonth, userid) as a
 group by a.createMonth;
 
@@ -368,7 +267,7 @@ create table _pcash_log engine = myisam
 select userid, amount, date(date) as c_date, month(date) as c_month, year(date) as c_year, substr(date,1,7) as ym, id_this_type
 from pcash_log
 where payed = 1 and type = 1
-and date between '2012-01-01 00:00:00' and '2014-12-31 23:59:59';
+and date between '2012-01-01 00:00:00' and '2015-01-31 23:59:59';
 
 /*計算每人每月的累積購買預測金額*/
 create table _pcash_log_calculate engine = myisam
@@ -421,7 +320,7 @@ create table _order_data engine = myisam
 SELECT userid, amount as redeem, date, substr(date,1,7) as ym, year(date) as y, substr(date,6,2) as m 
 FROM pcash_log
 where payed = 1 and type in (3,4,16) # 16是紅陽
-and date between '2012-01-01 00:00:00' and '2014-12-31 23:59:59';
+and date between '2012-01-01 00:00:00' and '2015-01-31 23:59:59';
 
 # 計算每個月有多少人儲值
 select a.ym, count(a.userid) as c
@@ -459,7 +358,7 @@ SELECT id, sellerid, mode, sale_allianceid, sale_gameid, sale_date, substr(sale_
              when (rank < 11 and selltype = 3) then '金牌'
              when (rank_sk < 11 and selltype = 3) then '金牌' else '銀牌' end) as killmedal     
 FROM revenue.predict_seller /*最好是指定精確的日期區間*/
-where sale_date between '2011-12-15 00:00:00' and '2014-12-31 23:59:59'; /*<====記得要改*/
+where sale_date between '2011-12-15 00:00:00' and '2015-01-31 23:59:59'; /*<====記得要改*/
 
 create table revenue._alliance engine = myisam
 SELECT allianceid, alliancename
