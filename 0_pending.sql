@@ -10326,7 +10326,6 @@ update plsport_playsport._analysis_user_list_nickname set nickname = replace(nic
 update plsport_playsport._analysis_user_list_nickname set nickname = replace(nickname, '&','');
 update plsport_playsport._analysis_user_list_nickname set nickname = replace(nickname, '$','');
 
-
 SELECT 'userid', 'nickname', '分析文數' union (
 SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/analysis_user_list_nickname.txt'
@@ -10338,6 +10337,88 @@ SELECT userid
 into outfile 'C:/Users/1-7_ASUS/Desktop/analysis_user_list_nickname_for_engineer.txt'
 fields terminated by ',' enclosed by '' lines terminated by '\r\n'
 FROM plsport_playsport._analysis_user_list_nickname);
+
+
+
+# =================================================================================================
+# 任務: [201408-A-11]開發回文推功能-第二次發文推樣式ABtesting [新建]
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4258&projectId=11
+# 說明
+# 目的：了解新的發文推介面是否吸引使用者
+#  
+# 內容
+# - 測試時間：待補
+# - 設定測試組別
+# - 觀察指標：1.發文推點擊次數、2.發文推比
+# - 報告時間：請於2/24先確認狀況，再評估是否要繼續執行
+# =================================================================================================
+
+# - 目前的版本:pushit_bottom_a
+# - 舊的版本:  pushit_bottom_b
+
+# 要先匯入linode上的events
+
+create table plsport_playsport._events engine = myisam
+SELECT * 
+FROM plsport_playsport.events
+where name like '%pushit_bottom%'
+and time between '2015-02-06 14:45:00' and now();
+
+    ALTER TABLE plsport_playsport._events convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._events_with_group engine = myisam
+select c.g, (case when (c.g<11) then 'a' else 'b' end) as abtest, c.userid, c.name, c.time
+from (
+    SELECT (b.id%20)+1 as g, a.userid, a.name, a.time 
+    FROM plsport_playsport._events a left join plsport_playsport.member b on a.userid = b.userid) as c;
+
+# 完成
+SELECT abtest, name, count(userid) as c 
+FROM plsport_playsport._events_with_group
+group by abtest, name;
+
+
+
+# =================================================================================================
+# 任務: [201406-B-12]強化玩家搜尋-優化ABtesting [進行中]
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4043&projectId=11
+# 說明
+# 目的:了解增加預設玩家數量，是否讓使用者更喜歡
+#  
+# 內容
+# - 測試時間:2/5~2/23
+# - 報告時間:2/26
+# - 觀察指標:1.預設玩家的點擊狀況。2.個人頁PV
+# =================================================================================================
+
+create table actionlog._check_usersearch engine = myisam
+SELECT userid, uri, time 
+FROM actionlog.action_201502
+where uri like '%rp=USE%'
+and userid <> ''
+and time between '2015-02-07 00:00:00' and now();
+# and time between '2015-02-06 11:30:00' and now();
+
+create table actionlog._check_usersearch_1 engine = myisam
+SELECT userid, uri, time, substr(uri,locate('&rp=',uri)+4,length(uri)) as p
+FROM actionlog._check_usersearch;
+
+create table actionlog._check_usersearch_2 engine = myisam
+SELECT userid, uri, time, (case when (locate('&',p)=0) then p else substr(p,1,locate('&',p)-1) end) as p
+FROM actionlog._check_usersearch_1;
+
+    ALTER TABLE actionlog._check_usersearch_2 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._check_usersearch_3 engine = myisam
+select c.g, (case when (c.g>10) then 'a' else 'b' end) as abtest, c.userid, c.uri, c.time, c.p
+from (
+    SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time, a.p 
+    FROM actionlog._check_usersearch_2 a left join plsport_playsport.member b on a.userid = b.userid) as c;
+
+SELECT abtest, p, count(userid) as c 
+FROM actionlog._check_usersearch_3
+group by abtest, p;
+
 
 
 

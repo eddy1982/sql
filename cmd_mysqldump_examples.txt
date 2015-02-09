@@ -12,3 +12,9 @@ mysqldump.exe --set-gtid-purged=OFF --user=analysis -peddy --max_allowed_packet=
 
 捉prediction_archive的資料
 mysqldump.exe --set-gtid-purged=OFF --user=analysis -peddy --max_allowed_packet=1G --host=192.168.1.34 --port=3306 --default-character-set=utf8 --comments --no-create-db --single-transaction --where="id between 80000000 and 83200000" plsport_playsport prediction_archive > C:\\proc\\dumps\\prediction_archive_temp.sql
+
+
+
+
+捉linode上的events
+mysqldump.exe --set-gtid-purged=OFF --user=analysis -peddy --max_allowed_packet=1G --host=106.185.35.141 --port=3306 --default-character-set=utf8 --comments --no-create-db --single-transaction userActions events > C:\\proc\\dumps\\events.sql
