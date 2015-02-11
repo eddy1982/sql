@@ -1885,6 +1885,52 @@ where length(phone) = 10 and substr(phone,1,2) = '09' and phone regexp '^[[:digi
 group by a.userid
 order by a.userid;
 
+        # (1)準備簡報用的而已 2015-02-11社群會議
+        create table textcampaign._all_phone_list engine = myisam
+        select a.userid, a.phone, sum(a.price) as total_redeem
+        from (
+            SELECT userid, phone, createon, price 
+            FROM plsport_playsport.order_data
+            where sellconfirm = 1 and payway in (1,2,3,4,5,6,9,10)
+            and createon between subdate(now(),9999) and now()) as a # 一年半內有儲值過
+        where length(phone) = 10 and substr(phone,1,2) = '09' and phone regexp '^[[:digit:]]{10}$'
+        group by a.userid
+        order by a.userid;
+        
+        # (2)       
+        create table textcampaign._last_time_login engine = myisam
+        SELECT userid, date(max(signin_time)) as last_time_login
+        FROM plsport_playsport.member_signin_log_archive
+        group by userid;
+
+        # (3) 
+        create table textcampaign._all_phone_list_with_join engine = myisam
+        SELECT a.userid, b.createon, a.phone, a.total_redeem 
+        FROM textcampaign._all_phone_list a left join plsport_playsport.member b on a.userid = b.userid;
+
+        ALTER TABLE textcampaign._all_phone_list_with_join convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE textcampaign._last_time_login convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE textcampaign._all_phone_list_with_join ADD INDEX (`userid`);
+        ALTER TABLE textcampaign._last_time_login ADD INDEX (`userid`);
+
+        create table textcampaign._all_phone_list_with_join_last engine = myisam
+        SELECT a.userid, date(a.createon) as join_date, b.last_time_login, a.phone, a.total_redeem 
+        FROM textcampaign._all_phone_list_with_join a left join textcampaign._last_time_login b on a.userid = b.userid;
+
+        create table textcampaign._all_phone_list_with_join_last_1 engine = myisam
+        SELECT userid, substr(join_date,1,7) as j, substr(last_time_login,1,7) as d, phone, total_redeem 
+        FROM textcampaign._all_phone_list_with_join_last;
+
+        # ok了
+        SELECT j, count(userid) as c 
+        FROM textcampaign._all_phone_list_with_join_last_1
+        group by j;
+
+        SELECT d, count(userid) as c 
+        FROM textcampaign._all_phone_list_with_join_last_1
+        group by d;
+
+
 # 拒收簡訊名單
 create table textcampaign._who_dont_want_text engine = myisam
 select a.phone
@@ -2294,7 +2340,6 @@ SELECT * FROM textcampaign._list6;
 
 
 # 以下是追蹤的部分 2015-01-26
-
 # 先匯入billrec_playsport_1422255478_簡訊發送結果.txt
 use textcampaign;
 
@@ -2334,13 +2379,11 @@ SELECT status, stas, count(phone) as c
 FROM textcampaign._list1
 group by status, stas;
 
-
 create table textcampaign._list2 engine = myisam # 1708名
 SELECT * 
 FROM textcampaign._list1
 where status = 'sent'
 and stas is null;
-
 
 # 回網站跳出訊息
 create table textcampaign._coupon_window_pop_up engine = myisam
@@ -2416,6 +2459,103 @@ SELECT userid, uri, cookie_stamp, date(min(time)) as time # 排除掉cookie重�
 FROM textcampaign._who_click_link_in_text
 group by userid, uri, cookie_stamp
 order by time;
+
+
+
+# ----------------------------------------------------------------------
+# 流失客領取兌換券 (柔雅) 2015-02-12
+#  TO EDDY:
+# 我們預計在 2/12 下午6點，發送下一波簡訊，麻煩你協助撈取名單，
+# 
+# 條件不變，規則如下:
+# 
+# 1.約前一年半的時間內，曾經儲值過
+# 2.已有三個月未登入、購買、儲值
+# 3.依照儲值總金額排序，越高的優先發送
+# 4.每次最多2000筆，匯出csv或txt(供yoyo8發送)
+# 5.每一筆有效號碼，不要連續傳送，相隔一個月以上
+# 
+# ps.請另外提供一份有id的名單，給工程套入程式使用。
+# 另外，請您試算，與上一波名單有重覆的人數有多少。
+# 麻煩請於，2/11(三)提供。
+# ----------------------------------------------------------------------
+
+# 先跑list1~list4
+
+# 主名單: 完整版(加入使用者id, 和最近一次登入日期)
+create table textcampaign._fail_number engine = myisam # 201501發送失敗的號碼
+SELECT concat('0',one) as phone, stas, date  
+FROM textcampaign.text_sent_status; # 前一次的發送狀態
+
+create table textcampaign._list5 engine = myisam
+select c.phone, d.id, c.userid, c.total_redeem, c.last_time_login, 
+       (case when (d.id is not null) then 'retention_20150212' end) as text_campaign, ((d.id%10)+1) as abtest_group
+from (
+    SELECT a.userid, a.phone, a.total_redeem, b.last_time_login
+    FROM textcampaign._list4 a left join textcampaign._last_time_login b on a.userid = b.userid) as c 
+left join plsport_playsport.member as d on c.userid = d.userid; 
+
+create table textcampaign._list6 engine = myisam
+SELECT a.phone, a.id, a.userid, a.total_redeem, a.last_time_login, a.text_campaign, a.abtest_group
+FROM textcampaign._list5 a left join textcampaign._fail_number b on a.phone = b.phone
+where b.stas is null;
+
+create table textcampaign._list7 engine = myisam
+SELECT phone, id, userid, total_redeem, last_time_login, text_campaign, abtest_group, 
+       (case when (abtest_group>6) then 'hold' else 'sent' end) as status # 60:40 發送/不發
+FROM textcampaign._list6;
+
+
+        # 給yoyo8簡訊發送
+        select 'phone', '使用者編號id', '簡訊行銷' union (
+        SELECT phone, id, text_campaign
+        into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150212_for_yoyo8.csv'
+        CHARACTER SET big5 fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
+        FROM textcampaign._list7
+        where status = 'sent'); # 只撈出有要發送的
+        # 一定要設定為big編碼, yoyo8規定的
+
+        # 給工程部匯入兌換券發送系統
+        select '使用者編號id', 'userid' union (
+        SELECT id, userid
+        into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150212_for_software_team.csv'
+        fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
+        FROM textcampaign._list7
+        where status = 'sent'); # 只撈出有要發送的
+        
+        
+create table textcampaign.retention_20150212_full_list_dont_delete engine = myisam
+SELECT * FROM textcampaign._list7;   
+
+# 另外，請您試算，與上一波名單有重覆的人數有多少。
+        create table textcampaign._check engine = myisam
+        SELECT a.phone, a.userid, a.text_campaign, b.text_campaign as last_time
+        FROM textcampaign.retention_20150212_full_list_dont_delete a left join textcampaign.retention_20150114_full_list_dont_delete b on a.phone = b.phone;
+
+        SELECT last_time , count(phone) 
+        FROM textcampaign._check
+        group by last_time;
+
+        SELECT count(phone) # 3615
+        FROM textcampaign._check;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
