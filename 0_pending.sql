@@ -2489,7 +2489,7 @@ FROM textcampaign.text_sent_status; # 前一次的發送狀態
 
 create table textcampaign._list5 engine = myisam
 select c.phone, d.id, c.userid, c.total_redeem, c.last_time_login, 
-       (case when (d.id is not null) then 'retention_20150212' end) as text_campaign, ((d.id%10)+1) as abtest_group
+       (case when (d.id is not null) then 'retention_20150224' end) as text_campaign, ((d.id%10)+1) as abtest_group
 from (
     SELECT a.userid, a.phone, a.total_redeem, b.last_time_login
     FROM textcampaign._list4 a left join textcampaign._last_time_login b on a.userid = b.userid) as c 
@@ -2509,7 +2509,7 @@ FROM textcampaign._list6;
         # 給yoyo8簡訊發送
         select 'phone', '使用者編號id', '簡訊行銷' union (
         SELECT phone, id, text_campaign
-        into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150212_for_yoyo8.csv'
+        into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150224_for_yoyo8.csv'
         CHARACTER SET big5 fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
         FROM textcampaign._list7
         where status = 'sent'); # 只撈出有要發送的
@@ -2518,19 +2518,19 @@ FROM textcampaign._list6;
         # 給工程部匯入兌換券發送系統
         select '使用者編號id', 'userid' union (
         SELECT id, userid
-        into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150212_for_software_team.csv'
+        into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150224_for_software_team.csv'
         fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
         FROM textcampaign._list7
         where status = 'sent'); # 只撈出有要發送的
         
         
-create table textcampaign.retention_20150212_full_list_dont_delete engine = myisam
+create table textcampaign.retention_20150224_full_list_dont_delete engine = myisam
 SELECT * FROM textcampaign._list7;   
 
 # 另外，請您試算，與上一波名單有重覆的人數有多少。
         create table textcampaign._check engine = myisam
         SELECT a.phone, a.userid, a.text_campaign, b.text_campaign as last_time
-        FROM textcampaign.retention_20150212_full_list_dont_delete a left join textcampaign.retention_20150114_full_list_dont_delete b on a.phone = b.phone;
+        FROM textcampaign.retention_20150224_full_list_dont_delete a left join textcampaign.retention_20150114_full_list_dont_delete b on a.phone = b.phone;
 
         SELECT last_time , count(phone) 
         FROM textcampaign._check
@@ -2538,24 +2538,6 @@ SELECT * FROM textcampaign._list7;
 
         SELECT count(phone) # 3615
         FROM textcampaign._check;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -10479,6 +10461,64 @@ fields terminated by ',' enclosed by '' lines terminated by '\r\n'
 FROM plsport_playsport._analysis_user_list_nickname);
 
 
+# =================================================================================================
+# 新增專案: 行銷企劃 - 分析文問卷分析 [任務] (學文) 2015-02-12
+# 此任務的內容是延續上面的任務
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4306&projectId=11
+# to eddy
+# 
+# 分析文問卷會在明日早上10:00跑完
+# 要麻煩您從結果中幫我們撈 "從11月開始到現在，有寫過五篇（含）已上的分析文"的做情況
+# 問卷結果在這裡
+# http://www.playsport.cc/questionnaire.php?question=201502051635358958&action=statistics
+# 明天早上10:00問卷才會跑完唷~
+# 謝謝!
+# =================================================================================================
+
+# 1. 要先匯入table: questionnaire_201502051635358958_answer
+# 2. 再匯入forum
+
+create table plsport_playsport._analysis_user_list engine = myisam
+select a.postuser, count(a.subjectid) as analysis_post_count
+from (
+    SELECT subjectid, postUser, posttime, allianceid, date(posttime) as d, substr(posttime,1,7) as m, year(posttime) as y 
+    FROM plsport_playsport.forum
+    where gametype = 1 # 分析文
+    and posttime between '2014-11-01 00:00:00' and now() # 近一年
+    order by posttime) as a
+group by a.postuser;
+
+
+create table plsport_playsport._analysis_user_list_nickname engine = myisam
+SELECT a.postuser as userid, b.nickname, a.analysis_post_count 
+FROM plsport_playsport._analysis_user_list a left join plsport_playsport.member b on a.postuser = b.userid
+where a.analysis_post_count >= 5
+order by a.analysis_post_count desc;
+
+# 如果欄位是數字命名的, 就要用``括起來
+        ALTER TABLE plsport_playsport.questionnaire_201502051635358958_answer CHANGE `1423205622` q1 INT(1);
+        ALTER TABLE plsport_playsport.questionnaire_201502051635358958_answer CHANGE `1423205651` q2 INT(1);
+        ALTER TABLE plsport_playsport.questionnaire_201502051635358958_answer CHANGE `1423205678` q3 INT(1);
+        ALTER TABLE plsport_playsport.questionnaire_201502051635358958_answer CHANGE `1423205718` q4 text;
+
+        update plsport_playsport.questionnaire_201502051635358958_answer SET q4 = TRIM(TRAILING '\\' FROM q4);
+        update plsport_playsport.questionnaire_201502051635358958_answer SET q4 = TRIM(TRAILING ' ' FROM q4);
+        update plsport_playsport.questionnaire_201502051635358958_answer set q4 = replace(q4, ' ','');
+        update plsport_playsport.questionnaire_201502051635358958_answer set q4 = replace(q4, '\\','');
+        update plsport_playsport.questionnaire_201502051635358958_answer set q4 = replace(q4, '\n','');
+        update plsport_playsport.questionnaire_201502051635358958_answer set q4 = replace(q4, '\r','');
+        update plsport_playsport.questionnaire_201502051635358958_answer set q4 = replace(q4, '\t','');
+
+
+create table plsport_playsport._qu_1 engine = myisam
+SELECT a.userid, b.nickname, a.q1, a.q2, a.q3, a.q4, b.analysis_post_count
+FROM plsport_playsport.questionnaire_201502051635358958_answer a inner join plsport_playsport._analysis_user_list_nickname b on a.userid = b.userid;
+
+create table plsport_playsport._qu_2 engine = myisam
+SELECT userid, q1,q2,q3,q4 
+FROM plsport_playsport.questionnaire_201502051635358958_answer;
+
+
 
 # =================================================================================================
 # 任務: [201408-A-11]開發回文推功能-第二次發文推樣式ABtesting [新建]
@@ -10558,6 +10598,12 @@ from (
 SELECT abtest, p, count(userid) as c 
 FROM actionlog._check_usersearch_3
 group by abtest, p;
+
+
+
+
+
+
 
 
 
