@@ -10558,6 +10558,91 @@ FROM plsport_playsport._events_with_group
 group by abtest, name;
 
 
+# =================================================================================================
+# 任務: 紅陽金流程式串接 - A/B testing [新建] (阿達) 2015-02-13
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4145&projectId=11
+# 要先匯入
+#    (1) member
+#    (2) order_data
+# =================================================================================================
+# To Eddy：
+# 因主機更換，我於 2/11 00:11開始關閉紅陽金流
+
+create table plsport_playsport._order_data_check engine = myisam
+SELECT id, userid, createon, ordernumber, price, payway, sellconfirm, create_from, platform_type 
+FROM plsport_playsport.order_data
+where createon between '2015-01-14 15:12:00' and '2015-02-11 00:00:00' # 主機受到攻擊前
+and platform_type in (2,3) # 手機/平板
+and payway in (1,10)       # 1: 一般信用卡, 2:紅陽
+and userid not in ('a9991','wayway1974','ydasam')  # 這個是測試帳號
+and substr(userid,1,9) <> 'ckone1209';             # 這個是測試帳號
+
+create table plsport_playsport._order_data_check_1 engine = myisam # 補上nickname
+SELECT a.id, (b.id%20)+1 as g, a.userid, b.nickname, a.createon, a.ordernumber, a.price, a.payway, a.sellconfirm, a.create_from, a.platform_type 
+FROM plsport_playsport._order_data_check a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._order_data_check_2 engine = myisam
+SELECT id, g, (case when (g in (7,8,9,10,11,12)) then 'red' else 'blue' end) as paymethon, # 30%的人是用紅陽, 其它是藍新
+       userid, nickname, date(createon) as d, ordernumber, price, payway, sellconfirm, create_from, platform_type 
+FROM plsport_playsport._order_data_check_1
+order by g;
+
+create table plsport_playsport._order_data_check_3 engine = myisam # 排除掉重覆在送出訂單前點擊的人
+SELECT g, paymethon, userid, nickname, d, payway, sellconfirm
+FROM plsport_playsport._order_data_check_2
+group by g, paymethon, userid, nickname, d, payway, sellconfirm; # 一個人在同一天內用同一種方式結帳只算一次
+
+SELECT paymethon, sellconfirm, count(userid) as c # 可以用a/b testing計算機來算了
+FROM plsport_playsport._order_data_check_3
+group by paymethon, sellconfirm;
+
+SELECT paymethon, payway, sum(price) as revenue
+FROM plsport_playsport._order_data_check_2
+where sellconfirm = 1
+group by paymethon, payway;
+
+create table plsport_playsport._order_data_check_2_for_r engine = myisam 
+SELECT userid, paymethon, sum(price) as revenue 
+FROM plsport_playsport._order_data_check_2
+where sellconfirm = 1
+group by userid, paymethon;
+
+# 輸出txt給R使用
+SELECT 'userid', 'm', 'r' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_order_data_check_2_for_r.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._order_data_check_2_for_r);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # =================================================================================================
 # 任務: [201406-B-12]強化玩家搜尋-優化ABtesting [進行中]
@@ -10598,72 +10683,6 @@ from (
 SELECT abtest, p, count(userid) as c 
 FROM actionlog._check_usersearch_3
 group by abtest, p;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 任務: 紅陽金流程式串接 - A/B testing [新建]
-# http://pm.playsport.cc/index.php/tasksComments?tasksId=4145&projectId=11
-# 要先匯入
-#    (1) member
-#    (2) order_data
-
-create table plsport_playsport._order_data_check engine = myisam
-SELECT id, userid, createon, ordernumber, price, payway, sellconfirm, create_from, platform_type 
-FROM plsport_playsport.order_data
-where createon between '2015-01-14 15:12:00' and now()
-and platform_type in (2,3) # 手機/平板
-and payway in (1,10)       # 1: 一般信用卡, 2:紅陽
-and userid <> 'a9991';     # 這個是測試帳號
-
-create table plsport_playsport._order_data_check_1 engine = myisam # 補上nickname
-SELECT a.id, (b.id%20)+1 as g, a.userid, b.nickname, a.createon, a.ordernumber, a.price, a.payway, a.sellconfirm, a.create_from, a.platform_type 
-FROM plsport_playsport._order_data_check a left join plsport_playsport.member b on a.userid = b.userid;
-
-create table plsport_playsport._order_data_check_2 engine = myisam
-SELECT id, g, (case when (g in (7,8,9,10,11,12)) then 'redsun' else 'bluestar' end) as paymethon, # 30%的人是用紅陽, 其它是藍新
-       userid, nickname, date(createon) as d, ordernumber, price, payway, sellconfirm, create_from, platform_type 
-FROM plsport_playsport._order_data_check_1
-order by g;
-
-create table plsport_playsport._order_data_check_3 engine = myisam # 排除掉重覆在送出訂單前點擊的人
-SELECT g, paymethon, userid, nickname, d, payway, sellconfirm
-FROM plsport_playsport._order_data_check_2
-group by g, paymethon, userid, nickname, d, payway, sellconfirm;
-
-SELECT paymethon, sellconfirm, count(userid) as c # 可以用a/b testing計算機來算了
-FROM plsport_playsport._order_data_check_3
-group by paymethon, sellconfirm;
-
 
 
 
