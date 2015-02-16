@@ -2356,23 +2356,23 @@ SELECT abtest_group, status, count(phone) as c
 FROM textcampaign.retention_20150114_full_list_dont_delete
 group by abtest_group, status;
 
-# 1	sent	358
-# 2	sent	392
-# 3	sent	362
-# 4	sent	363
-# 5	sent	363
-# 6	sent	364
-# 7	hold	355
-# 8	hold	317
-# 9	hold	342
-# 10	hold	351
+# 1 sent    358
+# 2 sent    392
+# 3 sent    362
+# 4 sent    363
+# 5 sent    363
+# 6 sent    364
+# 7 hold    355
+# 8 hold    317
+# 9 hold    342
+# 10    hold    351
 
 SELECT status, count(phone) as c 
 FROM textcampaign.retention_20150114_full_list_dont_delete
 group by status;
 
-# hold	1365
-# sent	2202 (494失敗)
+# hold  1365
+# sent  2202 (494失敗)
 
 # 發送狀況檢察
 SELECT status, stas, count(phone) as c 
@@ -4667,38 +4667,38 @@ SELECT a.subjectid, a.userid, a.score, a.datetime
 FROM plsport_playsport.forum_analysis_score a inner join plsport_playsport._nba_analysis_post b on a.subjectid = b.subjectid;
 
 
-			# 區間內看分析文的人數
-			select count(a.userid)
-			from (
-				SELECT userid, count(userid)
-				FROM actionlog._forumdetail_5
-				where d between '2014-11-24' and '2014-12-10'
-				group by userid) as a;
+            # 區間內看分析文的人數
+            select count(a.userid)
+            from (
+                SELECT userid, count(userid)
+                FROM actionlog._forumdetail_5
+                where d between '2014-11-24' and '2014-12-10'
+                group by userid) as a;
 
-			# 區間內看分析文的人數又有評分的人數
-			select count(a.userid)
-			from (
-				SELECT userid, count(userid) 
-				FROM plsport_playsport._score_on_nba_analysis_post
-				where date(datetime) between '2014-11-24' and '2014-12-10'
-				group by userid) as a;
+            # 區間內看分析文的人數又有評分的人數
+            select count(a.userid)
+            from (
+                SELECT userid, count(userid) 
+                FROM plsport_playsport._score_on_nba_analysis_post
+                where date(datetime) between '2014-11-24' and '2014-12-10'
+                group by userid) as a;
 
 # 每日看分析文的人數
 select a.d, count(a.userid) as user_count
 from (
-	SELECT d, userid, count(userid) as c 
-	FROM actionlog._forumdetail_5
-	group by d, userid) as a
+    SELECT d, userid, count(userid) as c 
+    FROM actionlog._forumdetail_5
+    group by d, userid) as a
 group by a.d;
 
 # 每日看分析文的人數又有評分的人數
 select b.d, count(b.userid) as user_count
 from (
-	select a.d, a.userid, count(a.userid) as c
-	from (
-		SELECT date(datetime) as d, userid, subjectid
-		FROM plsport_playsport._score_on_nba_analysis_post) as a
-	group by a.d, a.userid) as b
+    select a.d, a.userid, count(a.userid) as c
+    from (
+        SELECT date(datetime) as d, userid, subjectid
+        FROM plsport_playsport._score_on_nba_analysis_post) as a
+    group by a.d, a.userid) as b
 group by b.d;
 
 
@@ -9032,10 +9032,10 @@ group by userid;
 create table plsport_playsport._list_7_prediction_2 engine = myisam
 select userid, predict_count, round((cnt-rank+1)/cnt,2) as predict_count_percentile
 from (
-		SELECT userid, predict_count, @curRank := @curRank + 1 AS rank
-		FROM plsport_playsport._list_7_prediction_1, (SELECT @curRank := 0) r
-		order by predict_count desc) as dt,
-		(select count(distinct userid) as cnt from plsport_playsport._list_7_prediction_1) as ct;
+        SELECT userid, predict_count, @curRank := @curRank + 1 AS rank
+        FROM plsport_playsport._list_7_prediction_1, (SELECT @curRank := 0) r
+        order by predict_count desc) as dt,
+        (select count(distinct userid) as cnt from plsport_playsport._list_7_prediction_1) as ct;
 
 
         ALTER TABLE plsport_playsport._list_7 ADD INDEX (`userid`);
@@ -10065,9 +10065,9 @@ create table revenue._alliance engine = myisam
 SELECT allianceid, alliancename
 FROM revenue.alliance;
 
-		ALTER TABLE  _pcash_log ADD INDEX (`id_this_type`);       /*index*/
-		ALTER TABLE  _predict_seller_with_medal ADD INDEX (`id`); /*index*/
-		ALTER TABLE  _alliance ADD INDEX (`allianceid`);          /*index*/
+        ALTER TABLE  _pcash_log ADD INDEX (`id_this_type`);       /*index*/
+        ALTER TABLE  _predict_seller_with_medal ADD INDEX (`id`); /*index*/
+        ALTER TABLE  _alliance ADD INDEX (`allianceid`);          /*index*/
 
 create table _pcash_log_with_detailed_info engine = myisam
 select c.userid, c.amount, c.c_date, c.c_month, c.c_year, c.ym,
@@ -10177,10 +10177,10 @@ from (SELECT postuser, analysis_count, @curRank := @curRank + 1 AS rank
       order by analysis_count desc) as dt,
      (select count(distinct postuser) as cnt from plsport_playsport._analysis_count) as ct;
 
-		ALTER TABLE plsport_playsport._post_count_1 ADD INDEX (`postuser`);     /*index*/
-		ALTER TABLE plsport_playsport._reply_count_1 ADD INDEX (`userid`);      /*index*/
-		ALTER TABLE plsport_playsport._like_count_1 ADD INDEX (`postuser`);     /*index*/
-		ALTER TABLE plsport_playsport._analysis_count_1 ADD INDEX (`postuser`); /*index*/
+        ALTER TABLE plsport_playsport._post_count_1 ADD INDEX (`postuser`);     /*index*/
+        ALTER TABLE plsport_playsport._reply_count_1 ADD INDEX (`userid`);      /*index*/
+        ALTER TABLE plsport_playsport._like_count_1 ADD INDEX (`postuser`);     /*index*/
+        ALTER TABLE plsport_playsport._analysis_count_1 ADD INDEX (`postuser`); /*index*/
 
 create table plsport_playsport._list1 engine = myisam
 SELECT a.userid, a.nickname, b.post_count, b.post_p
@@ -10242,7 +10242,7 @@ FROM actionlog.action_visit_member_check
 where userid <> ''
 and ((uri like '%post_from%') or (uri like '%click_from%'));
 
-create table actionlog.action_visit_member_check_2 engine = myisam
+create table actionlog.action_visit_member_check_2 engine = myisamp
 SELECT userid, uri, time, (case when (locate('click_from=',uri)>0) then substr(uri,locate('click_from=',uri)+11, length(uri)) else '' end) as click,
                           (case when (locate('post_from=' ,uri)>0) then substr(uri,locate('post_from=' ,uri)+10, length(uri)) else '' end) as post
 FROM actionlog.action_visit_member_check_1;
@@ -10535,7 +10535,6 @@ FROM plsport_playsport.questionnaire_201502051635358958_answer;
 
 # - 目前的版本:pushit_bottom_a
 # - 舊的版本:  pushit_bottom_b
-
 # 要先匯入linode上的events
 
 create table plsport_playsport._events engine = myisam
@@ -10616,23 +10615,85 @@ FROM plsport_playsport._order_data_check_2_for_r);
 
 
 
+# =================================================================================================
+# 任務: 貼圖使用狀況研究 [新建] (福利班) 2015-02-13
+# 
+# 目標：
+#     1. 瞭解貼圖使用情形
+#     2. 瞭解貼圖是否提高回文數量
+# 請協助提供
+#     1. 所有回文中，使用到新貼圖的比例
+#     2. 從貼圖上線之後，回文中只有新貼圖，佔所有貼圖的比例；是否對照上線前，僅使用舊貼圖就回文的比例？
+# 第一批上線時間 2014/10/27
+# 第二批上線時間 2015/2/3
+# =================================================================================================
+# 先匯入forumcontent
+
+create table plsport_playsport._forumcontent engine = myisam
+SELECT * 
+FROM plsport_playsport.forumcontent
+where postdate between '2014-10-28 00:00:00' and now();
+
+create table plsport_playsport._forumcontent_1 engine = myisam
+SELECT subjectid, userid, content, postdate 
+FROM plsport_playsport._forumcontent;
+
+create table plsport_playsport._forumcontent_2 engine = myisam
+SELECT subjectid, userid, content, postdate, 
+       (case when (locate('/includes/images/smiley/playsport01.png',content)>0) then 1 else 0 end) as p01,
+       (case when (locate('/includes/images/smiley/playsport02.png',content)>0) then 1 else 0 end) as p02,
+       (case when (locate('/includes/images/smiley/playsport03.png',content)>0) then 1 else 0 end) as p03,
+       (case when (locate('/includes/images/smiley/playsport04.png',content)>0) then 1 else 0 end) as p04,
+       (case when (locate('/includes/images/smiley/playsport05.png',content)>0) then 1 else 0 end) as p05,
+       (case when (locate('/includes/images/smiley/playsport06.png',content)>0) then 1 else 0 end) as p06,
+       (case when (locate('/includes/images/smiley/playsport07.png',content)>0) then 1 else 0 end) as p07,
+       (case when (locate('/includes/images/smiley/playsport08.png',content)>0) then 1 else 0 end) as p08,
+       (case when (locate('/includes/images/smiley/playsport09.png',content)>0) then 1 else 0 end) as p09,
+       (case when (locate('/includes/images/smiley/playsport10.png',content)>0) then 1 else 0 end) as p10,
+       (case when (locate('/includes/images/smiley/playsport11.png',content)>0) then 1 else 0 end) as p11,
+       (case when (locate('/includes/images/smiley/playsport12.png',content)>0) then 1 else 0 end) as p12,
+       (case when (locate('/includes/images/smiley/playsport13.png',content)>0) then 1 else 0 end) as p13,
+       (case when (locate('/includes/images/smiley/playsport14.png',content)>0) then 1 else 0 end) as p14,
+       (case when (locate('/includes/images/smiley/playsport15.png',content)>0) then 1 else 0 end) as p15,
+       (case when (locate('/includes/images/smiley/playsport16.png',content)>0) then 1 else 0 end) as p16,
+       (case when (locate('/includes/images/smiley/playsport17.png',content)>0) then 1 else 0 end) as p17,
+       (case when (locate('/includes/images/smiley/playsport18.png',content)>0) then 1 else 0 end) as p18,
+       (case when (locate('/includes/images/smiley/playsport19.png',content)>0) then 1 else 0 end) as p19,
+       (case when (locate('/includes/images/smiley/playsport20.png',content)>0) then 1 else 0 end) as p20
+FROM plsport_playsport._forumcontent_1;
+
+create table plsport_playsport._forumcontent_2_all_icon_stat engine = myisam
+SELECT sum(p01), sum(p02), sum(p03), sum(p04), sum(p05), sum(p06), sum(p07), sum(p08), sum(p09), sum(p10), 
+       sum(p11), sum(p12), sum(p13), sum(p14), sum(p15), sum(p16), sum(p17), sum(p18), sum(p19), sum(p20)
+FROM plsport_playsport._forumcontent_2;
 
 
+create table plsport_playsport._forumcontent_1_1 engine = myisam
+SELECT subjectid, userid, content, postdate, 
+       (case when (locate('/includes/images/smiley/playsport',content)>0) then 1 else 0 end) as used_icon, 
+       length(content) as word_count,
+       (case when (locate('<p></p><img alt=',content)) then substr(content,1,16) else '' end) as pre,
+       (case when (locate('width="150" />',content)) then substr(content,locate('width="150" />',content),length(content)) else '' end) as suf
+FROM plsport_playsport._forumcontent_1;
 
+create table plsport_playsport._forumcontent_1_2 engine = myisam
+SELECT subjectid, userid, content, postdate, used_icon, word_count, 
+       (case when (pre = '<p></p><img alt=') then 1 else 0 end) as pre, 
+       (case when (suf = 'width="150" />') then 1 else 0 end) as suf
+FROM plsport_playsport._forumcontent_1_1;
 
+create table plsport_playsport._forumcontent_1_3 engine = myisam
+SELECT * FROM plsport_playsport._forumcontent_1_2
+where used_icon = 1
+and pre = 1
+and suf = 1
+and word_count < 135;
 
-
-
-
-
-
-
-
-
-
-
-
-
+select a.d, count(a.subjectid) as c
+from (
+    SELECT date(postdate) as d, subjectid 
+    FROM plsport_playsport._forumcontent_1_3) as a
+group by a.d;
 
 
 
@@ -10709,3 +10770,34 @@ into outfile 'C:/Users/1-7_ASUS/Desktop/user_location_1.csv'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._user_location_1);
 
+
+
+
+
+
+# 幫社群捉分身 2015-02-15
+#
+#
+#
+create table actionlog._cheat engine = myisam
+SELECT * FROM actionlog.action_201502
+where userid in ('aaaa1234','k7777');
+
+# 1. 比對user_agent
+SELECT userid, user_agent, count(userid) as c 
+FROM actionlog._cheat
+group by  userid, user_agent;
+
+# 2. 比對時間
+select a.userid, a.t, count(a.userid) as c
+from (
+    SELECT userid, substr(time,1,13) as t 
+    FROM actionlog._cheat) as a
+group by a.userid, a.t;
+
+# 3. 比對造訪頁面
+select a.userid, a.uri, count(a.userid) as c
+from (
+    SELECT userid, substr(uri,1,locate('.php',uri)-1) as uri
+    FROM actionlog._cheat) as a
+group by a.userid, a.uri;
