@@ -2541,7 +2541,7 @@ FROM textcampaign.text_sent_status; # 前一次的發送狀態
 
 create table textcampaign._list5 engine = myisam
 select c.phone, d.id, c.userid, c.total_redeem, c.last_time_login, 
-       (case when (d.id is not null) then 'retention_20150224' end) as text_campaign, ((d.id%10)+1) as abtest_group
+       (case when (d.id is not null) then 'retention_20150226' end) as text_campaign, ((d.id%10)+1) as abtest_group
 from (
     SELECT a.userid, a.phone, a.total_redeem, b.last_time_login
     FROM textcampaign._list4 a left join textcampaign._last_time_login b on a.userid = b.userid) as c 
@@ -2561,8 +2561,8 @@ FROM textcampaign._list6;
         # 給yoyo8簡訊發送
         select 'phone', '使用者編號id', '簡訊行銷' union (
         SELECT phone, id, text_campaign
-        into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150224_for_yoyo8.csv'
-        CHARACTER SET big5 fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
+        into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150226_for_yoyo8.csv'
+        CHARACTER SET big5 fields terminated by ',' enclosed by '' lines terminated by '\r\n' 
         FROM textcampaign._list7
         where status = 'sent'); # 只撈出有要發送的
         # 一定要設定為big編碼, yoyo8規定的
@@ -2570,25 +2570,25 @@ FROM textcampaign._list6;
         # 給工程部匯入兌換券發送系統
         select '使用者編號id', 'userid' union (
         SELECT id, userid
-        into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150224_for_software_team.csv'
-        fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
+        into outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150226_for_software_team.csv'
+        fields terminated by ',' enclosed by '' lines terminated by '\r\n' 
         FROM textcampaign._list7
         where status = 'sent'); # 只撈出有要發送的
         
         
-create table textcampaign.retention_20150224_full_list_dont_delete engine = myisam
+create table textcampaign.retention_20150226_full_list_dont_delete engine = myisam
 SELECT * FROM textcampaign._list7;   
 
 # 另外，請您試算，與上一波名單有重覆的人數有多少。
         create table textcampaign._check engine = myisam
         SELECT a.phone, a.userid, a.text_campaign, b.text_campaign as last_time
-        FROM textcampaign.retention_20150224_full_list_dont_delete a left join textcampaign.retention_20150114_full_list_dont_delete b on a.phone = b.phone;
+        FROM textcampaign.retention_20150226_full_list_dont_delete a left join textcampaign.retention_20150114_full_list_dont_delete b on a.phone = b.phone;
 
-        SELECT last_time, count(phone) 
+        SELECT last_time, count(phone)  # 2861
         FROM textcampaign._check
         group by last_time;
 
-        SELECT count(phone) # 3615
+        SELECT count(phone) # 3758
         FROM textcampaign._check;
 
 
@@ -8376,7 +8376,6 @@ rename table plsport_playsport._signin_days_2 to plsport_playsport._signin_days;
         where postdate between subdate(now(),91) and now()
         group by userid;
         
-        
                 # 重跑上面的SQL直到_alpp_action_log_5
                 # (1)討論區的貼文數要扣掉APP的貼文數
                 create table plsport_playsport._post_count_1 engine = myisam
@@ -8458,7 +8457,7 @@ from (
                 ALTER TABLE actionlog._forumdetail_pv_3_2 CHANGE `s` `s` VARCHAR(17) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL;
                 ALTER TABLE actionlog._forumdetail_pv_3_2 ADD INDEX (`s`);
 
-        # note: it takes around 46 mins
+        # 重要重要重要!!! note: it takes around 34~46 mins
         create table actionlog._forumdetail_pv_3_3 engine = myisam
         SELECT userid, s # s:subjectid
         FROM actionlog._forumdetail_pv_3_2
@@ -11219,6 +11218,30 @@ SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/user_location_1.csv'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._user_location_1);
+
+
+
+
+
+
+
+
+create table plsport_playsport._location engine = myisam
+SELECT id, deviceid, longitude, latitude, ip 
+FROM plsport_playsport.app_action_log
+where longitude is not null
+order by id desc;
+
+create table plsport_playsport._location_1 engine = myisam
+SELECT ip, longitude, latitude, max(id), count(id)
+FROM plsport_playsport._location
+group by ip;
+
+
+
+
+
+
 
 
 
