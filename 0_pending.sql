@@ -10148,7 +10148,7 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._app_action_log_3_for_cal_avg_click);
 
 
-# to 靜怡:
+# to 靜怡: (2015-03-02) http://pm.playsport.cc/index.php/tasksComments?tasksId=4041&projectId=11
 # 目前有以下幾點狀況:
 # 
 # 1. 煩請晨暐確定點擊預設版標是否已經有確定問題在那裡, 還是目前B版點擊不到版標是正常的.
@@ -10159,35 +10159,40 @@ FROM plsport_playsport._app_action_log_3_for_cal_avg_click);
 # 預設版標的問題，工程目前找不到原因
 # 麻煩年後再檢查一次狀況
 
-
-
 create table plsport_playsport._app_action_log engine=myisam 
 SELECT * FROM
     plsport_playsport.app_action_log
 where
     app = 1 and os = 1    #app=1即時比分, os=1是andriod 
+    and datetime between '2015-02-16 16:58:00' and now()
     and appversion in ( '2.2.4','2.2.5','2.2.6','2.2.7',
                         '2.2.8','2.2.9','2.3.0','2.3.1','2.3.2','2.3.3','2.3.4'); # ver2.2.4~2.3.1都是用新的log
                                                                   # 2.3.2 新增記錄坐標功能 (update:2015/1/27)
+                                                                  # 2.3.4 在3/2還是最新的版本
+                                                                  
 create table plsport_playsport._app_action_log_1 engine=myisam # 撈出點擊板標記錄
 SELECT * 
 FROM plsport_playsport._app_action_log
 where action = 'clickTitle'
 order by datetime desc;
 
+create table plsport_playsport._app_action_log_2 engine = myisam
+SELECT appversion, userid, action, remark, datetime, deviceid, abtestgroup, devicemodel, deviceosversion  
+FROM plsport_playsport._app_action_log_1
+where datetime between '2015-02-16 16:58:00' and now();
 
+create table plsport_playsport._app_action_log_3 engine = myisam
+SELECT action, remark, datetime, deviceid, abtestgroup, (case when (abtestgroup<11) then 'a' else 'b' end) as g, devicemodel
+FROM plsport_playsport._app_action_log_2
+where datetime between '2015-02-16 16:58:00' and now(); # ABtesting已於1/15 9:30上線
 
+SELECT g, remark, count(remark) as c 
+FROM plsport_playsport._app_action_log_3
+group by g, remark;
 
-
-
-
-
-
-
-
-
-
-
+SELECT * FROM plsport_playsport._predict_buyer_with_cons
+where substr(position,1,3) = 'MSA'
+and buy_date between '2015-02-16 16:58:00' and now();
 
 
 
