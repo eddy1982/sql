@@ -10148,6 +10148,48 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._app_action_log_3_for_cal_avg_click);
 
 
+# to 靜怡:
+# 目前有以下幾點狀況:
+# 
+# 1. 煩請晨暐確定點擊預設版標是否已經有確定問題在那裡, 還是目前B版點擊不到版標是正常的.
+# 2. 目前透過即時比分APP點擊而馬上購買的交易筆數很低, 所以目前無法得知參數設定的狀況
+# 3. 同上, 因為交易筆數很低, 所以過完年後, 我們再來看看交易的筆數可以累績多少, 但照目前的情況來看, 可能需要訂立其它的指標
+# 
+# TO EDDY
+# 預設版標的問題，工程目前找不到原因
+# 麻煩年後再檢查一次狀況
+
+
+
+create table plsport_playsport._app_action_log engine=myisam 
+SELECT * FROM
+    plsport_playsport.app_action_log
+where
+    app = 1 and os = 1    #app=1即時比分, os=1是andriod 
+    and appversion in ( '2.2.4','2.2.5','2.2.6','2.2.7',
+                        '2.2.8','2.2.9','2.3.0','2.3.1','2.3.2','2.3.3','2.3.4'); # ver2.2.4~2.3.1都是用新的log
+                                                                  # 2.3.2 新增記錄坐標功能 (update:2015/1/27)
+create table plsport_playsport._app_action_log_1 engine=myisam # 撈出點擊板標記錄
+SELECT * 
+FROM plsport_playsport._app_action_log
+where action = 'clickTitle'
+order by datetime desc;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #----------------------------------------------------------------------------------------------
 #APP的pv檢察-阿達看到即時比分app人數好像少很多
@@ -10544,6 +10586,176 @@ SELECT userid, (case when (q4 like '%1%') then 1 else 0 end) as t1,
 FROM plsport_playsport._qu_with_use_time_1;
 
 
+# ------------------------------------------------------
+# 團隊數據點擊量、隔日賽事點擊量 2/26
+#     2. 團隊數據點擊量
+#        a. 統計”數據▼”的點擊量，及使用比例( 多少使用者使用)
+#     3. 隔日賽事點擊量
+#        a. 統計預測比例、對戰紀錄點擊量
+#        b. 統計1/22(含)後，看隔日賽事的使用者是否有增加
+# ------------------------------------------------------
+
+# 先匯入events(已寫成.py)
+
+# (1)先撈出所有即時比分的pv
+create table actionlog._livescore engine = myisam
+SELECT userid, uri, time FROM actionlog.action_201411 where uri like '%/livescore%' and userid <> '';
+insert ignore into actionlog._livescore
+SELECT userid, uri, time FROM actionlog.action_201412 where uri like '%/livescore%' and userid <> '';
+insert ignore into actionlog._livescore
+SELECT userid, uri, time FROM actionlog.action_201501 where uri like '%/livescore%' and userid <> '';
+insert ignore into actionlog._livescore
+SELECT userid, uri, time FROM actionlog.action_201502 where uri like '%/livescore%' and userid <> '';
+
+# 預測比例
+create table actionlog._predictgame engine = myisam
+SELECT userid, uri, time FROM actionlog.action_201411 where uri like '%/predictgame.php%' and userid <> '';
+insert ignore into actionlog._predictgame
+SELECT userid, uri, time FROM actionlog.action_201412 where uri like '%/predictgame.php%' and userid <> '';
+insert ignore into actionlog._predictgame
+SELECT userid, uri, time FROM actionlog.action_201501 where uri like '%/predictgame.php%' and userid <> '';
+insert ignore into actionlog._predictgame
+SELECT userid, uri, time FROM actionlog.action_201502 where uri like '%/predictgame.php%' and userid <> '';
+
+# 賽事數據
+create table actionlog._games_data engine = myisam
+SELECT userid, uri, time FROM actionlog.action_201411 where uri like '%/games_data.php%' and userid <> '';
+insert ignore into actionlog._games_data
+SELECT userid, uri, time FROM actionlog.action_201412 where uri like '%/games_data.php%' and userid <> '';
+insert ignore into actionlog._games_data
+SELECT userid, uri, time FROM actionlog.action_201501 where uri like '%/games_data.php%' and userid <> '';
+insert ignore into actionlog._games_data
+SELECT userid, uri, time FROM actionlog.action_201502 where uri like '%/games_data.php%' and userid <> '';
+
+        # 預測比例(所有人)
+        create table actionlog._predictgame_without_login engine = myisam
+        SELECT userid, uri, time FROM actionlog.action_201501 where uri like '%/predictgame.php%';
+        insert ignore into actionlog._predictgame_without_login
+        SELECT userid, uri, time FROM actionlog.action_201502 where uri like '%/predictgame.php%';
+
+        # 賽事數據(所有人)
+        create table actionlog._games_data_without_login engine = myisam
+        SELECT userid, uri, time FROM actionlog.action_201501 where uri like '%/games_data.php%';
+        insert ignore into actionlog._games_data_without_login
+        SELECT userid, uri, time FROM actionlog.action_201502 where uri like '%/games_data.php%';
+
+# (2)再區分出那些人是只看NBA
+
+create table actionlog._livescore_1 engine = myisam
+select a.userid, a.uri, a.time, (case when (locate('&',a.t)=0) then a.t else substr(a.t,1,locate('&',a.t)-1) end) as p
+from (
+    SELECT userid, uri, time, (case when (locate('aid=',uri)=0) then 3 else substr(uri, locate('aid=',uri)+4, length(uri)) end) as t
+    FROM actionlog._livescore) as a;
+
+        create table actionlog._livescore_2 engine = myisam
+        SELECT * 
+        FROM actionlog._livescore_1
+        where length(p) in (1,2)
+        and p = 3;
+
+create table plsport_playsport._livescore_usage engine = myisam
+select a.userid, a.d, count(a.userid) as c
+from (
+    SELECT userid, date(time) as d 
+    FROM actionlog._livescore_2) as a
+group by a.userid, a.d;
+
+        # a.每天NBA即時比分使用的人數
+        SELECT d, count(userid) as user_count
+        FROM plsport_playsport._livescore_usage
+        group by d;
+ 
+create table plsport_playsport._click_record_team_open engine = myisam # 有登入的
+SELECT id, userid, name, date(time) as d
+FROM plsport_playsport.events
+where userid <> ''
+and name like '%livescore_record_team%';
+
+create table plsport_playsport._click_record_team_open_without_login engine = myisam # 所有人(含沒登入的)
+SELECT id, userid, name, date(time) as d
+FROM plsport_playsport.events
+where name like '%livescore_record_team%';
+
+        # b.統計”數據▼”的點擊量，(所有人(含沒登入的))
+        SELECT d, count(name) as c 
+        FROM plsport_playsport._click_record_team_open_without_login
+        group by d;
+
+        # c.及使用比例(多少使用者使用)
+        select a.d, count(a.userid) as user_click_count
+        from (
+            SELECT userid, d, count(name) as c 
+            FROM plsport_playsport._click_record_team_open
+            group by userid, d) as a
+        group by a.d;
+
+
+create table plsport_playsport._livescore_nextday_1 engine = myisam
+select a.userid, a.uri, a.time, substr(a.c,1,8) as nextday
+from (
+    SELECT userid, uri, time, (case when (locate('gamedate=', uri)=0) then "" else substr(uri,locate('gamedate=', uri)+9,length(uri)) end) as c
+    FROM actionlog._livescore_2
+    where p = 3) as a; # 只限看NBA
+
+        create table plsport_playsport._livescore_nextday_2 engine = myisam
+        SELECT userid, uri, date(time) as today, str_to_date(nextday, '%Y%m%d') as nextday, datediff(str_to_date(nextday, '%Y%m%d'), date(time)) as s
+        FROM plsport_playsport._livescore_nextday_1
+        where nextday <> '';
+
+        #抽出點選明天的人
+        create table plsport_playsport._livescore_nextday_3 engine = myisam
+        SELECT * FROM plsport_playsport._livescore_nextday_2
+        where s = 1;
+
+        # d.有多少人會去點擊隔日賽事
+        select a.today, count(a.userid) as c
+        from (
+            SELECT userid, today, count(uri) as c 
+            FROM plsport_playsport._livescore_nextday_3
+            group by userid, today) as a
+        group by a.today;
+
+        # e.統計預測比例人數
+        select b.d, count(b.userid) as user_count
+        from (
+            select a.d, a.userid, count(a.uri) as c
+            from (
+                SELECT userid, uri, date(time) as d 
+                FROM actionlog._predictgame
+                where uri like '%from=livescore%') as a
+            group by a.d, a.userid) as b
+        group by b.d;
+
+        # f.對戰紀錄人數
+        select b.d, count(b.userid) as user_count
+        from (
+            select a.d, a.userid, count(a.uri) as c
+            from (
+                SELECT userid, uri, date(time) as d 
+                FROM actionlog._games_data
+                where uri like '%from=livescore%') as a
+            group by a.d, a.userid) as b
+        group by b.d;
+
+
+# g.預測比例點擊數 (所有人)
+select a.d, count(a.uri) as c
+from (
+    SELECT userid, uri, date(time) as d 
+    FROM actionlog._predictgame_without_login
+    where uri like '%from=livescore%') as a
+group by a.d;
+
+
+# h.對戰紀錄點擊數 (所有人)
+select a.d, count(a.uri) as c
+from (
+    SELECT userid, uri, date(time) as d 
+    FROM actionlog._games_data_without_login
+    where uri like '%from=livescore%') as a
+group by a.d;
+
+
 
 # =================================================================================================
 # 任務: 撈取分析文問卷名單 [新建] (學文) 2015-02-06
@@ -10791,7 +11003,9 @@ FROM plsport_playsport._order_data_check_2_for_r);
 create table plsport_playsport._forumcontent engine = myisam
 SELECT * 
 FROM plsport_playsport.forumcontent
-where postdate between '2014-10-28 00:00:00' and now();
+where postdate between '2014-08-01 00:00:00' and now();
+# where postdate between '2015-02-03 00:00:00' and now();
+# where postdate between '2014-10-28 00:00:00' and now();
 
 create table plsport_playsport._forumcontent_1 engine = myisam
 SELECT subjectid, userid, content, postdate 
@@ -10826,7 +11040,6 @@ SELECT sum(p01), sum(p02), sum(p03), sum(p04), sum(p05), sum(p06), sum(p07), sum
        sum(p11), sum(p12), sum(p13), sum(p14), sum(p15), sum(p16), sum(p17), sum(p18), sum(p19), sum(p20)
 FROM plsport_playsport._forumcontent_2;
 
-
 create table plsport_playsport._forumcontent_1_1 engine = myisam
 SELECT subjectid, userid, content, postdate, 
        (case when (locate('/includes/images/smiley/playsport',content)>0) then 1 else 0 end) as used_icon, 
@@ -10853,6 +11066,47 @@ from (
     SELECT date(postdate) as d, subjectid 
     FROM plsport_playsport._forumcontent_1_3) as a
 group by a.d;
+
+
+
+create table plsport_playsport._forumcontent_2_1 engine = myisam
+SELECT subjectid, userid, content, postdate, 
+       (case when (locate('/includes/images/smiley/',content)>0) then 1 else 0 end) as used_icon, 
+       length(content) as word_count,
+       (case when (locate('<p></p><img alt=',content)) then substr(content,1,16) else '' end) as pre,
+       (case when (locate('width="19" />',content)) then substr(content,locate('width="19" />',content),length(content)) else '' end) as suf
+FROM plsport_playsport._forumcontent_1;
+
+create table plsport_playsport._forumcontent_2_2 engine = myisam
+SELECT subjectid, userid, content, postdate, used_icon, word_count, 
+       (case when (pre = '<p></p><img alt=') then 1 else 0 end) as pre, 
+       (case when (suf = 'width="19" />') then 1 else 0 end) as suf
+FROM plsport_playsport._forumcontent_2_1;
+
+create table plsport_playsport._forumcontent_2_3 engine = myisam
+SELECT * FROM plsport_playsport._forumcontent_2_2
+where used_icon = 1
+and pre = 1
+and suf = 1
+and word_count < 138;
+
+select a.d, count(a.subjectid) as c
+from (
+    SELECT date(postdate) as d, subjectid 
+    FROM plsport_playsport._forumcontent_2_3) as a
+group by a.d;
+
+
+select a.d, count(a.userid)
+from (
+    SELECT date(postdate) as d, userid 
+    FROM plsport_playsport._forumcontent_1) as a
+group by a.d;
+
+
+
+
+
 
 
 # =================================================================================================
