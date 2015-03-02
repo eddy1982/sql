@@ -3734,7 +3734,6 @@ order by a.userid, a.createon;
 # 透由玩家搜尋買預測比
 # =================================================================================================
 
-
 # 2. MVP測試名單  (阿達) 2015-02-06 新增
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=3062&projectId=11
 # 時間：2/9(一)
@@ -3744,14 +3743,19 @@ order by a.userid, a.createon;
 # c. 有在使用購牌專區購牌
 # 欄位：暱稱、ID、總儲值金額、近三個月儲值金額、購牌專區消費金額、居住地、最近登入時間
 
+# 2015-03-02 15:59
+# Eddy [行銷企劃]
+# eddy@playsport.cc
 create table actionlog.action_201411_platform engine = myisam
-SELECT userid, platform_type FROM actionlog.action_201404 where userid <> '';
+SELECT userid, platform_type FROM actionlog.action_201411 where userid <> '';
 create table actionlog.action_201412_platform engine = myisam
-SELECT userid, platform_type FROM actionlog.action_201405 where userid <> '';
+SELECT userid, platform_type FROM actionlog.action_201412 where userid <> '';
 create table actionlog.action_201501_platform engine = myisam
-SELECT userid, platform_type FROM actionlog.action_201406 where userid <> '';
+SELECT userid, platform_type FROM actionlog.action_201501 where userid <> '';
 create table actionlog.action_201502_platform engine = myisam
-SELECT userid, platform_type FROM actionlog.action_201407 where userid <> '';
+SELECT userid, platform_type FROM actionlog.action_201502 where userid <> '';
+create table actionlog.action_201503_platform engine = myisam
+SELECT userid, platform_type FROM actionlog.action_201503 where userid <> '';
 
 create table actionlog.action_201411_platform_group engine = myisam
 SELECT userid, platform_type, count(userid) as c FROM actionlog.action_201411_platform group by userid, platform_type;
@@ -3761,11 +3765,14 @@ create table actionlog.action_201501_platform_group engine = myisam
 SELECT userid, platform_type, count(userid) as c FROM actionlog.action_201501_platform group by userid, platform_type;
 create table actionlog.action_201502_platform_group engine = myisam
 SELECT userid, platform_type, count(userid) as c FROM actionlog.action_201502_platform group by userid, platform_type;
+create table actionlog.action_201503_platform_group engine = myisam
+SELECT userid, platform_type, count(userid) as c FROM actionlog.action_201503_platform group by userid, platform_type;
 
         create table actionlog.action_platform_group engine = myisam SELECT * FROM actionlog.action_201411_platform_group;
         insert ignore into actionlog.action_platform_group SELECT * FROM actionlog.action_201412_platform_group;
         insert ignore into actionlog.action_platform_group SELECT * FROM actionlog.action_201501_platform_group;
         insert ignore into actionlog.action_platform_group SELECT * FROM actionlog.action_201502_platform_group;
+        insert ignore into actionlog.action_platform_group SELECT * FROM actionlog.action_201503_platform_group;        
 
         # 桌上/手機/平板 等平台登入的pv計算
         create table actionlog._actionlog_platform_visit engine = myisam
@@ -3790,6 +3797,7 @@ drop table actionlog.action_201411_platform, actionlog.action_201411_platform_gr
 drop table actionlog.action_201412_platform, actionlog.action_201412_platform_group;
 drop table actionlog.action_201501_platform, actionlog.action_201501_platform_group;
 drop table actionlog.action_201502_platform, actionlog.action_201502_platform_group;
+drop table actionlog.action_201503_platform, actionlog.action_201503_platform_group;
 
 use plsport_playsport;
         #2選1
@@ -3808,10 +3816,9 @@ use plsport_playsport;
         FROM plsport_playsport.member_signin_log_archive
         group by userid;
 
-        ALTER TABLE  `_last_login_time` CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-
-        ALTER TABLE plsport_playsport._list_1 ADD INDEX (`userid`);  
-        ALTER TABLE plsport_playsport._last_login_time ADD INDEX (`userid`);  
+        ALTER TABLE `_last_login_time` CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE plsport_playsport._list_1 ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._last_login_time ADD INDEX (`userid`);
 
 create table plsport_playsport._list_2 engine = myisam
 SELECT a.userid, a.nickname, a.join_date, date(b.last_login) as last_login
@@ -3907,8 +3914,8 @@ from (
                                     where buy_date between subdate(now(),93) and now()) as a
                                 group by a.buyerid, a.p) as b) as c
                 group by c.buyerid) as d;
+                
         ALTER TABLE  `_buy_position` CHANGE  `buyerid`  `buyerid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT  '購買者userid';
-
         ALTER TABLE plsport_playsport._list_3 ADD INDEX (`userid`);  
         ALTER TABLE plsport_playsport._buy_position ADD INDEX (`buyerid`); 
 
@@ -3919,10 +3926,10 @@ FROM plsport_playsport._list_3 a left join plsport_playsport._buy_position b on 
 
         # (1)計算玩家搜尋的pv
         create table actionlog.action_usersearch engine = myisam
-        SELECT userid, uri, time FROM actionlog.action_201411 where uri like '%usersearch.php%' and userid <> '';
-        insert ignore into actionlog.action_usersearch SELECT userid, uri, time FROM actionlog.action_201412 where uri like '%usersearch.php%' and userid <> '';
+        SELECT userid, uri, time FROM actionlog.action_201412 where uri like '%usersearch.php%' and userid <> '';
         insert ignore into actionlog.action_usersearch SELECT userid, uri, time FROM actionlog.action_201501 where uri like '%usersearch.php%' and userid <> '';
         insert ignore into actionlog.action_usersearch SELECT userid, uri, time FROM actionlog.action_201502 where uri like '%usersearch.php%' and userid <> '';
+        insert ignore into actionlog.action_usersearch SELECT userid, uri, time FROM actionlog.action_201503 where uri like '%usersearch.php%' and userid <> '';
 
         create table plsport_playsport._usersearch_count engine = myisam
         SELECT userid, count(userid) as us_pv
@@ -3931,10 +3938,10 @@ FROM plsport_playsport._list_3 a left join plsport_playsport._buy_position b on 
 
         # (2)計算購牌專區的pv - 2014-06-24補充
         create table actionlog.action_buypredict engine = myisam
-        SELECT userid, uri, time FROM actionlog.action_201411 where uri like '%buy_predict.php%' and userid <> '';
-        insert ignore into actionlog.action_usersearch SELECT userid, uri, time FROM actionlog.action_201412 where uri like '%buy_predict.php%' and userid <> '';
+        SELECT userid, uri, time FROM actionlog.action_201412 where uri like '%buy_predict.php%' and userid <> '';
         insert ignore into actionlog.action_usersearch SELECT userid, uri, time FROM actionlog.action_201501 where uri like '%buy_predict.php%' and userid <> '';
         insert ignore into actionlog.action_usersearch SELECT userid, uri, time FROM actionlog.action_201502 where uri like '%buy_predict.php%' and userid <> '';
+        insert ignore into actionlog.action_usersearch SELECT userid, uri, time FROM actionlog.action_201503 where uri like '%buy_predict.php%' and userid <> '';
 
         create table plsport_playsport._buypredict_count engine = myisam
         SELECT userid, count(userid) as bp_pv
@@ -3944,7 +3951,6 @@ FROM plsport_playsport._list_3 a left join plsport_playsport._buy_position b on 
         ALTER TABLE plsport_playsport._list_4 ADD INDEX (`userid`);  
         ALTER TABLE plsport_playsport._usersearch_count ADD INDEX (`userid`); 
         ALTER TABLE plsport_playsport._buypredict_count ADD INDEX (`userid`); 
-
         ALTER TABLE plsport_playsport._usersearch_count convert to character set utf8 collate utf8_general_ci;
         ALTER TABLE plsport_playsport._buypredict_count convert to character set utf8 collate utf8_general_ci;
 
@@ -3975,7 +3981,9 @@ SELECT a.userid, a.nickname, a.join_date, a.last_login, a.total_redeem, a.redeem
 FROM plsport_playsport._list_5 a left join plsport_playsport._city_info_ok_with_chinese b on a.userid = b.userid;
 
         ALTER TABLE plsport_playsport._list_6 ADD INDEX (`userid`);  
-        ALTER TABLE actionlog._actionlog_platform_visit ADD INDEX (`userid`);  
+        ALTER TABLE actionlog._actionlog_platform_visit ADD INDEX (`userid`); 
+        ALTER TABLE plsport_playsport._list_6 convert to character set utf8 collate utf8_general_ci;        
+        ALTER TABLE actionlog._actionlog_platform_visit convert to character set utf8 collate utf8_general_ci;       
 
 create table plsport_playsport._list_7 engine = myisam
 SELECT a.userid, a.nickname, a.join_date, a.last_login, a.total_redeem, a.redeem_3_months,
@@ -3993,9 +4001,9 @@ FROM plsport_playsport._list_6 a left join actionlog._actionlog_platform_visit b
 create table plsport_playsport._list_7_ok engine = myisam
 SELECT userid, nickname, join_date, last_login, total_redeem, redeem_3_months, BZ, city1, desktop_p, (mobile_p+tablet_p) as mobile_p
 FROM plsport_playsport._list_7
-where redeem_3_months > 0
-and BZ > 0
-and (mobile_p+tablet_p) > 0.59;
+where redeem_3_months > 0       #a. 近三個月有消費的使用者
+and BZ > 0                      #c. 有在使用購牌專區購牌
+and (mobile_p+tablet_p) > 0.59; #b. 使用手機比率超過 60%
 
 
 SELECT 'userid', 'nickname', '加入會員', '最後登入', '總儲值金額', '近三個月儲值金額', '購牌專區消費金額', '居住地','使用電腦比例','使用手機比例' union (
