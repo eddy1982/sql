@@ -2592,6 +2592,98 @@ SELECT * FROM textcampaign._list7;
         FROM textcampaign._check;
 
 
+# 以下是分析的部分 (2015-03-03)-------------------------------------------------------------
+
+
+# 簡訊發送的成功率
+SELECT stas, count(one) as c 
+FROM textcampaign.text_sent_status_0226
+group by stas;
+# 失敗	123
+# 成功 	1810 / 1933 = 0.936
+
+
+create table textcampaign._who_receive_text engine = myisam
+SELECT concat('0',one) as phone, stas, date 
+FROM textcampaign.text_sent_status_0226;
+
+create table textcampaign._full_list engine = myisam
+SELECT a.phone, a.id, a.userid, a.total_redeem, a.last_time_login, a.text_campaign, a.abtest_group, a.status, b.stas, concat(a.status,'_',b.stas) as s
+FROM textcampaign.retention_20150226_full_list_dont_delete a left join textcampaign._who_receive_text b on a.phone = b.phone;
+
+# 檢查
+SELECT s, count(phone) 
+FROM textcampaign._full_list_1
+group by s;
+
+create table textcampaign._full_list_1 engine = myisam
+SELECT *
+FROM textcampaign._full_list
+where s is null OR s in ('sent_成功');
+
+
+# 回網站跳出訊息
+create table textcampaign._coupon_window_pop_up engine = myisam
+SELECT userid, outflowMember, (case when (outflowMember is not null) then 'see_pop' else '' end) as see
+FROM plsport_playsport.showmessage
+where outflowmember is not null
+and outflowMember between '2015-02-26 18:01:13' and '2015-02-28 21:59:13'
+order by outflowMember;
+
+create table textcampaign._full_list_2 engine = myisam
+SELECT a.phone, a.id, a.userid, a.total_redeem, a.last_time_login, a.text_campaign, a.abtest_group, a.status, a.stas, b.see  
+FROM textcampaign._full_list_1 a left join textcampaign._coupon_window_pop_up b on a.userid = b.userid;
+
+
+# 個人信箱獲得兌換券派送訊息( mailpcash_list蠻大的, 要捉很久)
+create table textcampaign._receive_coupon engine = myisam
+SELECT tou, title, date, remarks 
+FROM plsport_playsport.mailpcash_list
+where title like '%恭喜獲得兌換券%'
+and date between '2015-02-26 18:01:20' and '2015-02-28 21:47:01';
+
+create table textcampaign._full_list_3 engine = myisam
+SELECT a.phone, a.id, a.userid, a.total_redeem, a.last_time_login, a.text_campaign, a.abtest_group, a.status, a.stas, a.see, b.title as message
+FROM textcampaign._full_list_2 a left join textcampaign._receive_coupon b on a.userid = b.tou;
+
+create table textcampaign._spent engine = myisam
+SELECT userid, sum(amount) as spent
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date between '2015-02-26 18:01:13' and now()
+group by userid;
+
+create table textcampaign._full_list_4 engine = myisam
+SELECT a.phone, a.id, a.userid, a.total_redeem, a.last_time_login, a.text_campaign, a.abtest_group, a.status, a.stas, a.see, a.message, b.spent
+FROM textcampaign._full_list_3 a left join textcampaign._spent b on a.userid = b.userid;
+
+        SELECT * FROM textcampaign._full_list_4
+        where status = 'sent'
+        and stas = '成功'
+        and see = 'see_pop'
+        and message is not null
+        and spent is not null;
+
+
+        SELECT * FROM textcampaign._full_list_4
+        where spent is not null;
+
+        SELECT status, count(phone) 
+        FROM textcampaign._full_list_4
+        group by status;
+
+
+
+SELECT * FROM actionlog.action_201502
+where urik like '%retention_a_20150226%';
+
+create table textcampaign._who_click_link_in_text engine = myisam
+SELECT userid, uri, time, platform_type, cookie_stamp, user_agent
+FROM actionlog.action_201502
+where uri like '%utm_content=retention_a_20150226%'
+and time between '2015-02-26 18:00:00' and '2015-02-28 23:59:59';
+
+
 
 # =================================================================================================
 #  [201401-J-11] 購買後推薦專區 - 優化訪談名單
@@ -10405,7 +10497,7 @@ create table plsport_playsport._list5 engine = myisam
 SELECT * 
 FROM plsport_playsport._list4
 where post_count is not null
-and post_p > 0.98     # 發文需在前98%
+and post_p > 0.98 # 發文需在前98%
 and analysis_count is not null
 order by analysis_count desc;
 
@@ -10600,13 +10692,15 @@ FROM plsport_playsport._qu_with_use_time_1;
 
 
 # ------------------------------------------------------
-# 團隊數據點擊量、隔日賽事點擊量 2/26
+# 團隊數據點擊量、隔日賽事點擊量 2/26 (阿達)
 #     2. 團隊數據點擊量
-#        a. 統計”數據▼”的點擊量，及使用比例( 多少使用者使用)
+#        a. 統計”數據▼”的點擊量，及使用比例(多少使用者使用)
 #     3. 隔日賽事點擊量
 #        a. 統計預測比例、對戰紀錄點擊量
 #        b. 統計1/22(含)後，看隔日賽事的使用者是否有增加
 # ------------------------------------------------------
+
+# 文婷說此問券常常有受訪者答非所問的情況 2015-03-03
 
 # 先匯入events(已寫成.py)
 
@@ -11401,16 +11495,118 @@ FROM plsport_playsport._list_f_3);
 
 
 
+# 以下為問券的分析 2015-03-02(靜怡)
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4322&projectId=11
+
+create table actionlog._forum engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201412
+where uri like '%/forum%';
+insert ignore into actionlog._forum
+select userid, uri, time, platform_type from actionlog.action_201501
+where uri like '%/forum%';
+insert ignore into actionlog._forum
+select userid, uri, time, platform_type from actionlog.action_201502
+where uri like '%/forum%';
+insert ignore into actionlog._forum
+select userid, uri, time, platform_type from actionlog.action_201503
+where uri like '%/forum%';
 
 
+# 條件: 近2個月內
+create table actionlog._forum_1 engine = myisam
+SELECT * 
+FROM actionlog._forum
+where userid <> ''
+and time between subdate(now(),62) and now(); # 近2個月內的討論區pv數
+
+create table plsport_playsport._forum_post_count engine = myisam
+SELECT postuser, count(subjectid) as post_count 
+FROM plsport_playsport.forum
+where posttime between subdate(now(),62) and now()
+group by postuser;
+
+create table plsport_playsport._forum_reply_count engine = myisam
+SELECT userid, count(subjectid) as reply_count 
+FROM plsport_playsport.forumcontent
+where postdate between subdate(now(),62) and now()
+group by userid;
+
+create table plsport_playsport._forum_like_count engine = myisam
+SELECT userid, count(subject_id) as like_count 
+FROM plsport_playsport.forum_like
+where create_date between subdate(now(),62) and now()
+group by userid;
+
+ALTER TABLE plsport_playsport._forum_post_count convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._forum_reply_count convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._forum_like_count convert to character set utf8 collate utf8_general_ci;
+
+ALTER TABLE plsport_playsport._forum_post_count ADD INDEX (`postuser`);
+ALTER TABLE plsport_playsport._forum_reply_count ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport._forum_like_count ADD INDEX (`userid`);
 
 
+create table plsport_playsport._forum_list_1 engine = myisam
+SELECT a.userid, b.post_count
+FROM plsport_playsport.member a left join plsport_playsport._forum_post_count b on a.userid = b.postuser;
+
+create table plsport_playsport._forum_list_2 engine = myisam
+SELECT a.userid, a.post_count, b.reply_count
+FROM plsport_playsport._forum_list_1 a left join plsport_playsport._forum_reply_count b on a.userid = b.userid;
+
+create table plsport_playsport._forum_list_3 engine = myisam
+SELECT a.userid, a.post_count, a.reply_count, b.like_count
+FROM plsport_playsport._forum_list_2 a left join plsport_playsport._forum_like_count b on a.userid = b.userid;
 
 
+create table plsport_playsport._forum_list_4 engine = myisam
+SELECT userid,  COALESCE(post_count, 0) as post_count, 
+                COALESCE(reply_count, 0) as reply_count, 
+                COALESCE(like_count, 0) as like_count 
+FROM plsport_playsport._forum_list_3
+where userid <> '';
+
+create table plsport_playsport._forum_list_5 engine = myisam
+select a.userid, a.s as score
+from (
+    SELECT userid, post_count, reply_count, like_count, (post_count+reply_count+like_count) as c, (post_count*7 + reply_count*3 + like_count*0.2) as s
+    FROM plsport_playsport._forum_list_4) as a
+where a.s > 0;
+
+create table plsport_playsport._forum_list_6 engine = myisam
+select userid, score, round((cnt-rank+1)/cnt,2) as score_percentile
+from (SELECT userid, score, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._forum_list_5, (SELECT @curRank := 0) r
+      order by score desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._forum_list_5) as ct;
 
 
+create table plsport_playsport._forum_questionnaire engine = myisam
+SELECT userid, `1423651483` as q1, `1423651637` as q2, `1423652084` as q3, `1424142973` as q4, `1424143026` as q5
+FROM plsport_playsport.questionnaire_201502111857119574_answer
+where spend_minute > 0.29;
+
+create table plsport_playsport._forum_list_7 engine = myisam
+SELECT a.userid, a.q1, a.q2, a.q3, a.q4, a.q5, b.score, b.score_percentile
+FROM plsport_playsport._forum_questionnaire a left join plsport_playsport._forum_list_6 b on a.userid = b.userid;
 
 
+        update plsport_playsport._forum_list_7 set q5 = replace(q5, ' ','');
+        update plsport_playsport._forum_list_7 set q5 = replace(q5, '　','');
+        update plsport_playsport._forum_list_7 set q5 = replace(q5, '\\','');
+        update plsport_playsport._forum_list_7 set q5 = replace(q5, ',','');
+        update plsport_playsport._forum_list_7 set q5 = replace(q5, ';','');
+        update plsport_playsport._forum_list_7 set q5 = replace(q5, '\n','');
+        update plsport_playsport._forum_list_7 set q5 = replace(q5, '\r','');
+        update plsport_playsport._forum_list_7 set q5 = replace(q5, '\t','');
+
+
+SELECT 'userid', 'q1', 'q2', 'q3', 'q4', 'q5', 'score', 'p' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_list_7.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_list_7);
 
 
 
