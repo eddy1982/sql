@@ -10299,6 +10299,7 @@ AND buy_date between '2015-02-16 16:58:00' AND now();
 
 
 # 2. 上次提到透過即時比分APP點擊而馬上購買的交易筆數很低 (2015-03-05)
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4041&projectId=11
 # 這次從過年前(2015-02-16 16:58:00)~目前的區間來撈, 竟然只有1筆.....
 # 很奇怪的是, 用iOS的人的交易筆數較多(有77筆), 用andorid的人只有1筆
 # 所以根本完全沒辦法來abtesting
