@@ -10259,6 +10259,8 @@ FROM plsport_playsport._app_action_log_3_for_cal_avg_click);
 # 預設版標的問題，工程目前找不到原因
 # 麻煩年後再檢查一次狀況
 
+# 第二次ABtesting已於2015-02-16 16:58上線
+
 CREATE TABLE plsport_playsport._app_action_log engine=myisam 
 SELECT * FROM
     plsport_playsport.app_action_log
@@ -10296,23 +10298,87 @@ AND buy_date between '2015-02-16 16:58:00' AND now();
 
 
 
-#----------------------------------------------------------------------------------------------
-#APP的pv檢察-阿達看到即時比分app人數好像少很多
+# 2. 上次提到透過即時比分APP點擊而馬上購買的交易筆數很低 (2015-03-05)
+# 這次從過年前(2015-02-16 16:58:00)~目前的區間來撈, 竟然只有1筆.....
+# 很奇怪的是, 用iOS的人的交易筆數較多(有77筆), 用andorid的人只有1筆
+# 所以根本完全沒辦法來abtesting
+# 
+# 後來我想到一招, 就是如果我們採用"透過即時比分APP點擊而馬上購買的交易"此條件可能太嚴格,
+# 我這裡是可以做比較細的比對, 例如說:
+# "透過即時比分APP點擊某殺手, 而當日有購買該殺手"就計算, 條件可能比較寬鬆一點, 而且也算合理
+# 
+# 我們需要討論看看妳和阿達是否同意改用這樣的觀察指標. 或是說有沒有其它建議, 至少原本的觀察指標是不可行的, 我們要想另一個我們都認同的觀察指標.
 
-CREATE TABLE plsport_playsport._app_action_log_check_1 engine = myisam
-SELECT action, remark, deviceid,datetime, substr(datetime,9,2) as d, substr(datetime,12,2) as h 
-FROM plsport_playsport._app_action_log_0
-WHERE month(datetime)=1;
+# 先執行上面的_app_action_log_1~_app_action_log_2
 
-CREATE TABLE plsport_playsport._app_action_log_check_2 engine = myisam
-SELECT deviceid, d, h, count(action) as c 
-FROM plsport_playsport._app_action_log_check_1
-GROUP BY deviceid, d, h;
+create table actionlog._title_click_from_app engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201502
+where userid <> ''
+and uri like '%rp=MSA%'
+and time between '2015-02-16 16:58:00' AND now();
 
-CREATE TABLE plsport_playsport._app_action_log_check_3 engine = myisam
-SELECT d, h, count(deviceid) as device_count 
-FROM plsport_playsport._app_action_log_check_2
-GROUP BY d, h;
+create table actionlog._title_click_from_app_1 engine = myisam
+select a.userid, a.uri, a.time, a.platform_type, substr(a.p, 1, locate('&',a.p)-1) as killer
+from (
+    SELECT userid, uri, time, platform_type, substr(uri, locate('visit=',uri)+6, length(uri)) as p
+    FROM actionlog._title_click_from_app) as a;
+
+create table actionlog._title_click_from_app_2 engine = myisam
+select a.userid, a.uri, a.time, a.platform_type, a.killer, substr(a.p, 1, locate('&',a.p)-1) as allianceid
+from (
+    SELECT userid, uri, time, platform_type, killer, substr(uri, locate('allianceid=',uri)+11, length(uri)) as p
+    FROM actionlog._title_click_from_app_1) as a;
+
+create table actionlog._title_click_from_app_3 engine = myisam
+select a.userid, a.uri, a.time, a.platform_type, a.killer, a.allianceid, a.rp, right(a.rp, 1) as abtest
+from (
+    SELECT userid, uri, time, platform_type, killer, allianceid, substr(uri, locate('rp=',uri)+3, length(uri)) as rp
+    FROM actionlog._title_click_from_app_2) as a 
+where right(a.rp, 1) in ('A','B');
+
+        ALTER TABLE plsport_playsport.predict_buyer ADD INDEX (`id_bought`);
+        ALTER TABLE plsport_playsport.predict_seller ADD INDEX (`id`);
+
+create table plsport_playsport._sellinfo engine = myisam
+SELECT a.buyerid, a.buy_date, a.buy_gamedate as gamedate, b.sellerid as killer, a.buy_price as price, a.buy_allianceid as allianceid
+FROM plsport_playsport.predict_buyer a left join plsport_playsport.predict_seller b on a.id_bought = b.id
+where a.buy_date between '2015-02-16 16:58:00' AND now()
+and a.buy_price <> 0;
+
+select a.h, count(a.price)
+from (
+    SELECT hour(buy_date) as h, price 
+    FROM plsport_playsport._sellinfo) as a
+group by a.h;
+
+        ALTER TABLE actionlog._title_click_from_app_3 CHANGE `killer` `killer` VARCHAR(32) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL;
+        ALTER TABLE actionlog._title_click_from_app_3 CHANGE `allianceid` `allianceid` INT(4) NOT NULL;
+        ALTER TABLE plsport_playsport._sellinfo ADD INDEX (`buyerid`,`killer`,`allianceid`);
+        ALTER TABLE actionlog._title_click_from_app_3 ADD INDEX (`userid`,`killer`,`allianceid`);
+
+ALTER TABLE plsport_playsport._sellinfo convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._title_click_from_app_3 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._title_click_from_app_4 engine = myisam
+SELECT a.buyerid, a.buy_date, a.gamedate, a.killer, a.price, a.allianceid, b.time as seetime, b.rp, b.abtest
+FROM plsport_playsport._sellinfo a left join actionlog._title_click_from_app_3 b on a.buyerid = b.userid and a.killer = b.killer and a.allianceid = b.allianceid
+where b.time is not null;
+
+create table actionlog._title_click_from_app_5 engine = myisam
+select *
+from (
+    SELECT buyerid, buy_date, gamedate, killer, price, allianceid, seetime, rp, abtest, round(TIME_TO_SEC(timediff(buy_date,seetime))/60,1) as difft #以分為單位
+    FROM actionlog._title_click_from_app_4) as a
+where a.difft < 23*60 and a.difft > 0; #點擊到實際購買的時間為>0且<23小時
+
+#完成
+create table actionlog._title_click_from_app_6 engine = myisam
+SELECT buyerid, buy_date, gamedate, killer, price, allianceid, min(seetime) as seetime, rp, abtest, difft as mins
+FROM actionlog._title_click_from_app_5
+group by buyerid, buy_date, gamedate, killer, price, allianceid;
+
+
 
 
 # =================================================================================================
