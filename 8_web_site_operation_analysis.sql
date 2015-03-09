@@ -246,7 +246,7 @@ insert ignore into prediction.p_main select * from prediction.p_2015;
 select a.createMonth, count(a.userid) as u
 from (
     SELECT createMonth, userid, sum(userid) as p
-    FROM prediction.p_201412
+    FROM prediction.p_201501
     group by createMonth, userid) as a
 group by a.createMonth;
 

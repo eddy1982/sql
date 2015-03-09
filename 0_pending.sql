@@ -11678,7 +11678,8 @@ FROM plsport_playsport._forum_list_7);
 
 
 # =================================================================================================
-# 任務: [201406-B-12]強化玩家搜尋-優化ABtesting [進行中]
+# 任務: [201406-B-12]強化玩家搜尋-優化ABtesting [進行中] (靜怡) 2015-03-09
+# 之前的完整版SQL寫在另一個檔案中 0_pending_usersearch.sql
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4043&projectId=11
 # 說明
 # 目的:了解增加預設玩家數量，是否讓使用者更喜歡
@@ -11689,6 +11690,7 @@ FROM plsport_playsport._forum_list_7);
 # - 觀察指標:1.預設玩家的點擊狀況。2.個人頁PV
 # =================================================================================================
 
+# 點擊分佈的檢查
 CREATE TABLE actionlog._check_usersearch engine = myisam
 SELECT userid, uri, time 
 FROM actionlog.action_201502
@@ -11696,6 +11698,13 @@ WHERE uri LIKE '%rp=USE%'
 AND userid <> ''
 AND time between '2015-02-16 14:53:00' AND now();
 # AND time between '2015-02-06 11:30:00' AND now();
+
+insert ignore into actionlog._check_usersearch
+SELECT userid, uri, time 
+FROM actionlog.action_201503
+WHERE uri LIKE '%rp=USE%'
+AND userid <> ''
+AND time between '2015-02-16 14:53:00' AND now();
 
 CREATE TABLE actionlog._check_usersearch_1 engine = myisam
 SELECT userid, uri, time, substr(uri,locate('&rp=',uri)+4,length(uri)) as p
@@ -11716,6 +11725,238 @@ FROM (
 SELECT abtest, p, count(userid) as c 
 FROM actionlog._check_usersearch_3
 GROUP BY abtest, p;
+
+CREATE TABLE actionlog._check_usersearch_4 engine = myisam
+SELECT * 
+FROM actionlog._check_usersearch_3
+where substr(p,4,1) in (2,3);
+
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=3419&projectId=11
+# 我們將這次a/b testing的目標都列出來:
+# 
+# 目標1:搜尋bar的使用率
+# 目標2:從玩家搜尋點至個人頁的pv
+# 目標3:進入玩家搜尋的pv
+# 目標4:在玩家搜尋頁的所有pv
+# 目標5:透過玩家搜尋購牌的金額
+# 目標6:曾經透過玩家搜尋購牌的使用者在全站的消費金額
+
+# (1)
+CREATE TABLE actionlog._visit_usersearch engine = myisam
+SELECT userid, uri, time 
+FROM actionlog.action_201502
+WHERE uri LIKE '%usersearch.php%'
+AND userid <> ''
+AND time between '2015-02-16 14:53:00' AND now();
+
+insert ignore into actionlog._visit_usersearch
+SELECT userid, uri, time 
+FROM actionlog.action_201503
+WHERE uri LIKE '%usersearch.php%'
+AND userid <> ''
+AND time between '2015-02-16 14:53:00' AND now();
+
+    ALTER TABLE actionlog._visit_usersearch convert to character SET utf8 collate utf8_general_ci;
+
+create table actionlog._visit_usersearch_1 engine = myisam
+select c.g, (case when (c.g>10) then 'a' else 'b' end) as abtest, c.userid, c.uri, c.time, length(c.uri) as le
+from (
+    SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time
+    FROM actionlog._visit_usersearch a left join plsport_playsport.member b on a.userid = b.userid) as c;
+
+select a.abtest, count(a.userid) as user_count
+from (
+    SELECT abtest, userid, count(uri) as c 
+    FROM actionlog._visit_usersearch_1
+    group by abtest, userid) as a
+group by a.abtest;
+
+select a.abtest, count(a.userid) as user_count
+from (
+    SELECT abtest, userid, count(uri) as c 
+    FROM actionlog._visit_usersearch_1
+    where le > 15
+    group by abtest, userid) as a
+group by a.abtest;
+
+# 2340 > 1201
+# 2383 > 1156
+
+# (2)從玩家搜尋點至個人頁的pv
+SELECT 'abtest', 'userid', 'pv' union (
+SELECT abtest, userid, count(uri) as pv 
+into outfile 'C:/Users/1-7_ASUS/Desktop/usersearch_2.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._check_usersearch_4
+group by abtest, userid);
+
+# (3)進入玩家搜尋的pv
+SELECT 'abtest', 'userid', 'pv' union (
+SELECT abtest, userid, count(uri) as pv 
+into outfile 'C:/Users/1-7_ASUS/Desktop/usersearch_3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._visit_usersearch_1
+where le = 15
+group by abtest, userid);
+
+# (4)在玩家搜尋頁的所有pv
+SELECT 'abtest', 'userid', 'pv' union (
+SELECT abtest, userid, count(uri) as pv 
+into outfile 'C:/Users/1-7_ASUS/Desktop/usersearch_4.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._visit_usersearch_1
+group by abtest, userid);
+
+
+# (5)來看消費金額-透過玩家搜尋購牌的金額
+create table plsport_playsport._who_buy_predict_via_user_search engine = myisam
+SELECT * 
+FROM plsport_playsport._predict_buyer_with_cons
+where substr(position,1,3) = 'USE'
+and date(buy_date) between '2015-02-16 14:53:00' and now();
+
+create table plsport_playsport._who_buy_predict_via_user_search_1 engine = myisam
+select c.g, (case when (c.g > 10) then 'a' else 'b' end) as abtest, c.userid, c.buy_date, c.buy_price, c.position
+from (
+    SELECT (b.id%20)+1 as g, a.buyerid as userid, a.buy_date, a.buy_price, a.position
+    FROM plsport_playsport._who_buy_predict_via_user_search a left join plsport_playsport.member b on a.buyerid = b.userid) as c;
+
+create table plsport_playsport._who_buy_predict_via_user_search_2 engine = myisam
+select a.g, a.abtest, a.userid, a.buy_date, a.buy_price, a.position, a.p
+from (
+    SELECT g, abtest, userid, buy_date, buy_price, position, concat(abtest,'_',position) as p
+    FROM plsport_playsport._who_buy_predict_via_user_search_1) as a;
+
+create table plsport_playsport._who_buy_predict_via_user_search_3 engine = myisam
+SELECT * FROM plsport_playsport._who_buy_predict_via_user_search_2
+where substr(p,6,1) in (2,3);
+
+create table plsport_playsport._task_5_list_export engine = myisam
+SELECT abtest, userid, sum(buy_price) as revenue 
+FROM plsport_playsport._who_buy_predict_via_user_search_3
+group by abtest, userid;
+
+SELECT 'abtest', 'userid', 'revenue' union (
+SELECT abtest, userid, sum(buy_price) as revenue 
+into outfile 'C:/Users/1-7_ASUS/Desktop/usersearch_5.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._who_buy_predict_via_user_search_3
+group by abtest, userid);
+
+
+# (6)全站-曾經透過玩家搜尋購牌的使用者在全站的消費金額
+create table plsport_playsport._who_buy_predict_via_user_search_all engine = myisam
+SELECT * 
+FROM plsport_playsport._predict_buyer_with_cons
+where date(buy_date) between '2015-02-16 14:53:00' and now();
+
+
+create table plsport_playsport._who_buy_predict_via_user_search_4 engine = myisam
+SELECT buyerid as userid, buy_date as date, buy_price as price  
+FROM plsport_playsport._who_buy_predict_via_user_search_all
+where buyerid in (SELECT userid 
+                  FROM plsport_playsport._task_5_list_export
+                  group by userid);
+
+create table plsport_playsport._who_buy_predict_via_user_search_5 engine = myisam
+select c.g, (case when (c.g > 10) then 'a' else 'b' end) as abtest, c.userid, c.date, c.price
+from (
+    SELECT (b.id%20)+1 as g, a.userid as userid, a.date, a.price
+    FROM plsport_playsport._who_buy_predict_via_user_search_4 a left join plsport_playsport.member b on a.userid = b.userid) as c;
+
+create table plsport_playsport._task_6_list_export engine = myisam
+SELECT abtest, userid, sum(price) as c 
+FROM plsport_playsport._who_buy_predict_via_user_search_5
+group by abtest, userid;
+
+SELECT 'abtest', 'userid', 'revenue' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/usersearch_6.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._task_6_list_export);
+
+
+# 補充: 使用者是否常在點擊第3列
+
+create table actionlog._check_usersearch_5 engine = myisam
+SELECT abtest, userid, uri, time, p, (case when (locate('ucp=',uri)>0) then substr(uri,locate('ucp=',uri)+4,length(uri)) else '' end) as ucp
+FROM actionlog._check_usersearch_4;
+
+create table actionlog._check_usersearch_6 engine = myisam
+SELECT abtest, p, ucp, count(uri) as c 
+FROM actionlog._check_usersearch_5
+group by abtest, p, ucp;
+
+
+
+# =================================================================================================
+# 任務: [201502-C-2]優化手機版購買噱幣頁-付款方式使用比列 [新建] (靜怡) 2015-03-06
+# 說明
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4299&projectId=11
+# 目的:了解站上付款方式的使用比列
+# 內容
+# - (1)站上各付款方式的使用率與成功率
+# - (2)快速結帳與(3)優惠儲值使用率與成功率
+# - 需求裝置:電腦與手機
+# - 統計區間:近一年
+# - 提交時間:3/5
+# =================================================================================================
+
+create table plsport_playsport._order_data_1 engine = myisam
+SELECT userid, createon, ordernumber, price, payway, sellconfirm, create_from,
+       (case when (platform_type<2) then 'pc' else 'mobile' end) as pf
+FROM plsport_playsport.order_data
+where createon between subdate(now(),369) AND now()
+order by userid;
+
+create table plsport_playsport._order_data_2 engine = myisam
+SELECT userid, createon, substr(createon,1,13) as h, ordernumber, price, payway, sellconfirm, create_from, pf 
+FROM plsport_playsport._order_data_1;
+
+ALTER TABLE plsport_playsport._order_data_2 ADD INDEX (`userid`, `h`, `price`, `payway`, `sellconfirm`, `create_from`);
+
+# 需要排除掉重覆點擊(產生訂單編號)的記錄, 會比較精準
+create table plsport_playsport._order_data_3 engine = myisam
+SELECT userid, max(createon) as createon, h, ordernumber, price, payway, sellconfirm, create_from, pf 
+FROM plsport_playsport._order_data_2
+group by userid, h, price, payway, sellconfirm, create_from ;
+
+SELECT * 
+FROM plsport_playsport._order_data_3;
+
+# 可匯至EXCEL
+SELECT 'userid', 'createon', 'h', 'orderno', 'price', 'payway', 'sellconfirm', 'createfrom', 'pf' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_order_data_3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._order_data_3);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
