@@ -2592,8 +2592,7 @@ SELECT * FROM textcampaign._list7;
         FROM textcampaign._check;
 
 
-# 以下是分析的部分 (2015-03-03)-------------------------------------------------------------
-
+# 以下是分析的部分 (2015-03-03)-再次執行分析 (2015-03-10)----------------------
 
 # 簡訊發送的成功率
 SELECT stas, count(one) as c 
@@ -2601,7 +2600,6 @@ FROM textcampaign.text_sent_status_0226
 GROUP BY stas;
 # 失敗    123
 # 成功    1810 / 1933 = 0.936
-
 
 CREATE TABLE textcampaign._who_receive_text engine = myisam
 SELECT concat('0',one) as phone, stas, date 
@@ -2664,13 +2662,35 @@ FROM textcampaign._full_list_3 a LEFT JOIN textcampaign._spent b on a.userid = b
         AND message is not null
         AND spent is not null;
 
+        SELECT status, stas, count(userid) as user_count 
+        FROM textcampaign._full_list_4
+        group by status, stas;
 
-        SELECT * FROM textcampaign._full_list_4
-        WHERE spent is not null;
-
+        SELECT status, sum(spent) as revenue, count(userid) as user_count
+        FROM textcampaign._full_list_4
+        WHERE spent is not null
+        group by status;
+        
         SELECT status, count(phone) 
         FROM textcampaign._full_list_4
         GROUP BY status;
+        
+# 計算在期間內, 有使用抵用券的記錄
+CREATE TABLE textcampaign._coupon_used engine = myisam
+SELECT userid, count(id) as coupon_used_count 
+FROM plsport_playsport.coupon_used_detail
+WHERE type = 1
+AND date between '2015-02-26 18:01:13' AND now()
+GROUP BY userid;        
+        
+CREATE TABLE textcampaign._full_list_5 engine = myisam
+SELECT a.userid, a.status, a.stas, a.see, a.message, a.spent, b.coupon_used_count
+FROM textcampaign._full_list_4 a left join textcampaign._coupon_used b on a.userid = b.userid;
+
+SELECT * FROM textcampaign._full_list_5
+where status = 'sent'
+and coupon_used_count is not null;
+
 
 
 
@@ -4721,7 +4741,7 @@ FROM (
     SELECT userid, subjectid, allianceid, date(got_time) as d, substr(got_time,1,7) as m, year(got_time) as y
     FROM plsport_playsport.analysis_king
     WHERE allianceid = 3 # NBA 
-    AND got_time between '2015-01-20 00:00:00' AND '2015-02-02 23:59:59') as a
+    AND got_time between '2015-02-03 00:00:00' AND '2015-03-09 23:59:59') as a
 GROUP BY a.d, a.allianceid;
 
 # (2)分析文總數
@@ -4731,7 +4751,7 @@ FROM (
     FROM plsport_playsport.forum
     WHERE gametype = 1 # 分析文
     AND allianceid = 3 # NBA 
-    AND posttime between '2015-01-20 00:00:00' AND '2015-02-02 23:59:59'
+    AND posttime between '2015-02-03 00:00:00' AND '2015-03-09 23:59:59'
     ORDER BY posttime) as a
 GROUP BY a.d, a.allianceid;
 
@@ -10911,7 +10931,6 @@ FROM (
             GROUP BY a.d, a.userid) as b
         GROUP BY b.d;
 
-
 # g.預測比例點擊數 (所有人)
 SELECT a.d, count(a.uri) as c
 FROM (
@@ -10919,7 +10938,6 @@ FROM (
     FROM actionlog._predictgame_without_login
     WHERE uri LIKE '%FROM=livescore%') as a
 GROUP BY a.d;
-
 
 # h.對戰紀錄點擊數 (所有人)
 SELECT a.d, count(a.uri) as c
@@ -11276,10 +11294,6 @@ FROM (
     SELECT date(postdate) as d, userid 
     FROM plsport_playsport._forumcontent_1) as a
 GROUP BY a.d;
-
-
-
-
 
 
 
@@ -11932,16 +11946,326 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._order_data_3);
 
 
+# Thu, Mar 12, 2015 at 11:18 AM
+# EDDY
+# 
+# 麻煩幫我查詢MYCARD點數在手機上的使用率
+# 只要針對手機就好
+# 這不急你再抽空幫我查一下
+# 謝謝
+
+
+create table plsport_playsport._order_data engine = myisam
+SELECT id, userid, createon, ordernumber, price, payway, sellconfirm, create_from, platform_type
+FROM plsport_playsport.order_data
+where createon between subdate(now(),369) AND now();
+
+create table plsport_playsport._orders_pcash_other engine = myisam
+SELECT * FROM plsport_playsport.orders_pcash_other
+where date between subdate(now(),369) AND now();
+
+
+ALTER TABLE plsport_playsport._order_data ADD INDEX (`id`);
+ALTER TABLE plsport_playsport._orders_pcash_other ADD INDEX (`id_order_data`);
+
+create table plsport_playsport._order_data_1 engine = myisam
+SELECT a.id, a.userid, a.createon, a.ordernumber, a.price, a.payway, a.sellconfirm, a.create_from, a.platform_type, b.paymenttype, b.final_paymenttype
+FROM plsport_playsport._order_data a left join plsport_playsport._orders_pcash_other b on a.id = b.id_order_data;
+
+
+create table plsport_playsport._order_data_2 engine = myisam
+select *
+from (
+    SELECT id, userid, createon, ordernumber, price, payway, sellconfirm, create_from, 
+           (case when (platform_type<2) then 'pc' else 'mobile' end) as p, paymenttype, final_paymenttype 
+    FROM plsport_playsport._order_data_1) as a
+where a.p = 'mobile'
+and sellconfirm = 1;
+
+
+SELECT payway, count(userid) as c 
+FROM plsport_playsport._order_data_2
+where substr(final_paymenttype,1,3) = 'MFS'
+group by payway;
 
 
 
+# =================================================================================================
+# 任務: 快速結帳開關使用狀況 [新建] (靜怡) 2015-03-10
+# 目的
+# 
+# 知選擇關閉快速結帳的使用狀況
+# 
+# 內容
+# - 統計區間:近三個月
+# - 對象:有看過快速結帳的使用者
+# - 需求:關閉快速結帳的比列
+# =================================================================================================
+
+create table plsport_playsport.quick_order_switch_1_open engine = myisam
+SELECT * 
+FROM plsport_playsport.quick_order_switch
+where create_time between '2014-12-01 00:00:00' AND now()
+order by id desc;
+
+SELECT count(userid) 
+FROM plsport_playsport.quick_order_switch_1_open;
+
+select count(a.userid) as c
+from (
+    SELECT userid,off_time
+    FROM plsport_playsport.quick_order_switch_1_open
+    group by userid) as a;
+
+select count(a.userid) as c
+from (
+    SELECT userid,off_time
+    FROM plsport_playsport.quick_order_switch_1_open
+    where off_time is not null
+    group by userid) as a;
+
+
+# =================================================================================================
+# 任務: [201408-A-13]開發回文推功能-發文推比狀況了解 [新建] (靜怡) 2015-03-11
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4349&projectId=11
+# 說明
+# 目的:1.了解發文推比現況 2.找出發文推比下降原因
+# 
+# 內容
+# - 針對使用裝置、聯盟與文章類別進行了解分析
+# - 使用裝置:發文推介面在電腦與手機點擊狀況
+# - 文章分類:發文推介面在分析、感謝 、Live、亮單 、新聞等類別點擊狀況
+# - 聯盟:發文推介面在各聯盟文章點擊狀況
+# - 統計時間區段由DEEY自行設定
+# - 報告時間:3/11
+# =================================================================================================
+
+# 先匯入以下tables:
+# forum
+# forum_like
+# member
+# member_signin_log_archive
+
+create table plsport_playsport._member_signin engine = myisam
+SELECT userid, date(signin_time) as d 
+FROM plsport_playsport.member_signin_log_archive
+where signin_time between '2014-01-01 00:00:00' and now();
+
+create table plsport_playsport._forum engine = myisam
+SELECT subjectid, allianceid, gametype, postuser, date(posttime) as d, replycount, pushcount 
+FROM plsport_playsport.forum
+where posttime between '2014-01-01 00:00:00' and now();
+
+create table plsport_playsport._forum_like engine = myisam
+SELECT subject_id, userid, date(create_date) as d
+FROM plsport_playsport.forum_like
+where create_date between '2014-01-01 00:00:00' and now();
+
+
+create table plsport_playsport._member_signin_1 engine = myisam
+SELECT userid, d, count(userid) as c 
+FROM plsport_playsport._member_signin
+group by userid, d;
+
+create table plsport_playsport._member_signin_2 engine = myisam
+SELECT d, count(userid) as user_count 
+FROM plsport_playsport._member_signin_1
+group by d;
+
+create table plsport_playsport._forum_like_1 engine = myisam
+SELECT d, userid, count(subject_id) as c 
+FROM plsport_playsport._forum_like
+group by d, userid;
+
+create table plsport_playsport._forum_like_2 engine = myisam
+SELECT d, count(userid) as like_user_count 
+FROM plsport_playsport._forum_like_1
+group by d;
+
+create table plsport_playsport._forum_1 engine = myisam
+SELECT d, postuser, count(subjectid) as c 
+FROM plsport_playsport._forum
+group by d, postuser;
+
+create table plsport_playsport._forum_2 engine = myisam
+SELECT d, count(postuser) as post_user_count 
+FROM plsport_playsport._forum_1
+group by d;
+
+create table plsport_playsport._main_check_table engine = myisam
+select c.d, c.user_count, c.post_user_count, d.like_user_count
+from (
+    SELECT a.d, a.user_count, b.post_user_count
+    FROM plsport_playsport._member_signin_2 a left join plsport_playsport._forum_2 b on a.d = b.d) as c
+    left join plsport_playsport._forum_like_2 as d on c.d = d.d;
 
 
 
+create table plsport_playsport._main_check engine = myisam
+select a.d, a.post, a.reply_count, a.push_count, round((a.reply_count/a.post),2) as r_r, round((a.push_count/a.post),2) as p_r
+from (
+    SELECT d, count(subjectid) as post, sum(replycount) as reply_count, sum(pushcount) as push_count 
+    FROM plsport_playsport._forum
+    group by d) as a;
+    
+        # 以聯盟來區分
+        create table plsport_playsport._main_check_mlb engine = myisam
+        select a.d, a.post, a.reply_count, a.push_count, round((a.reply_count/a.post),2) as r_r, round((a.push_count/a.post),2) as p_r
+        from (
+            SELECT d, count(subjectid) as post, sum(replycount) as reply_count, sum(pushcount) as push_count 
+            FROM plsport_playsport._forum
+            where allianceid = 1
+            group by d) as a;
+            
+        create table plsport_playsport._main_check_nba engine = myisam
+        select a.d, a.post, a.reply_count, a.push_count, round((a.reply_count/a.post),2) as r_r, round((a.push_count/a.post),2) as p_r
+        from (
+            SELECT d, count(subjectid) as post, sum(replycount) as reply_count, sum(pushcount) as push_count 
+            FROM plsport_playsport._forum
+            where allianceid = 3
+            group by d) as a;
+            
+        create table plsport_playsport._main_check_kba engine = myisam
+        select a.d, a.post, a.reply_count, a.push_count, round((a.reply_count/a.post),2) as r_r, round((a.push_count/a.post),2) as p_r
+        from (
+            SELECT d, count(subjectid) as post, sum(replycount) as reply_count, sum(pushcount) as push_count 
+            FROM plsport_playsport._forum
+            where allianceid = 92
+            group by d) as a;    
+    
+        # 以聯盟來區分(總表), 因為有些日期不一定所有聯盟都有, 所以要join在一起
+        select e.d, e.all_push_ratio, e.nba, e.mlb, f.p_r as kba
+        from (
+            select c.d, c.all_push_ratio, c.nba, d.p_r as mlb
+            from (
+                SELECT a.d, a.p_r as all_push_ratio, b.p_r as nba
+                FROM plsport_playsport._main_check a left join plsport_playsport._main_check_nba b on a.d = b.d) as c
+                left join plsport_playsport._main_check_mlb as d on c.d = d.d) as e
+            left join plsport_playsport._main_check_kba as f on e.d = f.d
+        order by e.d;
+            
+
+        create table plsport_playsport._main_check_all_ana_post engine = myisam
+        select a.d, a.post, a.reply_count, a.push_count, round((a.reply_count/a.post),2) as r_r, round((a.push_count/a.post),2) as p_r
+        from (
+            SELECT d, count(subjectid) as post, sum(replycount) as reply_count, sum(pushcount) as push_count 
+            FROM plsport_playsport._forum
+            where gametype = 1
+            group by d) as a; 
+
+        create table plsport_playsport._main_check_nba_ana_post engine = myisam
+        select a.d, a.post, a.reply_count, a.push_count, round((a.reply_count/a.post),2) as r_r, round((a.push_count/a.post),2) as p_r
+        from (
+            SELECT d, count(subjectid) as post, sum(replycount) as reply_count, sum(pushcount) as push_count 
+            FROM plsport_playsport._forum
+            where allianceid = 3
+            and gametype = 1
+            group by d) as a; 
+            
+        create table plsport_playsport._main_check_mlb_ana_post engine = myisam
+        select a.d, a.post, a.reply_count, a.push_count, round((a.reply_count/a.post),2) as r_r, round((a.push_count/a.post),2) as p_r
+        from (
+            SELECT d, count(subjectid) as post, sum(replycount) as reply_count, sum(pushcount) as push_count 
+            FROM plsport_playsport._forum
+            where allianceid = 1
+            and gametype = 1
+            group by d) as a;
+            
+        create table plsport_playsport._main_check_kba_ana_post engine = myisam
+        select a.d, a.post, a.reply_count, a.push_count, round((a.reply_count/a.post),2) as r_r, round((a.push_count/a.post),2) as p_r
+        from (
+            SELECT d, count(subjectid) as post, sum(replycount) as reply_count, sum(pushcount) as push_count 
+            FROM plsport_playsport._forum
+            where allianceid = 92
+            and gametype = 1
+            group by d) as a;              
+            
+        select e.d, e.all_push_ratio, e.nba, e.mlb, f.p_r as kba
+        from (
+            select c.d, c.all_push_ratio, c.nba, d.p_r as mlb
+            from (
+                SELECT a.d, a.p_r as all_push_ratio, b.p_r as nba
+                FROM plsport_playsport._main_check_all_ana_post a left join plsport_playsport._main_check_nba_ana_post b on a.d = b.d) as c
+                left join plsport_playsport._main_check_mlb_ana_post as d on c.d = d.d) as e
+            left join plsport_playsport._main_check_kba_ana_post as f on e.d = f.d
+        order by e.d;            
+            
 
 
+# 以裝置來區分, 但因為資料較大, 處理時間較久, 所以只先抽出看2月份的就好
+create table plsport_playsport._forumdetail_201502 engine = myisam
+SELECT userid, uri, substr(time,1,15) as t, (case when (platform_type<2) then 'pc' else 'mobile' end) as p 
+FROM actionlog.action_201502
+where userid <> ''
+and uri like '%forumdetail.php%';
 
+create table plsport_playsport._forumdetail_201402 engine = myisam
+SELECT userid, uri, substr(time,1,15) as t, (case when (platform_type<2) then 'pc' else 'mobile' end) as p 
+FROM actionlog.action_201402
+where userid <> ''
+and uri like '%forumdetail.php%';
 
+create table plsport_playsport._forumdetail_201502_a engine = myisam
+SELECT userid, t, p, count(uri) as c 
+FROM plsport_playsport._forumdetail_201502
+group by userid, t, p;
+
+create table plsport_playsport._forumdetail_201402_a engine = myisam
+SELECT userid, t, p, count(uri) as c 
+FROM plsport_playsport._forumdetail_201402
+group by userid, t, p;
+
+create table plsport_playsport._forum_like_201502 engine = myisam
+SELECT subject_id, userid, substr(create_date,1,15) as t
+FROM plsport_playsport.forum_like
+where substr(create_date,1,7) = '2015-02';
+
+create table plsport_playsport._forum_like_201402 engine = myisam
+SELECT subject_id, userid, substr(create_date,1,15) as t
+FROM plsport_playsport.forum_like
+where substr(create_date,1,7) = '2014-02';
+
+        ALTER TABLE plsport_playsport._forumdetail_201502_a ADD INDEX (`userid`,`t`);
+        ALTER TABLE plsport_playsport._forumdetail_201402_a ADD INDEX (`userid`,`t`);
+        ALTER TABLE plsport_playsport._forum_like_201502 ADD INDEX (`userid`,`t`);
+        ALTER TABLE plsport_playsport._forum_like_201402 ADD INDEX (`userid`,`t`);
+        ALTER TABLE plsport_playsport._forumdetail_201502_a convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._forumdetail_201402_a convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._forum_like_201502 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._forum_like_201402 convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._forum_like_201502_with_device engine = myisam
+SELECT  a.subject_id, a.userid, a.t, b.p
+FROM plsport_playsport._forum_like_201502 a left join plsport_playsport._forumdetail_201502_a b on a.userid = b.userid and a.t = b.t;
+
+create table plsport_playsport._forum_like_201402_with_device engine = myisam
+SELECT  a.subject_id, a.userid, a.t, b.p
+FROM plsport_playsport._forum_like_201402 a left join plsport_playsport._forumdetail_201402_a b on a.userid = b.userid and a.t = b.t;
+
+create table plsport_playsport._forum_like_201502_with_device_1 engine = myisam
+select a.userid, a.t, a.p, count(userid) as c
+from (
+    SELECT userid, substr(t,1,10) as t, p 
+    FROM plsport_playsport._forum_like_201502_with_device
+    where p is not null) as a
+group by a.userid, a.t, a.p;
+
+create table plsport_playsport._forum_like_201402_with_device_1 engine = myisam
+select a.userid, a.t, a.p, count(userid) as c
+from (
+    SELECT userid, substr(t,1,10) as t, p 
+    FROM plsport_playsport._forum_like_201402_with_device
+    where p is not null) as a
+group by a.userid, a.t, a.p;
+
+# 完成
+SELECT t, p, count(userid) as user_count 
+FROM plsport_playsport._forum_like_201502_with_device_1
+group by t, p;
+
+SELECT t, p, count(userid) as user_count 
+FROM plsport_playsport._forum_like_201402_with_device_1
+group by t, p;
 
 
 
@@ -12023,3 +12347,14 @@ FROM (
     SELECT userid, substr(uri,1,locate('.php',uri)-1) as uri
     FROM actionlog._cheat) as a
 GROUP BY a.userid, a.uri;
+
+
+
+
+
+
+    
+
+
+
+
