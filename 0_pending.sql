@@ -11119,17 +11119,17 @@ GROUP BY abtest, name;
 # 因主機更換，我於 2/11 00:11開始關閉紅陽金流
 
 
-CREATE TABLE plsport_playsport._order_data_check engine = myisam
-SELECT id, userid, CREATEon, ordernumber, price, payway, sellconfirm, CREATE_FROM, platform_type 
-FROM plsport_playsport.order_data
-WHERE CREATEon between '2015-01-14 15:12:00' AND '2015-02-11 00:00:00' # 主機受到攻擊前
-AND platform_type in (2,3) # 手機/平板
-AND payway in (1,10)       # 1: 一般信用卡, 2:紅陽
-AND userid not in ('a9991','wayway1974','ydasam')  # 這個是測試帳號
-AND substr(userid,1,9) <> 'ckone1209';             # 這個是測試帳號
+        CREATE TABLE plsport_playsport._order_data_check_a engine = myisam
+        SELECT id, userid, CREATEon, ordernumber, price, payway, sellconfirm, CREATE_FROM, platform_type 
+        FROM plsport_playsport.order_data
+        WHERE CREATEon between '2015-01-14 15:12:00' AND '2015-02-11 00:00:00' # 主機受到攻擊前
+        AND platform_type in (2,3) # 手機/平板
+        AND payway in (1,10)       # 1: 一般信用卡, 2:紅陽
+        AND userid not in ('a9991','wayway1974','ydasam')  # 這個是測試帳號
+        AND substr(userid,1,9) <> 'ckone1209';             # 這個是測試帳號
 
         # 2015-02-16 13:36已將測試名單改為(userid%20)+1 in (7,8,9,10,11,12,13,14), 佔比為全站40%
-        CREATE TABLE plsport_playsport._order_data_check engine = myisam
+        CREATE TABLE plsport_playsport._order_data_check_b engine = myisam
         SELECT id, userid, CREATEon, ordernumber, price, payway, sellconfirm, CREATE_FROM, platform_type 
         FROM plsport_playsport.order_data
         WHERE CREATEon between '2015-02-16 13:36:00' AND now() # 主機受到攻擊前
@@ -11139,27 +11139,50 @@ AND substr(userid,1,9) <> 'ckone1209';             # 這個是測試帳號
         AND substr(userid,1,9) <> 'ckone1209';             # 這個是測試帳號
 
 
-CREATE TABLE plsport_playsport._order_data_check_1 engine = myisam # 補上nickname
+CREATE TABLE plsport_playsport._order_data_check_a_1 engine = myisam # 補上nickname
 SELECT a.id, (b.id%20)+1 as g, a.userid, b.nickname, a.CREATEon, a.ordernumber, a.price, a.payway, a.sellconfirm, a.CREATE_FROM, a.platform_type 
-FROM plsport_playsport._order_data_check a LEFT JOIN plsport_playsport.member b on a.userid = b.userid;
+FROM plsport_playsport._order_data_check_a a LEFT JOIN plsport_playsport.member b on a.userid = b.userid;
 
-CREATE TABLE plsport_playsport._order_data_check_2 engine = myisam
-SELECT id, g, (case when (g in (7,8,9,10,11,12,13,14)) then 'red' else 'blue' end) as paymethon, # 40%的人是用紅陽, 其它是藍新
+CREATE TABLE plsport_playsport._order_data_check_b_1 engine = myisam # 補上nickname
+SELECT a.id, (b.id%20)+1 as g, a.userid, b.nickname, a.CREATEon, a.ordernumber, a.price, a.payway, a.sellconfirm, a.CREATE_FROM, a.platform_type 
+FROM plsport_playsport._order_data_check_b a LEFT JOIN plsport_playsport.member b on a.userid = b.userid;
+
+
+CREATE TABLE plsport_playsport._order_data_check_a_2 engine = myisam
+SELECT id, g, (case when (g in (7,8,9,10,11,12)) then 'red' else 'blue' end) as paymethon, # 30%的人是用紅陽, 其它是藍新
        userid, nickname, date(CREATEon) as d, ordernumber, price, payway, sellconfirm, CREATE_FROM, platform_type 
-FROM plsport_playsport._order_data_check_1
+FROM plsport_playsport._order_data_check_a_1
 ORDER BY g;
 
-CREATE TABLE plsport_playsport._order_data_check_3 engine = myisam # 排除掉重覆在送出訂單前點擊的人
+CREATE TABLE plsport_playsport._order_data_check_b_2 engine = myisam
+SELECT id, g, (case when (g in (7,8,9,10,11,12,13,14)) then 'red' else 'blue' end) as paymethon, # 40%的人是用紅陽, 其它是藍新
+       userid, nickname, date(CREATEon) as d, ordernumber, price, payway, sellconfirm, CREATE_FROM, platform_type 
+FROM plsport_playsport._order_data_check_b_1
+ORDER BY g;
+
+
+CREATE TABLE plsport_playsport._order_data_check_a_3 engine = myisam # 排除掉重覆在送出訂單前點擊的人
 SELECT g, paymethon, userid, nickname, d, payway, sellconfirm
-FROM plsport_playsport._order_data_check_2
+FROM plsport_playsport._order_data_check_a_2
 GROUP BY g, paymethon, userid, nickname, d, payway, sellconfirm; # 一個人在同一天內用同一種方式結帳只算一次
 
+CREATE TABLE plsport_playsport._order_data_check_b_3 engine = myisam # 排除掉重覆在送出訂單前點擊的人
+SELECT g, paymethon, userid, nickname, d, payway, sellconfirm
+FROM plsport_playsport._order_data_check_b_2
+GROUP BY g, paymethon, userid, nickname, d, payway, sellconfirm; # 一個人在同一天內用同一種方式結帳只算一次
+
+
 SELECT paymethon, sellconfirm, count(userid) as c # 可以用a/b testing計算機來算了
-FROM plsport_playsport._order_data_check_3
+FROM plsport_playsport._order_data_check_a_3
 GROUP BY paymethon, sellconfirm;
 
+SELECT paymethon, sellconfirm, count(userid) as c # 可以用a/b testing計算機來算了
+FROM plsport_playsport._order_data_check_b_3
+GROUP BY paymethon, sellconfirm;
+
+
 SELECT paymethon, payway, sum(price) as revenue
-FROM plsport_playsport._order_data_check_2
+FROM plsport_playsport._order_data_check_b_2
 WHERE sellconfirm = 1
 GROUP BY paymethon, payway;
 
