@@ -210,9 +210,9 @@ group by postyear, postmonth1, board, boardtype;
 -- ======================================================================================
 use prediction;
 
-create table prediction.prediction_201502 engine = myisam
+create table prediction.prediction_201503 engine = myisam
 SELECT * FROM plsport_playsport.prediction
-where date(createon) between '2015-02-01' and '2015-02-28';
+where date(createon) between '2015-03-01' and '2015-03-31';
 
 create table p_201409 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201409;
@@ -226,6 +226,9 @@ create table p_201501 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201501;
 create table p_201502 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201502;
+create table p_201503 engine = myisam
+select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201503;
+
 
         /*====使用者分群專用的====*/
         create table prediction.p_recently engine = myisam select * from prediction.p_201409; /*近4個月預測資料, 看使用者分群要篩至多久前的記錄*/
@@ -236,7 +239,8 @@ select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as c
 
         create table prediction.p_2015 engine = myisam select * from prediction.p_201501;
         insert ignore into prediction.p_2015 select * from prediction.p_201502;                    
-                    
+        insert ignore into prediction.p_2015 select * from prediction.p_201503;  
+
 create table prediction.p_main engine = myisam select * from prediction.p_2012;
 insert ignore into prediction.p_main select * from prediction.p_2013;
 insert ignore into prediction.p_main select * from prediction.p_2014;
