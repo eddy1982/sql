@@ -13109,7 +13109,7 @@ FROM plsport_playsport._analysis_post_5);
 
 
 # =================================================================================================
-# 任務: [201404-B-5]手機網頁版header優化-MVP測試名單撈取 [新建]
+# 任務: [201404-B-5]手機網頁版header優化-MVP測試名單撈取 [新建] (靜怡) 20154-03-26
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4474&projectId=11
 # 說明
 #  
@@ -13258,7 +13258,72 @@ FROM actionlog._pv_forum_action3_list4);
 
 
 
+# =================================================================================================
+# 任務: 雙料殺手漲價:帳戶信名單撈取 [新建] (柔雅) 2015-03-26
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4482&projectId=11
+#  TO eddy:
+# 麻煩協助撈取寄送帳戶信的名單，
+# 
+# 條件: 
+# 1.殺手:目前有販售資格的殺手
+# 2.消費者:近三個月內有以噱幣消費、且累積儲值達999元的人
+# 
+# 麻煩協助撈取名單，
+# 時間:最晚3/26完成。
+# =================================================================================================
 
+
+create table plsport_playsport._medal_fire engine = myisam 
+SELECT userid, nickname, count(userid) as c
+FROM plsport_playsport.medal_fire
+where sell_allow = 1
+and vol > 100
+group by userid, nickname;
+
+create table plsport_playsport._single_killer engine = myisam 
+SELECT userid, nickname, count(userid) as c 
+FROM plsport_playsport.single_killer
+where sell_allow =1
+group by userid, nickname;
+
+create table plsport_playsport._killer_list engine = myisam
+SELECT * FROM plsport_playsport._medal_fire;
+insert ignore into plsport_playsport._killer_list 
+SELECT * FROM plsport_playsport._single_killer;
+
+create table plsport_playsport._killer_list_1 engine = myisam
+SELECT userid, nickname
+FROM plsport_playsport._killer_list
+group by userid, nickname;
+
+create table plsport_playsport._buyer_list engine = myisam
+select * 
+from (
+    select a.userid, sum(a.price) as total_spent
+    from (
+        SELECT userid, createon, price  
+        FROM plsport_playsport.order_data
+        where payway in (1,2,3,4,5,6,9,10)
+        and sellconfirm = 1
+        and createon between subdate(now(),91) and now()) as a
+    group by a.userid) as b
+where b.total_spent > 998;
+
+create table plsport_playsport._buyer_list_1 engine = myisam
+SELECT a.userid, a.total_spent, b.nickname
+FROM plsport_playsport._buyer_list a left join plsport_playsport._killer_list_1 b on a.userid = b.userid
+where b.nickname is null;
+
+
+SELECT userid
+into outfile 'C:/Users/1-7_ASUS/Desktop/_killer_list.txt'
+fields terminated by ',' enclosed by '' lines terminated by '\r\n'
+FROM plsport_playsport._killer_list_1;
+
+SELECT userid
+into outfile 'C:/Users/1-7_ASUS/Desktop/_buyer_list.txt'
+fields terminated by ',' enclosed by '' lines terminated by '\r\n'
+FROM plsport_playsport._buyer_list_1;
 
 
 
