@@ -331,3 +331,50 @@ ALTER TABLE  `_list_limit_3000` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER 
 ALTER TABLE  `_existed_list` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 select a.userid from _list_limit_3000 a inner join _existed_list b on a.userid = b.userid;
 # select的結果應該是空的
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ALTER TABLE plsport_playsport.satisfactionquestionnaire_answer convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._questionnaire_answer_suggestion engine = myisam
+SELECT a.userid, b.nickname, date(a.completetime) as date, a.suggestion 
+FROM plsport_playsport.satisfactionquestionnaire_answer a left join plsport_playsport.member b on a.userid = b.userid
+where a.version = 4.0 and a.suggestion <> '' and a.userid <> 'yenhsun1982'
+order by completetime desc;
+
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = TRIM(suggestion);
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, '.',''); 
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, ';','');
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, '/','');
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, '\\','_');
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, '"','');
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, '&','');
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, '#','');
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, ' ','');
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, '\n','');
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, '\r','');
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, '\b','');
+update plsport_playsport._questionnaire_answer_suggestion set suggestion = replace(suggestion, '\t','');
+
+SELECT 'userid', 'nickname', 'date', 'suggestion' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_questionnaire_answer_suggestion.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._questionnaire_answer_suggestion);
+
+
+
+

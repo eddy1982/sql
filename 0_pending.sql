@@ -13108,16 +13108,153 @@ FROM plsport_playsport._analysis_post_5);
 
 
 
+# =================================================================================================
+# 任務: [201404-B-5]手機網頁版header優化-MVP測試名單撈取 [新建]
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4474&projectId=11
+# 說明
+#  
+# 提供MVP測試名單
+#  
+# 需求
+# - 撈取時間:近三個月
+# - 需求欄位:暱稱、ID、討論區PV與比例、總PV、購買預測金額，電腦與手機使用比、最後登入時間
+# =================================================================================================
+
+# 總PV
+create table actionlog._all_action_201412 engine = myisam
+SELECT userid, uri, date(time) as d, platform_type  FROM actionlog.action_201412 where userid <> '';
+create table actionlog._all_action_201501 engine = myisam
+SELECT userid, uri, date(time) as d, platform_type  FROM actionlog.action_201501 where userid <> '';
+create table actionlog._all_action_201502 engine = myisam
+SELECT userid, uri, date(time) as d, platform_type  FROM actionlog.action_201502 where userid <> '';
+create table actionlog._all_action_201503 engine = myisam
+SELECT userid, uri, date(time) as d, platform_type  FROM actionlog.action_201503 where userid <> '';
+
+create table actionlog._pv_all_action_201412 engine = myisam
+SELECT userid, d, platform_type, count(userid) as c FROM actionlog._all_action_201412 group by userid, d, platform_type;
+create table actionlog._pv_all_action_201501 engine = myisam
+SELECT userid, d, platform_type, count(userid) as c FROM actionlog._all_action_201501 group by userid, d, platform_type;
+create table actionlog._pv_all_action_201502 engine = myisam
+SELECT userid, d, platform_type, count(userid) as c FROM actionlog._all_action_201502 group by userid, d, platform_type;
+create table actionlog._pv_all_action_201503 engine = myisam
+SELECT userid, d, platform_type, count(userid) as c FROM actionlog._all_action_201503 group by userid, d, platform_type;
+
+create table actionlog._pv_all_action engine = myisam SELECT * FROM actionlog._pv_all_action_201412;
+insert ignore into actionlog._pv_all_action SELECT * FROM actionlog._pv_all_action_201501;
+insert ignore into actionlog._pv_all_action SELECT * FROM actionlog._pv_all_action_201502;
+insert ignore into actionlog._pv_all_action SELECT * FROM actionlog._pv_all_action_201503;
+
+create table actionlog._pv_all_action1 engine = myisam
+select a.userid, a.p, sum(a.c) as pv
+from (
+    SELECT userid, d, (case when (platform_type<2) then 'pc' else 'mobile' end) as p, c
+    FROM actionlog._pv_all_action
+    where d between subdate(now(),91) and now()) as a
+group by a.userid, a.p;
+
+create table actionlog._pv_all_action2 engine = myisam
+select b.userid, b.pc+b.mobile as total_pv, b.pc, b.mobile, round(b.pc/(b.pc+b.mobile),3) as p_pc, round(b.mobile/(b.pc+b.mobile),3) as p_mobile
+from (
+    select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+    from (
+        SELECT userid, (case when (p='pc') then pv else 0 end) as pc,
+                       (case when (p='mobile') then pv else 0 end) as mobile
+        FROM actionlog._pv_all_action1) as a
+    group by a.userid) as b;
+
+create table actionlog._pv_all_action3 engine = myisam
+select userid, total_pv, round((cnt-rank+1)/cnt,2) as total_pv_percentile, pc, mobile, p_pc, p_mobile
+from (SELECT userid, total_pv, pc, mobile, p_pc, p_mobile, @curRank := @curRank + 1 AS rank
+      FROM actionlog._pv_all_action2, (SELECT @curRank := 0) r
+      order by total_pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._pv_all_action2) as ct;
 
 
+# 討論區PV與比例
+create table actionlog._forum_action_201412 engine = myisam
+SELECT userid, uri, date(time) as d, platform_type  FROM actionlog.action_201412 where userid <> '' and uri like '%/forum%';
+create table actionlog._forum_action_201501 engine = myisam
+SELECT userid, uri, date(time) as d, platform_type  FROM actionlog.action_201501 where userid <> '' and uri like '%/forum%';
+create table actionlog._forum_action_201502 engine = myisam
+SELECT userid, uri, date(time) as d, platform_type  FROM actionlog.action_201502 where userid <> '' and uri like '%/forum%';
+create table actionlog._forum_action_201503 engine = myisam
+SELECT userid, uri, date(time) as d, platform_type  FROM actionlog.action_201503 where userid <> '' and uri like '%/forum%';
 
+create table actionlog._pv_forum_action_201412 engine = myisam
+SELECT userid, d, platform_type, count(userid) as c FROM actionlog._forum_action_201412 group by userid, d, platform_type;
+create table actionlog._pv_forum_action_201501 engine = myisam
+SELECT userid, d, platform_type, count(userid) as c FROM actionlog._forum_action_201501 group by userid, d, platform_type;
+create table actionlog._pv_forum_action_201502 engine = myisam
+SELECT userid, d, platform_type, count(userid) as c FROM actionlog._forum_action_201502 group by userid, d, platform_type;
+create table actionlog._pv_forum_action_201503 engine = myisam
+SELECT userid, d, platform_type, count(userid) as c FROM actionlog._forum_action_201503 group by userid, d, platform_type;
 
+create table actionlog._pv_forum_action engine = myisam SELECT * FROM actionlog._pv_forum_action_201412;
+insert ignore into actionlog._pv_forum_action SELECT * FROM actionlog._pv_forum_action_201501;
+insert ignore into actionlog._pv_forum_action SELECT * FROM actionlog._pv_forum_action_201502;
+insert ignore into actionlog._pv_forum_action SELECT * FROM actionlog._pv_forum_action_201503;
 
+create table actionlog._pv_forum_action1 engine = myisam
+SELECT userid, sum(c) as forum_pv 
+FROM actionlog._pv_forum_action
+where d between subdate(now(),91) and now()
+group by userid;
 
+create table actionlog._pv_forum_action2 engine = myisam
+select userid, forum_pv, round((cnt-rank+1)/cnt,2) as forum_pv_percentile
+from (SELECT userid, forum_pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._pv_forum_action1, (SELECT @curRank := 0) r
+      order by forum_pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._pv_forum_action1) as ct;
 
+        ALTER TABLE actionlog._pv_all_action3 ADD INDEX (`userid`);
+        ALTER TABLE actionlog._pv_forum_action2 ADD INDEX (`userid`);
 
+create table actionlog._pv_forum_action3_list1 engine = myisam
+SELECT a.userid, b.forum_pv, a.forum_pv_percentile, a.total_pv, a.total_pv_percentile, a.pc, a.mobile, a.p_pc, a.p_mobile
+FROM actionlog._pv_all_action3 a left join actionlog._pv_forum_action2 b on a.userid = b.userid
+where a.total_pv_percentile > 0.49;
 
+        ALTER TABLE actionlog._pv_forum_action3_list1 convert to character set utf8 collate utf8_general_ci;
 
+create table actionlog._pv_forum_action3_list2 engine = myisam
+SELECT a.userid, b.nickname, a.forum_pv, a.forum_pv_percentile, a.total_pv, a.total_pv_percentile, a.pc, a.mobile, a.p_pc, a.p_mobile
+FROM actionlog._pv_forum_action3_list1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+# 每個人最後一次登入是何日
+CREATE TABLE plsport_playsport._last_time_login engine = myisam
+SELECT userid, date(max(signin_time)) as last_time_login
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+        ALTER TABLE actionlog._pv_forum_action3_list2 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._last_time_login convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._pv_forum_action3_list2  ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._last_time_login ADD INDEX (`userid`);
+        
+create table actionlog._pv_forum_action3_list3 engine = myisam
+SELECT a.userid, a.nickname, a.forum_pv, a.forum_pv_percentile, a.total_pv, a.total_pv_percentile, a.pc, a.mobile, a.p_pc, a.p_mobile, b.last_time_login
+FROM actionlog._pv_forum_action3_list2 a left join plsport_playsport._last_time_login b on a.userid = b.userid;
+
+create table plsport_playsport._pcash_log engine = myisam
+SELECT userid, sum(amount) as spent
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date between subdate(now(),91) and now()
+group by userid;
+
+        ALTER TABLE plsport_playsport._pcash_log ADD INDEX (`userid`);
+        ALTER TABLE actionlog._pv_forum_action3_list3 ADD INDEX (`userid`);
+
+create table actionlog._pv_forum_action3_list4 engine = myisam
+SELECT a.userid, a.nickname, a.forum_pv, a.forum_pv_percentile, a.total_pv, a.total_pv_percentile, b.spent, a.pc, a.mobile, a.p_pc, a.p_mobile, a.last_time_login
+FROM actionlog._pv_forum_action3_list3 a left join plsport_playsport._pcash_log b on a.userid = b.userid;
+
+SELECT 'userid', '暱稱', '討論區pv', '討論區pv前n%', '全站pv', '全站pv前n%', '購買預測金額', '電腦pv', '手機pv', '電腦%', '手機%', '最後登入時間' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/header_improve_MVP_list.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._pv_forum_action3_list4);
 
 
 
