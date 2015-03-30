@@ -2721,6 +2721,8 @@ AND time between '2015-02-26 18:00:00' AND '2015-02-28 23:59:59';
 # - 以上兩種方式，需要abtesting做為檢驗。
 #     任務狀態: 進行中
 
+# 下面這份名單是針對短期的流失客 2015-03-30
+# 匯入 (1)pcash_log (2)coupon_used_detail (3)order_data
 
 create table plsport_playsport._who_spent_before_31_days engine = myisam
 select a.userid, sum(a.amount) as spent
@@ -2780,11 +2782,9 @@ group by a.userid;
             left join plsport_playsport._who_use_coupon_in_31_days as d on c.userid = d.userid
         where c.spent is not null or d.coupon is not null;
 
-
 create table plsport_playsport._list_all_1 engine = myisam
 SELECT * FROM plsport_playsport._list_all
 where spent1 is null and coupon1 is null;
-
 
 CREATE TABLE plsport_playsport._phone_number engine = myisam
 SELECT a.userid, a.phone, sum(a.price) as total_redeem
@@ -2822,15 +2822,45 @@ where b.phone is null;
         SELECT concat('0',one) as phone, stas 
         FROM textcampaign.text_sent_status
         where stas = '失敗';
+        
+        create table plsport_playsport._fail_number_1 engine = myisam
+        SELECT phone, stas 
+        FROM plsport_playsport._fail_number
+        group by phone, stas;
 
 create table plsport_playsport._list_all_4 engine = myisam
 SELECT  a.userid, a.phone, a.spent, a.coupon, a.spent1, a.coupon1 
-FROM plsport_playsport._list_all_3 a left join plsport_playsport._fail_number b on a.phone = b.phone
+FROM plsport_playsport._list_all_3 a left join plsport_playsport._fail_number_1 b on a.phone = b.phone
 where b.phone is null;
 
 create table plsport_playsport._list_all_5 engine = myisam
 SELECT * FROM plsport_playsport._list_all_4
 where phone is not null;
+
+create table plsport_playsport._list_all_6 engine = myisam
+SELECT (b.id%10)+1 as g, (case when ((b.id%10)+1<7) then 'sent' else 'hold' end) as abtest, b.id, a.userid, a.phone, a.spent, a.coupon, a.spent1, a.coupon1, # 60%要發送
+       (case when (a.userid is not null) then 'retention_c_20150401' else '' end) as text_campaign
+FROM plsport_playsport._list_all_5 a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table textcampaign.retention_c_20150401_full_list_dont_delete engine = myisam
+SELECT * FROM plsport_playsport._list_all_6;
+
+        # 給yoyo8簡訊發送
+        SELECT 'phone', '使用者編號id', '簡訊行銷' UNION (
+        SELECT phone, id, text_campaign
+        INTO outfile 'C:/Users/1-7_ASUS/Desktop/retention_c_20150401_for_yoyo8.csv'
+        CHARACTER SET big5 fields terminated by ',' enclosed by '' lines terminated by '\r\n' 
+        FROM textcampaign.retention_c_20150401_full_list_dont_delete
+        WHERE abtest = 'sent'); # 只撈出有要發送的
+        # 一定要設定為big編碼, yoyo8規定的
+
+        # 給工程部匯入兌換券發送系統
+        SELECT '使用者編號id', 'userid' UNION (
+        SELECT id, userid
+        INTO outfile 'C:/Users/1-7_ASUS/Desktop/retention_c_20150401_for_software_team.csv'
+        fields terminated by ',' enclosed by '' lines terminated by '\r\n' 
+        FROM textcampaign.retention_c_20150401_full_list_dont_delete
+        WHERE abtest = 'sent'); # 只撈出有要發送的
 
 
 
@@ -3987,8 +4017,12 @@ ORDER BY a.userid, a.CREATEon;
 # 2015-03-02 15:59
 # Eddy [行銷企劃]
 # eddy@playsport.cc
-CREATE TABLE actionlog.action_201411_platform engine = myisam
-SELECT userid, platform_type FROM actionlog.action_201411 WHERE userid <> '';
+
+# to Eddy：
+# 煩請3/31再產生一次 MVP測試名單
+# 謝謝！
+#     任務狀態: 進行中
+
 CREATE TABLE actionlog.action_201412_platform engine = myisam
 SELECT userid, platform_type FROM actionlog.action_201412 WHERE userid <> '';
 CREATE TABLE actionlog.action_201501_platform engine = myisam
@@ -3998,8 +4032,6 @@ SELECT userid, platform_type FROM actionlog.action_201502 WHERE userid <> '';
 CREATE TABLE actionlog.action_201503_platform engine = myisam
 SELECT userid, platform_type FROM actionlog.action_201503 WHERE userid <> '';
 
-CREATE TABLE actionlog.action_201411_platform_group engine = myisam
-SELECT userid, platform_type, count(userid) as c FROM actionlog.action_201411_platform GROUP BY userid, platform_type;
 CREATE TABLE actionlog.action_201412_platform_group engine = myisam
 SELECT userid, platform_type, count(userid) as c FROM actionlog.action_201412_platform GROUP BY userid, platform_type;
 CREATE TABLE actionlog.action_201501_platform_group engine = myisam
@@ -4009,8 +4041,7 @@ SELECT userid, platform_type, count(userid) as c FROM actionlog.action_201502_pl
 CREATE TABLE actionlog.action_201503_platform_group engine = myisam
 SELECT userid, platform_type, count(userid) as c FROM actionlog.action_201503_platform GROUP BY userid, platform_type;
 
-        CREATE TABLE actionlog.action_platform_group engine = myisam SELECT * FROM actionlog.action_201411_platform_group;
-        INSERT IGNORE INTO actionlog.action_platform_group SELECT * FROM actionlog.action_201412_platform_group;
+        CREATE TABLE actionlog.action_platform_group engine = myisam SELECT * FROM actionlog.action_201412_platform_group;
         INSERT IGNORE INTO actionlog.action_platform_group SELECT * FROM actionlog.action_201501_platform_group;
         INSERT IGNORE INTO actionlog.action_platform_group SELECT * FROM actionlog.action_201502_platform_group;
         INSERT IGNORE INTO actionlog.action_platform_group SELECT * FROM actionlog.action_201503_platform_group;        
@@ -4034,7 +4065,7 @@ SELECT userid, platform_type, count(userid) as c FROM actionlog.action_201503_pl
                         ORDER BY userid) as a) as b
                 GROUP BY b.userid) as c) as d;
 
-drop TABLE actionlog.action_201411_platform, actionlog.action_201411_platform_group;
+
 drop TABLE actionlog.action_201412_platform, actionlog.action_201412_platform_group;
 drop TABLE actionlog.action_201501_platform, actionlog.action_201501_platform_group;
 drop TABLE actionlog.action_201502_platform, actionlog.action_201502_platform_group;
@@ -4180,9 +4211,9 @@ FROM plsport_playsport._list_3 a LEFT JOIN plsport_playsport._buy_position b on 
         # (2)計算購牌專區的pv - 2014-06-24補充
         CREATE TABLE actionlog.action_buypredict engine = myisam
         SELECT userid, uri, time FROM actionlog.action_201412 WHERE uri LIKE '%buy_predict.php%' AND userid <> '';
-        INSERT IGNORE INTO actionlog.action_usersearch SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%buy_predict.php%' AND userid <> '';
-        INSERT IGNORE INTO actionlog.action_usersearch SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%buy_predict.php%' AND userid <> '';
-        INSERT IGNORE INTO actionlog.action_usersearch SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%buy_predict.php%' AND userid <> '';
+        INSERT IGNORE INTO actionlog.action_buypredict SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%buy_predict.php%' AND userid <> '';
+        INSERT IGNORE INTO actionlog.action_buypredict SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%buy_predict.php%' AND userid <> '';
+        INSERT IGNORE INTO actionlog.action_buypredict SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%buy_predict.php%' AND userid <> '';
 
         CREATE TABLE plsport_playsport._buypredict_count engine = myisam
         SELECT userid, count(userid) as bp_pv
@@ -4210,16 +4241,18 @@ FROM (
         # 產生_city_info_ok_with_chinese
         # 搜尋keyword "地址"
         # line: 1536
+        # update: 201-03-30 已經寫了新的居住地
+        # 執行step16_user_city.py即可
         # ========================================
-        ALTER TABLE  `_city_info_ok_with_chinese` CHANGE  `userid`  `userid` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+        ALTER TABLE  `_user_city` CHANGE  `userid`  `userid` VARCHAR( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 
         ALTER TABLE plsport_playsport._list_5 ADD INDEX (`userid`);  
-        ALTER TABLE plsport_playsport._city_info_ok_with_chinese ADD INDEX (`userid`);  
+        ALTER TABLE plsport_playsport._user_city ADD INDEX (`userid`);  
 
 CREATE TABLE plsport_playsport._list_6 engine = myisam
 SELECT a.userid, a.nickname, a.join_date, a.last_login, a.total_redeem, a.redeem_3_months,
-       a.BRC, a.BZ, a.FRND, a.FR, a.WPB, a.MPB, a.IDX, a.HT, a.US, a.NONE, a.total, a.us_pv, a.bp_pv, b.city1
-FROM plsport_playsport._list_5 a LEFT JOIN plsport_playsport._city_info_ok_with_chinese b on a.userid = b.userid;
+       a.BRC, a.BZ, a.FRND, a.FR, a.WPB, a.MPB, a.IDX, a.HT, a.US, a.NONE, a.total, a.us_pv, a.bp_pv, b.city
+FROM plsport_playsport._list_5 a LEFT JOIN plsport_playsport._user_city b on a.userid = b.userid;
 
         ALTER TABLE plsport_playsport._list_6 ADD INDEX (`userid`);  
         ALTER TABLE actionlog._actionlog_platform_visit ADD INDEX (`userid`); 
@@ -4228,7 +4261,7 @@ FROM plsport_playsport._list_5 a LEFT JOIN plsport_playsport._city_info_ok_with_
 
 CREATE TABLE plsport_playsport._list_7 engine = myisam
 SELECT a.userid, a.nickname, a.join_date, a.last_login, a.total_redeem, a.redeem_3_months,
-       a.BRC, a.BZ, a.FRND, a.FR, a.WPB, a.MPB, a.IDX, a.HT, a.US, a.NONE, a.total, a.us_pv, a.bp_pv, a.city1,
+       a.BRC, a.BZ, a.FRND, a.FR, a.WPB, a.MPB, a.IDX, a.HT, a.US, a.NONE, a.total, a.us_pv, a.bp_pv, a.city,
        b.desktop, b.mobile, b.TABLEt, b.desktop_p, b.mobile_p, b.TABLEt_p 
 FROM plsport_playsport._list_6 a LEFT JOIN actionlog._actionlog_platform_visit b on a.userid = b.userid;
 
@@ -4240,7 +4273,7 @@ FROM plsport_playsport._list_6 a LEFT JOIN actionlog._actionlog_platform_visit b
 # 欄位：暱稱、ID、總儲值金額、近三個月儲值金額、購牌專區消費金額、居住地、最近登入時間
 
 CREATE TABLE plsport_playsport._list_7_ok engine = myisam
-SELECT userid, nickname, join_date, last_login, total_redeem, redeem_3_months, BZ, city1, desktop_p, (mobile_p+TABLEt_p) as mobile_p
+SELECT userid, nickname, join_date, last_login, total_redeem, redeem_3_months, BZ, city, desktop_p, (mobile_p+TABLEt_p) as mobile_p
 FROM plsport_playsport._list_7
 WHERE redeem_3_months > 0       #a. 近三個月有消費的使用者
 AND BZ > 0                      #c. 有在使用購牌專區購牌
@@ -9888,7 +9921,6 @@ GROUP BY stat, score;
 # =================================================================================================
 
 # 要先匯入events(linode上)
-
 CREATE TABLE plsport_playsport._events engine = myisam
 SELECT * FROM plsport_playsport.events
 WHERE name LIKE '%pushit_bottom%'
@@ -9962,6 +9994,57 @@ GROUP BY abtest;
 
 # a 5048
 # b 4990
+
+# =================================================================================================
+# 任務: [201408-A-15]開發回文推功能-第三次發文推樣式ABtesting [新建] (靜怡))
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4436&projectId=11
+# 目的：找出發文推降低的原因
+# 內容
+# 
+# - 測試時間：3/25~4/25
+# - 提供測試組別
+# - 觀察指標：1.發文推點擊次數、2.發文推比
+# - 另提供手機發文推點擊狀況
+# - 報告時間：4/27
+# =================================================================================================
+
+# 要先匯入events(linode上)
+
+CREATE TABLE plsport_playsport._events engine = myisam
+SELECT * FROM plsport_playsport.events
+WHERE name LIKE '%pushit_bottom%'
+AND time between '2015-03-25 13:36:00' AND now() # 2015-03-25 13:36上線
+ORDER BY time DESC;
+
+        ALTER TABLE plsport_playsport._events convert to character SET utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._events ADD INDEX (`userid`);
+
+CREATE TABLE plsport_playsport._events_1 engine = myisam
+SELECT c.userid, c.g, (case when (c.g < 11) then 'a' else 'b' end) as abtest, c.name, c.time # a為測試組
+FROM (
+    SELECT a.userid, (b.id%20)+1 as g, a.name, a.time 
+    FROM plsport_playsport._events a LEFT JOIN plsport_playsport.member b on a.userid = b.userid) as c;
+
+SELECT abtest, name, count(userid) as c 
+FROM plsport_playsport._events_1
+GROUP BY abtest, name;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # =================================================================================================
@@ -13272,7 +13355,6 @@ FROM actionlog._pv_forum_action3_list4);
 # 時間:最晚3/26完成。
 # =================================================================================================
 
-
 create table plsport_playsport._medal_fire engine = myisam 
 SELECT userid, nickname, count(userid) as c
 FROM plsport_playsport.medal_fire
@@ -13314,7 +13396,6 @@ SELECT a.userid, a.total_spent, b.nickname
 FROM plsport_playsport._buyer_list a left join plsport_playsport._killer_list_1 b on a.userid = b.userid
 where b.nickname is null;
 
-
 SELECT userid
 into outfile 'C:/Users/1-7_ASUS/Desktop/_killer_list.txt'
 fields terminated by ',' enclosed by '' lines terminated by '\r\n'
@@ -13324,6 +13405,118 @@ SELECT userid
 into outfile 'C:/Users/1-7_ASUS/Desktop/_buyer_list.txt'
 fields terminated by ',' enclosed by '' lines terminated by '\r\n'
 FROM plsport_playsport._buyer_list_1;
+
+
+# =================================================================================================
+# 任務: 2015年雙料殺手漲價 追蹤成果 [新建] (福利班 [管理員])
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4276&projectId=11
+# 目的:調整雙料殺手售價，148元改為168元、特價128元改為148元。
+# 上線時間: 3/30 開始(時間待確認)，全面調整售價。 
+# 
+# 必須追蹤以下：
+# 各種殺手的購買佔比，單殺、莊殺、雙料，
+# 和之前銀牌殺手價格調漲的內容一樣，
+# 
+# 追蹤區間
+# 先抓了兩個月，3/30~ 5/30
+# =================================================================================================
+
+# 匯入 (1)predict_seller (2)alliance (3)order_data
+
+create table plsport_playsport._predict_seller_with_medal engine = myisam
+SELECT id, sellerid, mode, sale_allianceid, sale_gameid, sale_date, substr(sale_date,1,7) as m, substr(sale_date,1,10) as d, sale_price, buyer_count, rank, rank_sk, selltype,
+       (case when (selltype = 1) then '莊殺'
+             when (selltype = 2) then '單殺'
+             when (selltype = 3) then '雙殺' end ) as killtype,
+       (case when (rank <11 and selltype = 1) then '金牌'
+             when (rank <31 and selltype = 1) then '銀牌'
+             when (rank <52 and selltype = 1) then '銅牌'
+             when (rank_sk< 11 and selltype = 2) then '金牌'
+             when (rank_sk< 31 and selltype = 2) then '銀牌'
+             when (rank_sk< 52 and selltype = 2) then '銅牌'
+             when (rank < 11 and selltype = 3) then '金牌'
+             when (rank_sk < 11 and selltype = 3) then '金牌' else '銀牌' end) as killmedal     
+FROM plsport_playsport.predict_seller /*最好是指定精確的日期區間*/
+where sale_date between '2011-12-15 00:00:00' and now(); /*<====記得要改*/
+
+create table plsport_playsport._pcash_log engine = myisam
+select userid, amount, date(date) as c_date, month(date) as c_month, year(date) as c_year, substr(date,1,7) as ym, id_this_type
+from plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date between '2012-01-01 00:00:00' and now();
+
+        ALTER TABLE  plsport_playsport._pcash_log ADD INDEX (`id_this_type`);       
+        ALTER TABLE  plsport_playsport._predict_seller_with_medal ADD INDEX (`id`);
+        ALTER TABLE  plsport_playsport.alliance ADD INDEX (`allianceid`);
+
+create table plsport_playsport._pcash_log_with_detailed_info engine = myisam
+select c.userid, c.amount, c.c_date, c.c_month, c.c_year, c.ym,
+       c.id, c.sellerid, c.sale_allianceid, d.alliancename, c.sale_date, c.sale_price, c.killtype, c.killmedal
+from (
+    SELECT a.userid, a.amount, a.c_date, a.c_month, a.c_year, a.ym, 
+           b.id, b.sellerid, b.sale_allianceid, b.sale_date, b.sale_price, b.killtype, b.killmedal
+    FROM plsport_playsport._pcash_log a left join plsport_playsport._predict_seller_with_medal b on a.id_this_type = b.id) as c
+left join plsport_playsport.alliance as d on c.sale_allianceid = d.allianceid;
+
+create table plsport_playsport._pcash_log_with_detailed_info_1 engine = myisam
+select a.c_date as d, a.killtype, count(a.userid) as buyer_count
+from (
+    SELECT * FROM plsport_playsport._pcash_log_with_detailed_info
+    where sale_date between subdate(now(),62) and subdate(now(),1)) as a
+group by a.c_date, a.killtype
+order by a.c_date desc;
+
+create table plsport_playsport._predict_seller_with_medal_1 engine = myisam
+SELECT a.sellerid, a.sale_allianceid, b.alliancename, a.sale_gameid, a.sale_date, a.d, a.sale_price, a.killtype 
+FROM plsport_playsport._predict_seller_with_medal a left join plsport_playsport.alliance b on a.sale_allianceid = b.allianceid;
+
+create table plsport_playsport._predict_seller_with_medal_2 engine = myisam
+SELECT sale_allianceid, alliancename, d, sale_price, killtype, count(sellerid) as seller_count 
+FROM plsport_playsport._predict_seller_with_medal_1
+group by sale_allianceid, alliancename, d, sale_price, killtype
+order by d desc;
+
+create table plsport_playsport._predict_seller_with_medal_3 engine = myisam
+SELECT concat(sale_allianceid,'_',alliancename) as alliance, d, sale_price, killtype, seller_count
+FROM plsport_playsport._predict_seller_with_medal_2;
+
+create table plsport_playsport._predict_seller_with_medal_4 engine = myisam
+SELECT d, killtype, sum(seller_count) as seller_count 
+FROM plsport_playsport._predict_seller_with_medal_3
+where d between subdate(now(),62) and subdate(now(),1)
+group by d, killtype
+order by d desc;
+
+create table plsport_playsport._main_table_1 engine = myisam
+select c.d as date, c.killtype, c.seller_count, c.buyer_count, round((c.buyer_count/c.seller_count),1) as ratio
+from (
+    SELECT a.d, a.killtype, a.seller_count, b.buyer_count
+    FROM plsport_playsport._predict_seller_with_medal_4 a left join plsport_playsport._pcash_log_with_detailed_info_1 b on a.d = b.d and a.killtype = b.killtype) as c;
+
+SELECT 'date', 'killtype', 'seller_count', 'buyer_count', 'ratio' union (
+SELECT *
+into outfile 'C:/proc/python/data/everyday_killer_type_stat.csv'
+fields terminated by ',' enclosed by '' lines terminated by '\r\n'
+FROM plsport_playsport._main_table_1);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -13399,3 +13592,127 @@ FROM (
     SELECT userid, substr(uri,1,locate('.php',uri)-1) as uri
     FROM actionlog._cheat) as a
 GROUP BY a.userid, a.uri;
+
+
+
+# 新的居住地對應表
+create table plsport_playsport._user_living_city engine = myisam
+SELECT userid, (case when (city=0) then '基隆'
+                     when (city=1) then '台北市'
+                     when (city=2) then '新北市' 
+                     when (city=3) then '桃園' 
+                     when (city=4) then '新竹'
+                     when (city=6) then '苗栗'
+                     when (city=7) then '台中'
+                     when (city=9) then '彰化'
+                     when (city=10) then '南投'
+                     when (city=11) then '嘉義'
+                     when (city=13) then '雲林'
+                     when (city=14) then '台南'
+                     when (city=16) then '高雄'
+                     when (city=18) then '屏東'
+                     when (city=19) then '宜蘭'
+                     when (city=20) then '花蓮'
+                     when (city=21) then '台東'
+                     when (city=25) then '外島'
+                     when (city=26) then '海外' else 'error' end)  as city
+FROM plsport_playsport.user_living_city
+where action = 1
+group by userid, city;
+
+create table plsport_playsport._udata engine = myisam
+SELECT userid, (case when (city=0) then '基隆'
+                     when (city=1) then '台北市'
+                     when (city=2) then '新北市'
+                     when (city=3) then '桃園'
+                     when (city=4) then '新竹'
+                     when (city=5) then '新竹'
+                     when (city=6) then '苗栗'
+                     when (city=7) then '台中'
+                     when (city=8) then '台中'
+                     when (city=9) then '彰化'
+                     when (city=10) then '南投'
+                     when (city=11) then '嘉義'
+                     when (city=12) then '嘉義'
+                     when (city=13) then '雲林'
+                     when (city=14) then '台南'
+                     when (city=15) then '台南'
+                     when (city=16) then '高雄'
+                     when (city=17) then '高雄'
+                     when (city=18) then '屏東'
+                     when (city=19) then '宜蘭'
+                     when (city=20) then '花蓮'
+                     when (city=21) then '台東'
+                     when (city=22) then '外島'
+                     when (city=23) then '外島'
+                     when (city=24) then '外島'
+                     when (city=25) then '外島' else 'error' end) as city
+FROM plsport_playsport.udata
+where length(address) > 1;
+
+create table plsport_playsport._exchange_validate engine = myisam
+SELECT userid, (case when (city=0) then '基隆'
+                     when (city=1) then '台北市'
+                     when (city=2) then '新北市'
+                     when (city=3) then '桃園'
+                     when (city=4) then '新竹'
+                     when (city=5) then '新竹'
+                     when (city=6) then '苗栗'
+                     when (city=7) then '台中'
+                     when (city=8) then '台中'
+                     when (city=9) then '彰化'
+                     when (city=10) then '南投'
+                     when (city=11) then '嘉義'
+                     when (city=12) then '嘉義'
+                     when (city=13) then '雲林'
+                     when (city=14) then '台南'
+                     when (city=15) then '台南'
+                     when (city=16) then '高雄'
+                     when (city=17) then '高雄'
+                     when (city=18) then '屏東'
+                     when (city=19) then '宜蘭'
+                     when (city=20) then '花蓮'
+                     when (city=21) then '台東'
+                     when (city=22) then '外島'
+                     when (city=23) then '外島'
+                     when (city=24) then '外島'
+                     when (city=25) then '外島' else 'error' end) as city
+FROM plsport_playsport.exchange_validate
+where address is not null;
+
+        ALTER TABLE plsport_playsport._user_living_city ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._udata ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._exchange_validate ADD INDEX (`userid`);
+
+create table plsport_playsport._user_city_1 engine = myisam
+select e.id, e.userid, e.city1, e.city2, f.city as city3
+from (
+    select c.id, c.userid, c.city1, d.city as city2
+    from (
+        SELECT a.id, a.userid, b.city as city1
+        FROM plsport_playsport.member a left join plsport_playsport._udata b on a.userid =  b.userid) as c
+        left join plsport_playsport._user_living_city as d on c.userid = d.userid) as e
+        left join plsport_playsport._exchange_validate as f on e.userid = f.userid
+where e.city1 is not null or e.city2 is not null or f.city is not null;
+
+create table plsport_playsport._user_city_2 engine = myisam
+select a.id, a.userid, a.city1, a.city2, a.city3, (case when (a.city1 is null) then a.city4 else a.city1 end) as city5
+from (
+    SELECT id, userid, city1, city2, city3, (case when (city2 is null) then city3 else city2 end) as city4 
+    FROM plsport_playsport._user_city_1) as a;
+
+create table plsport_playsport._user_city_3 engine = myisam
+SELECT userid, city5 as city 
+FROM plsport_playsport._user_city_2;
+
+drop table plsport_playsport._user_living_city;
+drop table plsport_playsport._udata;
+drop table plsport_playsport._exchange_validate;
+drop table plsport_playsport._user_city_1;
+drop table plsport_playsport._user_city_2;
+rename table plsport_playsport._user_city_3 to plsport_playsport._user_city;
+
+
+
+
+
