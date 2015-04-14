@@ -10393,7 +10393,7 @@ SELECT * FROM
 WHERE
     app = 1 AND os = 1    #app=1即時比分, os=1是ANDriod 
     AND appversion in ( '2.2.4','2.2.5','2.2.6','2.2.7',
-                        '2.2.8','2.2.9','2.3.0','2.3.1','2.3.2','2.3.3','2.3.4'); # ver2.2.4~2.3.1都是用新的log
+                        '2.2.8','2.2.9','2.3.0','2.3.1','2.3.2','2.3.3','2.3.4','2.3.4','2.3.5','2.3.6','2.3.7'); # ver2.2.4~2.3.1都是用新的log
                                                                   # 2.3.2 新增記錄坐標功能 (update:2015/1/27)
 
 CREATE TABLE plsport_playsport._app_action_log_1 engine=myisam # 撈出點擊板標記錄
@@ -10404,17 +10404,16 @@ ORDER BY datetime DESC;
 
         ALTER TABLE plsport_playsport._app_action_log_1 ADD INDEX (`userid`,`datetime`,`deviceid`,`devicemodel`);
 
-# 排除掉重覆送出的log, 小呆已修正此問題, 但之後撈app_action_log都還是要執行一下此段SQL
-CREATE TABLE plsport_playsport._app_action_log_2 engine = myisam
-SELECT appversion, userid, action, remark, datetime, deviceid, abtestgroup, devicemodel, deviceosversion 
-FROM plsport_playsport._app_action_log_1
-GROUP BY appversion, userid, action, remark, datetime, deviceid, devicemodel, deviceosversion;
+        # 排除掉重覆送出的log, 小呆已修正此問題, 但之後撈app_action_log都還是要執行一下此段SQL
+        CREATE TABLE plsport_playsport._app_action_log_2 engine = myisam
+        SELECT appversion, userid, action, remark, datetime, deviceid, abtestgroup, devicemodel, deviceosversion 
+        FROM plsport_playsport._app_action_log_1
+        GROUP BY appversion, userid, action, remark, datetime, deviceid, devicemodel, deviceosversion;
 
         CREATE TABLE plsport_playsport._app_action_log_2 engine = myisam
         SELECT appversion, userid, action, remark, datetime, deviceid, abtestgroup, devicemodel, deviceosversion  
         FROM plsport_playsport._app_action_log_1
         WHERE datetime between '2015-02-16 16:58:00' AND now();
-
 
 CREATE TABLE plsport_playsport._app_action_log_3 engine = myisam
 SELECT action, remark, datetime, deviceid, abtestgroup, (case when (abtestgroup<11) then 'a' else 'b' end) as g, devicemodel
@@ -10429,7 +10428,7 @@ GROUP BY g, remark;
         CREATE TABLE plsport_playsport._app_action_log_1_all engine=myisam # 所有的行為
         SELECT deviceid, abtestgroup, datetime, (case when (abtestgroup<11) then 'a' else 'b' end) as g 
         FROM plsport_playsport._app_action_log
-        WHERE datetime between '2015-01-15 09:30:00' AND now()
+        WHERE datetime between '2015-02-16 16:58:00' AND now()
         ORDER BY datetime DESC;
 
         CREATE TABLE plsport_playsport._app_action_log_1_all_1 engine=myisam
@@ -13001,6 +13000,7 @@ FROM plsport_playsport._predict_list_4);
 
 # =================================================================================================
 # 任務: 分析文新規則成本試算 [新建] (柔雅) 2015-03-20
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4428&projectId=11
 # 
 # 麻煩協助撈取，分析文寫手的表現。
 # 條件:
@@ -13132,6 +13132,185 @@ create table actionlog._forumdetail_4_201410 engine = myisam SELECT s as subject
 create table actionlog._forumdetail_4_201411 engine = myisam SELECT s as subjectid, count(cookie_stamp) as views FROM actionlog._forumdetail_3_201411 group by s;
 create table actionlog._forumdetail_4_201412 engine = myisam SELECT s as subjectid, count(cookie_stamp) as views FROM actionlog._forumdetail_3_201412 group by s;
 
+create table actionlog._forumdetail_5_201401 engine = myisam SELECT (case when (subjectid is not null) then '201401' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201401;
+create table actionlog._forumdetail_5_201402 engine = myisam SELECT (case when (subjectid is not null) then '201402' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201402;
+create table actionlog._forumdetail_5_201403 engine = myisam SELECT (case when (subjectid is not null) then '201403' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201403;
+create table actionlog._forumdetail_5_201404 engine = myisam SELECT (case when (subjectid is not null) then '201404' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201404;
+create table actionlog._forumdetail_5_201405 engine = myisam SELECT (case when (subjectid is not null) then '201405' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201405;
+create table actionlog._forumdetail_5_201406 engine = myisam SELECT (case when (subjectid is not null) then '201406' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201406;
+create table actionlog._forumdetail_5_201407 engine = myisam SELECT (case when (subjectid is not null) then '201407' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201407;
+create table actionlog._forumdetail_5_201408 engine = myisam SELECT (case when (subjectid is not null) then '201408' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201408;
+create table actionlog._forumdetail_5_201409 engine = myisam SELECT (case when (subjectid is not null) then '201409' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201409;
+create table actionlog._forumdetail_5_201410 engine = myisam SELECT (case when (subjectid is not null) then '201410' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201410;
+create table actionlog._forumdetail_5_201411 engine = myisam SELECT (case when (subjectid is not null) then '201411' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201411;
+create table actionlog._forumdetail_5_201412 engine = myisam SELECT (case when (subjectid is not null) then '201411' else '' end) as m, subjectid, views FROM actionlog._forumdetail_4_201412;
+
+create table actionlog._forumdetail_6_201401 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201401 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+create table actionlog._forumdetail_6_201402 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201402 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+create table actionlog._forumdetail_6_201403 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201403 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+create table actionlog._forumdetail_6_201404 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201404 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+create table actionlog._forumdetail_6_201405 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201405 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+create table actionlog._forumdetail_6_201406 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201406 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+create table actionlog._forumdetail_6_201407 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201407 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+create table actionlog._forumdetail_6_201408 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201408 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+create table actionlog._forumdetail_6_201409 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201409 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+create table actionlog._forumdetail_6_201410 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201410 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+create table actionlog._forumdetail_6_201411 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201411 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+create table actionlog._forumdetail_6_201412 engine = myisam SELECT a.m, b.postuser, a.subjectid, a.views FROM actionlog._forumdetail_5_201412 a left join plsport_playsport._analysis_post_1 b on a.subjectid = b.subjectid;
+
+create table actionlog._forumdetail_6 engine = myisam SELECT * FROM actionlog._forumdetail_6_201401;
+insert ignore into actionlog._forumdetail_6 SELECT * FROM actionlog._forumdetail_6_201402; 
+insert ignore into actionlog._forumdetail_6 SELECT * FROM actionlog._forumdetail_6_201403; 
+insert ignore into actionlog._forumdetail_6 SELECT * FROM actionlog._forumdetail_6_201404; 
+insert ignore into actionlog._forumdetail_6 SELECT * FROM actionlog._forumdetail_6_201405; 
+insert ignore into actionlog._forumdetail_6 SELECT * FROM actionlog._forumdetail_6_201406; 
+insert ignore into actionlog._forumdetail_6 SELECT * FROM actionlog._forumdetail_6_201407; 
+insert ignore into actionlog._forumdetail_6 SELECT * FROM actionlog._forumdetail_6_201408; 
+insert ignore into actionlog._forumdetail_6 SELECT * FROM actionlog._forumdetail_6_201409; 
+insert ignore into actionlog._forumdetail_6 SELECT * FROM actionlog._forumdetail_6_201410; 
+insert ignore into actionlog._forumdetail_6 SELECT * FROM actionlog._forumdetail_6_201411; 
+insert ignore into actionlog._forumdetail_6 SELECT * FROM actionlog._forumdetail_6_201412; 
+
+create table actionlog._forumdetail_7 engine = myisam
+SELECT m, postuser, (case when (views>499) then 1 else 0 end) as lv2,
+                    (case when (views>2999) then 1 else 0 end) as lv3,
+                    (case when (views>5999) then 1 else 0 end) as lv4
+FROM actionlog._forumdetail_6;
+
+
+create table actionlog._forumdetail_8 engine = myisam
+SELECT m, postuser, sum(lv2) as lv2, sum(lv3) as lv3, sum(lv4) as lv4 
+FROM actionlog._forumdetail_7
+group by m, postuser;
+
+create table actionlog._forumdetail_9 engine = myisam
+SELECT * FROM actionlog._forumdetail_8
+where (lv2 + lv3 + lv4) > 0
+order by postuser, m;
+
+
+create table actionlog._forumdetail_10_1 engine = myisam
+SELECT postuser, substr(min(m),5,2) as lv2_m 
+FROM actionlog._forumdetail_9
+where lv2>0
+group by postuser;
+
+create table actionlog._forumdetail_10_2 engine = myisam
+SELECT postuser, substr(min(m),5,2) as lv3_m 
+FROM actionlog._forumdetail_9
+where lv3>0
+group by postuser;
+
+create table actionlog._forumdetail_10_3 engine = myisam
+SELECT postuser, substr(min(m),5,2) as lv4_m 
+FROM actionlog._forumdetail_9
+where lv4>0
+group by postuser;
+
+        ALTER TABLE actionlog._forumdetail_10_1 CHANGE `lv2_m` `lv2_m` INT(2) NULL DEFAULT NULL;
+        ALTER TABLE actionlog._forumdetail_10_2 CHANGE `lv3_m` `lv3_m` INT(2) NULL DEFAULT NULL;
+        ALTER TABLE actionlog._forumdetail_10_3 CHANGE `lv4_m` `lv4_m` INT(2) NULL DEFAULT NULL;
+
+create table actionlog._forumdetail_11_1 engine = myisam SELECT postuser, (lv2_m+1) as lv2_m FROM actionlog._forumdetail_10_1;
+create table actionlog._forumdetail_11_2 engine = myisam SELECT postuser, (lv3_m+1) as lv3_m FROM actionlog._forumdetail_10_2;
+create table actionlog._forumdetail_11_3 engine = myisam SELECT postuser, (lv4_m+1) as lv4_m FROM actionlog._forumdetail_10_3;
+
+create table actionlog._forumdetail_11_0 engine = myisam
+SELECT poster, min(month) as lv1_m
+FROM plsport_playsport.analysis_cost
+where analysisking = 'yes'
+group by poster;
+
+create table actionlog._forumdetail_12_1 engine = myisam
+SELECT a.poster, (a.lv1_m+1) as lv1_m, b.lv2_m
+FROM actionlog._forumdetail_11_0 a left join actionlog._forumdetail_11_1 b on a.poster = b.postuser;
+
+create table actionlog._forumdetail_12_2 engine = myisam
+SELECT a.poster, a.lv1_m, a.lv2_m, b.lv3_m
+FROM actionlog._forumdetail_12_1 a left join actionlog._forumdetail_11_2 b on a.poster = b.postuser;
+
+create table actionlog._forumdetail_12_4 engine = myisam
+SELECT a.poster, a.lv1_m, a.lv2_m, a.lv3_m, b.lv4_m
+FROM actionlog._forumdetail_12_2 a left join actionlog._forumdetail_11_3 b on a.poster = b.postuser;
+
+
+create table actionlog._forumdetail_13 engine = myisam
+select a.poster, (a.lv1_m+a.lv2_m+a.lv3_m+a.lv4_m) as lv
+from (
+    SELECT poster, (case when (lv1_m>0) then 1 else 0 end) as lv1_m,
+                   (case when (lv2_m>0) then 1 else 0 end) as lv2_m,
+                   (case when (lv3_m>0) then 1 else 0 end) as lv3_m,
+                   (case when (lv4_m>0) then 1 else 0 end) as lv4_m
+    FROM actionlog._forumdetail_12_4) as a;
+
+create table actionlog._forumdetail_14 engine = myisam
+SELECT a.month, a.poster, a.viewed, a.percentile, a.analysisking, b.lv
+FROM plsport_playsport.analysis_cost a left join actionlog._forumdetail_13 b on a.poster = b.poster;
+
+create table actionlog._forumdetail_15 engine = myisam
+SELECT a.month, a.poster, b.nickname, a.viewed, a.percentile, a.analysisking, a.lv 
+FROM actionlog._forumdetail_14 a left join plsport_playsport.member b on a.poster = b.userid;
+
+ALTER TABLE actionlog._forumdetail_15 CHANGE `viewed` `viewed` INT(10) NULL DEFAULT NULL;
+
+
+create table actionlog._forumdetail_16 engine = myisam
+SELECT a.month, a.poster, a.nickname, a.viewed, a.percentile, a.analysisking, b.v as rule1, a.lv as rule2
+FROM actionlog._forumdetail_15 a left join (select e.poster, (e.v2+e.v3+e.v4)+1 as v
+from (
+    SELECT poster, (case when (max(viewed)>4999) then 1 else 0 end) as v2,
+                   (case when (max(viewed)>19999) then 1 else 0 end) as v3,
+                   (case when (max(viewed)>39999) then 1 else 0 end) as v4
+    FROM actionlog._forumdetail_15
+    group by poster) as e) as b on a.poster = b.poster;
+
+create table actionlog._forumdetail_17 engine = myisam
+SELECT month, poster, nickname, viewed, percentile, analysisking, rule1, rule2, (case when ( rule1<rule2) then rule1 else rule2 end) as lv
+FROM actionlog._forumdetail_16;
+
+SELECT 'month', 'poster', 'nickname', 'viewed', 'percentile', 'analysisking', 'rule1', 'rule2', 'level' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forumdetail_15.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forumdetail_17);
+
+
+
+
+
+
+
+
+
+
+
+
+create table actionlog._forumdetail_10_a engine = myisam
+SELECT a.m, a.postuser, a.lv2, a.lv3, a.lv4, b.lv2_m
+FROM actionlog._forumdetail_9 a left join actionlog._forumdetail_10_1 b on a.postuser = b.postuser;
+
+create table actionlog._forumdetail_10_b engine = myisam
+SELECT a.m, a.postuser, a.lv2, a.lv3, a.lv4, a.lv2_m, b.lv3_m
+FROM actionlog._forumdetail_10_a a left join actionlog._forumdetail_10_2 b on a.postuser = b.postuser;
+
+create table actionlog._forumdetail_10_c engine = myisam
+SELECT a.m, a.postuser, a.lv2, a.lv3, a.lv4, a.lv2_m, a.lv3_m, b.lv4_m
+FROM actionlog._forumdetail_10_b a left join actionlog._forumdetail_10_3 b on a.postuser = b.postuser;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 create table actionlog._forumdetail_4 engine = myisam SELECT * FROM actionlog._forumdetail_4_201401;
 insert ignore into actionlog._forumdetail_4 SELECT * FROM actionlog._forumdetail_4_201402; 
 insert ignore into actionlog._forumdetail_4 SELECT * FROM actionlog._forumdetail_4_201403; 
@@ -13144,7 +13323,9 @@ insert ignore into actionlog._forumdetail_4 SELECT * FROM actionlog._forumdetail
 insert ignore into actionlog._forumdetail_4 SELECT * FROM actionlog._forumdetail_4_201410; 
 insert ignore into actionlog._forumdetail_4 SELECT * FROM actionlog._forumdetail_4_201411; 
 insert ignore into actionlog._forumdetail_4 SELECT * FROM actionlog._forumdetail_4_201412; 
- 
+
+
+
 create table actionlog._forumdetail_5 engine = myisam
 SELECT subjectid, sum(views) as views
 FROM actionlog._forumdetail_4
@@ -13261,14 +13442,26 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._analysis_post_5);
 
 
+# update: 2015-04-09
+# TO eddy:
+# 查看過名單後，想麻煩您幫忙介定，寫手的等級，以利帶入稿費、試算成本。
+# 
+# 條件如下:
+#         1.將寫手等級區分為: 新人、初級、中級、高級 四個等級。
+#         2.領取稿費最低門檻為:至少當過一次優質分析王(則為新人等級)
+#         3.條件表如下:
+# 升級基本條件 	      新人寫手 	初級 	中級 	高級
+# 單月累積人氣 	       不限 	5000 	20000 	40000
+# 單篇分析文最高人氣 	不限 	500 	3000 	6000
+# 單月最低發文數 	  	  	  	 
+# 稿費金額/每千次瀏覽 	NT 10 	NT 25 	NT 50 	NT100
 
+# 先匯入analysis_cost , 也就是_new_analysis_post_cost_evaluation.csv
 
-
-
-
-
-
-
+create table plsport_playsport._analysis_list engine = myisam
+SELECT poster 
+FROM plsport_playsport.analysis_cost
+group by poster;
 
 
 

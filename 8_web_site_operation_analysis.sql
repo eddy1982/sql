@@ -11,6 +11,7 @@ create table _action_201411 engine = myisam select userid, uri, time from action
 create table _action_201412 engine = myisam select userid, uri, time from action_201412;
 create table _action_201501 engine = myisam select userid, uri, time from action_201501;
 create table _action_201502 engine = myisam select userid, uri, time from action_201502;
+create table _action_201503 engine = myisam select userid, uri, time from action_201503;
 
 /*(2)計算每個月的登入人數, 排除重覆的人*/
 create table __action_201409_usercount engine = myisam
@@ -25,12 +26,14 @@ create table __action_201501_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201501 group by userid;
 create table __action_201502_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201502 group by userid;
+create table __action_201503_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from _action_201503 group by userid;
 -- note: 算完就可以drop, 要不然很佔空間
 
 -- 2014/1/2新增, 排除異常名單, 機器人
 -- 先執行 8_user_find_the robot_register
 
-        ALTER TABLE  actionlog.__action_201502_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+        ALTER TABLE  actionlog.__action_201503_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
         ALTER TABLE  plsport_playsport._problem_members CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 
 select count(a.userid) from actionlog.__action_201409_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
@@ -39,6 +42,7 @@ select count(a.userid) from actionlog.__action_201411_usercount a left join plsp
 select count(a.userid) from actionlog.__action_201412_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201501_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201502_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+select count(a.userid) from actionlog.__action_201503_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 
 -- ======================================================================================
 --  準備其它資料表
@@ -69,7 +73,7 @@ drop table if exists forum.forum_edited_export_1;
 
 create table forum.forum engine = myisam /*直接把匯入的移到forum裡*/
 select * from plsport_playsport.forum
-where date(posttime) between '2012-01-01' and '2015-02-28'
+where date(posttime) between '2012-01-01' and '2015-03-31'
 and postuser not like '%xiaojita%'; # 2014-11-13洗版po文機器人
 
 drop table if exists forum_temp.forumcontent_2015_;
@@ -77,7 +81,7 @@ drop table if exists forum_temp.forumcontent;
 
 create table forum_temp.forumcontent_2015_ engine = myisam /*dump這個比較久, 只有這個是新的*/
 select * from plsport_playsport.forumcontent
-where date(postdate) between '2015-01-01' and '2015-02-28';
+where date(postdate) between '2015-01-01' and '2015-03-31';
 
 create table forum.forumcontent engine = myisam /*重新merge這2年內的forumcontent, 只更新最近的, 再把3個檔merge起來*/
 select * from forum_temp.forumcontent_2012;
@@ -250,7 +254,7 @@ insert ignore into prediction.p_main select * from prediction.p_2015;
 select a.createMonth, count(a.userid) as u
 from (
     SELECT createMonth, userid, sum(userid) as p
-    FROM prediction.p_201501
+    FROM prediction.p_201503
     group by createMonth, userid) as a
 group by a.createMonth;
 
@@ -274,7 +278,7 @@ create table _pcash_log engine = myisam
 select userid, amount, date(date) as c_date, month(date) as c_month, year(date) as c_year, substr(date,1,7) as ym, id_this_type
 from pcash_log
 where payed = 1 and type = 1
-and date between '2012-01-01 00:00:00' and '2015-02-28 23:59:59';
+and date between '2012-01-01 00:00:00' and '2015-03-31 23:59:59';
 
 /*計算每人每月的累積購買預測金額*/
 create table _pcash_log_calculate engine = myisam
@@ -327,7 +331,7 @@ create table _order_data engine = myisam
 SELECT userid, amount as redeem, date, substr(date,1,7) as ym, year(date) as y, substr(date,6,2) as m 
 FROM pcash_log
 where payed = 1 and type in (3,4,16) # 16是紅陽
-and date between '2012-01-01 00:00:00' and '2015-02-28 23:59:59';
+and date between '2012-01-01 00:00:00' and '2015-03-31 23:59:59';
 
 # 計算每個月有多少人儲值
 select a.ym, count(a.userid) as c
@@ -365,7 +369,7 @@ SELECT id, sellerid, mode, sale_allianceid, sale_gameid, sale_date, substr(sale_
              when (rank < 11 and selltype = 3) then '金牌'
              when (rank_sk < 11 and selltype = 3) then '金牌' else '銀牌' end) as killmedal     
 FROM revenue.predict_seller /*最好是指定精確的日期區間*/
-where sale_date between '2011-12-15 00:00:00' and '2015-02-28 23:59:59'; /*<====記得要改*/
+where sale_date between '2011-12-15 00:00:00' and '2015-03-31 23:59:59'; /*<====記得要改*/
 
 create table revenue._alliance engine = myisam
 SELECT allianceid, alliancename
@@ -399,40 +403,3 @@ group by ym, alliancename, sale_price, killtype, killmedal;
          fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
          FROM revenue._pcash_log_with_detailed_info_ok); 
 
-
-# ======================================================================================
-#    ARPU付費會員平均消費金額 - (套用分群版)
-#    每個月總儲值金額/付費會員人數=ARPU
-#
-#    要先將R匯出的csv檔匯入至user_cluster, 檔案是_from_r
-# ======================================================================================
-use revenue;
-create table revenue._from_r engine = myisam select * from user_cluster._from_r;
-create table revenue._member engine = myisam select * from user_cluster._member;
-
-create table revenue._redeem_amount_within_31_days engine = myisam
-select a.userid, sum(a.price) as redeem_amount
-from (
-    SELECT userid, price 
-    FROM revenue._order_data    
-    where createon between subdate(now(),90) and now()) as a
-group by a.userid;
-
-ALTER TABLE revenue._from_r ADD INDEX (`id`);
-ALTER TABLE revenue._member ADD INDEX (`id`);
-
-create table revenue._from_r_with_real_userid engine = myisam
-SELECT a.id, b.userid, a.g 
-FROM revenue._from_r a left join revenue._member b on a.id = b.id;
-
-ALTER TABLE revenue._from_r_with_real_userid ADD INDEX (`userid`);
-ALTER TABLE revenue._redeem_amount_within_31_days ADD INDEX (`userid`);
-
-create table revenue._redeem_amount_with_cluster engine = myisam
-SELECT a.userid, b.g, a.redeem_amount
-FROM revenue._redeem_amount_within_31_days a left join revenue._from_r_with_real_userid b on a.userid = b.userid
-where b.g is not null;
-
-SELECT g, sum(redeem_amount) as total, count(userid) as user_count
-FROM revenue._redeem_amount_with_cluster
-group by g;

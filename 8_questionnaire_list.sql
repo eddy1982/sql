@@ -254,6 +254,16 @@ from (
 group by a.userid;
 
 /*--------------------------------------------
+  (1.5)產生近3個月沒有寫過問券的人的名單
+---------------------------------------------*/
+create table questionnaire._fill_question_in_4_month engine = myisam
+SELECT userid 
+FROM questionnaire.satisfactionquestionnaire_answer
+where completeTime between subdate(now(),120) and now()
+group by userid;
+
+
+/*--------------------------------------------
   (2)上個月有登入過的人
 ---------------------------------------------*/
 create table questionnaire._signin_list engine = myisam
@@ -261,18 +271,22 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2015-02-01' and '2015-02-28') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2015-03-01' and '2015-03-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
+
 
 ALTER TABLE _signin_list ADD INDEX (`userid`); 
 ALTER TABLE _existed_list ADD INDEX (`userid`);
-
+ALTER TABLE _fill_question_in_4_month ADD INDEX (`userid`);
 /*--------------------------------------------
   排除1: 上月份的名單, 但排除掉之前有做過問卷的人
 ---------------------------------------------*/
 ALTER TABLE questionnaire._existed_list CHANGE `userid` `userid` VARCHAR(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE questionnaire._fill_question_in_4_month CHANGE `userid` `userid` VARCHAR(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE questionnaire._signin_list CHANGE `userid` `userid` VARCHAR(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
 create table questionnaire._list engine = myisam /*上月份的名單, 但排除掉之前有做過問卷的人*/
-SELECT a.userid FROM questionnaire._signin_list a left join questionnaire._existed_list b on a.userid = b.userid
+SELECT a.userid FROM questionnaire._signin_list a left join questionnaire._fill_question_in_4_month b on a.userid = b.userid
 where b.userid is null;/*排除掉*/
 
 /*--------------------------------------------
@@ -312,11 +326,12 @@ delete from questionnaire._list_full where userid = 'yenhsun1982';
 
 create table questionnaire._list_limit_3000 engine = myisam
 SELECT * FROM questionnaire._list_full
+where userid <> '' # 不知道為什麼會有一些\N出現, 所以排掉
 order by rand() # 隨機抽出3000名受測者
 limit 0, 3000;
 
 # 再把工友放進去
-insert into questionnaire._list_limit_3000 values ('ydasam'),('monkey'),('chinginge'),('pauleanr'),('yenhsun1982');
+insert into questionnaire._list_limit_3000 values ('monkey'),('chinginge'),('pauleanr'),('yenhsun1982');
 
 #重要, 第一次執行要注意工友是否有2筆????
 
@@ -333,7 +348,10 @@ select a.userid from _list_limit_3000 a inner join _existed_list b on a.userid =
 # select的結果應該是空的
 
 
-
+ALTER TABLE  `_list_limit_3000` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+ALTER TABLE  `_fill_question_in_4_month` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+select a.userid from _list_limit_3000 a inner join _fill_question_in_4_month b on a.userid = b.userid;
+# select的結果應該是空的
 
 
 
