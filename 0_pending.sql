@@ -5096,8 +5096,8 @@ SELECT a.d, a.allianceid, count(a.subjectid) as best_ana_post_count
 FROM (
     SELECT userid, subjectid, allianceid, date(got_time) as d, substr(got_time,1,7) as m, year(got_time) as y
     FROM plsport_playsport.analysis_king
-    WHERE allianceid = 3 # NBA 
-    AND got_time between '2015-02-03 00:00:00' AND '2015-03-09 23:59:59') as a
+    WHERE allianceid = 1 # MLB
+    AND got_time between '2015-04-09 00:00:00' AND '2015-04-20 23:59:59') as a
 GROUP BY a.d, a.allianceid;
 
 # (2)分析文總數
@@ -5106,8 +5106,8 @@ FROM (
     SELECT subjectid, posttime, allianceid, date(posttime) as d, substr(posttime,1,7) as m, year(posttime) as y 
     FROM plsport_playsport.forum
     WHERE gametype = 1 # 分析文
-    AND allianceid = 3 # NBA 
-    AND posttime between '2015-02-03 00:00:00' AND '2015-03-09 23:59:59'
+    AND allianceid = 1 # MLB 
+    AND posttime between '2015-04-09 00:00:00' AND '2015-04-20 23:59:59'
     ORDER BY posttime) as a
 GROUP BY a.d, a.allianceid;
 
@@ -14352,6 +14352,140 @@ SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/_livescore10.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._livescore10);
+
+
+# =================================================================================================
+# 任務: 使用者投注習慣問卷-分析任務 [新建] 2015-04-20 (柔雅))
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4581&projectId=11
+#  TO eddy:
+# 
+# 經由問卷，我們收集到使用者的投注習慣，
+# 麻煩協助分析。
+# 1.問卷問題的統計整理
+# 2.試算，運彩盤一天大約可獲得多少注單。
+# 問卷回覆的網址
+# =================================================================================================
+
+
+create table plsport_playsport._ans engine = myisam
+SELECT a.mestamp, a.id, b.userid, a.bet, a.mode, a.q1, a.q2, a.q3, a.q4, a.q5, a.q6, a.q7, a.q8, a.q9, a.q10, a.q11
+FROM plsport_playsport.ans a left join plsport_playsport.member b on a.id = b.id;
+
+create table plsport_playsport._ans_1 engine = myisam
+SELECT min(mestamp) as time, id, userid, bet, mode, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11 
+FROM plsport_playsport._ans
+group by id;
+
+create table plsport_playsport._ans_2 engine = myisam
+SELECT min(mestamp) as time, id, userid, bet, mode, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11 
+FROM plsport_playsport._ans
+where userid is not null
+group by userid;
+
+
+SELECT bet, mode, count(userid) as c
+FROM plsport_playsport._ans_2
+group by bet , mode;
+
+# 有	兩者都有	1255
+# 有	國際盤	    868
+# 有	運彩盤	    1487
+# 沒有		        491
+
+create table plsport_playsport._ans_3_1 engine = myisam
+SELECT q6, q7, q8, count(userid) as c 
+FROM plsport_playsport._ans_2
+where mode = '國際盤'
+group by q6, q7, q8;
+
+        update plsport_playsport._ans_3_1 set q7 = 'a_0~3000元'     where q7 = '0~3000元';
+        update plsport_playsport._ans_3_1 set q7 = 'b_3001~9000元'  where q7 = '3001~9000元';
+        update plsport_playsport._ans_3_1 set q7 = 'c_9001~15000元' where q7 = '9001~15000元';
+        update plsport_playsport._ans_3_1 set q7 = 'd_15001~20000元'where q7 = '15001~20000元';
+        update plsport_playsport._ans_3_1 set q7 = 'e_20001元以上'  where q7 = '20001元以上';
+
+        update plsport_playsport._ans_3_1 set q8 = 'a_100~500元'   where q8 = '100~500元';
+        update plsport_playsport._ans_3_1 set q8 = 'b_501~1000元'  where q8 = '501~1000元';
+        update plsport_playsport._ans_3_1 set q8 = 'c_1001~2000元' where q8 = '1001~2000元';
+        update plsport_playsport._ans_3_1 set q8 = 'd_2001~3000元' where q8 = '2001~3000元';
+        update plsport_playsport._ans_3_1 set q8 = 'e_3001元以上'  where q8 = '3001元以上';
+
+
+
+create table plsport_playsport._ans_3_2 engine = myisam
+SELECT q9, q10, q11, count(userid) as c 
+FROM plsport_playsport._ans_2
+where mode = '運彩盤'
+group by q9, q10, q11;
+
+        update plsport_playsport._ans_3_2 set q10 = 'a_0~1000元'     where q10 = '0~1000元';
+        update plsport_playsport._ans_3_2 set q10 = 'b_1001~3000元'  where q10 = '1001~3000元';
+        update plsport_playsport._ans_3_2 set q10 = 'c_3001~6000元'  where q10 = '3001~6000元';
+        update plsport_playsport._ans_3_2 set q10 = 'd_6001~10000元' where q10 = '6001~10000元';
+        update plsport_playsport._ans_3_2 set q10 = 'e_10001元以上'  where q10 = '10001元以上';
+
+        update plsport_playsport._ans_3_2 set q11 = 'a_100~500元'   where q11 = '100~500元';
+        update plsport_playsport._ans_3_2 set q11 = 'b_500~1000元'  where q11 = '500~1000元';
+        update plsport_playsport._ans_3_2 set q11 = 'c_1000~2000元' where q11 = '1000~2000元';
+        update plsport_playsport._ans_3_2 set q11 = 'd_2001~3000元' where q11 = '2001~3000元';
+        update plsport_playsport._ans_3_2 set q11 = 'e_3001元以上'  where q11 = '3001元以上';
+
+
+
+create table plsport_playsport._ans_3_3 engine = myisam
+SELECT * FROM plsport_playsport._ans_2
+where mode = '兩者都有';
+
+        update plsport_playsport._ans_3_3 set q2 = 'a_0~3000元'     where q2 = '0~3000元';
+        update plsport_playsport._ans_3_3 set q2 = 'b_3001~9000元'  where q2 = '3001~9000元';
+        update plsport_playsport._ans_3_3 set q2 = 'c_9001~15000元' where q2 = '9001~15000元';
+        update plsport_playsport._ans_3_3 set q2 = 'd_15001~20000元'where q2 = '15001~20000元';
+        update plsport_playsport._ans_3_3 set q2 = 'e_20001元以上'  where q2 = '20001元以上';
+
+        update plsport_playsport._ans_3_3 set q3 = 'a_100~500元'   where q3 = '100~500元';
+        update plsport_playsport._ans_3_3 set q3 = 'b_501~1000元'  where q3 = '501~1000元';
+        update plsport_playsport._ans_3_3 set q3 = 'c_1001~2000元' where q3 = '1001~2000元';
+        update plsport_playsport._ans_3_3 set q3 = 'd_2001~3000元' where q3 = '2001~3000元';
+        update plsport_playsport._ans_3_3 set q3 = 'e_3001元以上'  where q3 = '3001元以上';
+
+        update plsport_playsport._ans_3_3 set q4 = 'a_0~1000元'     where q4 = '0~1000元';
+        update plsport_playsport._ans_3_3 set q4 = 'b_1001~3000元'  where q4 = '1001~3000元';
+        update plsport_playsport._ans_3_3 set q4 = 'c_3001~6000元'  where q4 = '3001~6000元';
+        update plsport_playsport._ans_3_3 set q4 = 'd_6001~10000元' where q4 = '6001~10000元';
+        update plsport_playsport._ans_3_3 set q4 = 'e_10001元以上'  where q4 = '10001元以上';
+
+        update plsport_playsport._ans_3_3 set q5 = 'a_100~500元'   where q5 = '100~500元';
+        update plsport_playsport._ans_3_3 set q5 = 'b_501~1000元'  where q5 = '501~1000元';
+        update plsport_playsport._ans_3_3 set q5 = 'c_1001~2000元' where q5 = '1001~2000元';
+        update plsport_playsport._ans_3_3 set q5 = 'd_2001~3000元' where q5 = '2001~3000元';
+        update plsport_playsport._ans_3_3 set q5 = 'e_3001元以上'  where q5 = '3001元以上';
+
+SELECT q1, q2, q3, count(userid) as c 
+FROM plsport_playsport._ans_3_3
+group by q1, q2, q3;
+
+SELECT q1, q4, q5, count(userid) as c 
+FROM plsport_playsport._ans_3_3
+group by q1, q4, q5;
+
+
+
+create table plsport_playsport._member_signin_log_archive engine = myisam
+SELECT userid, date(signin_time) as d
+FROM plsport_playsport.member_signin_log_archive
+where year(signin_time) = 2015;
+
+create table plsport_playsport._member_signin_log_archive_1 engine = myisam
+SELECT userid, d, count(userid) 
+FROM plsport_playsport._member_signin_log_archive
+group by userid, d;
+
+create table plsport_playsport._member_signin_log_archive_2 engine = myisam
+SELECT d, count(userid) as c 
+FROM plsport_playsport._member_signin_log_archive_1
+group by d desc;
+
+
 
 
 
