@@ -5097,7 +5097,7 @@ FROM (
     SELECT userid, subjectid, allianceid, date(got_time) as d, substr(got_time,1,7) as m, year(got_time) as y
     FROM plsport_playsport.analysis_king
     WHERE allianceid = 1 # MLB
-    AND got_time between '2015-04-09 00:00:00' AND '2015-04-20 23:59:59') as a
+    AND got_time between '2015-04-09 00:00:00' AND '2015-04-21 23:59:59') as a
 GROUP BY a.d, a.allianceid;
 
 # (2)分析文總數
@@ -5107,7 +5107,7 @@ FROM (
     FROM plsport_playsport.forum
     WHERE gametype = 1 # 分析文
     AND allianceid = 1 # MLB 
-    AND posttime between '2015-04-09 00:00:00' AND '2015-04-20 23:59:59'
+    AND posttime between '2015-04-09 00:00:00' AND '2015-04-21 23:59:59'
     ORDER BY posttime) as a
 GROUP BY a.d, a.allianceid;
 
@@ -13258,9 +13258,6 @@ FROM plsport_playsport._list_8);
 # - 需求欄位:暱稱、ID、預測點擊天數、電腦與手機使用比、最後登入時間，居住地
 # =================================================================================================
 
-create table actionlog._visit_member_201412 engine = myisam
-SELECT userid, uri, time, (case when (platform_type<2) then 'pc' else 'mobile' end) as p
-FROM actionlog.action_201412 where userid <> '' and uri like '%visit_member.php%';
 create table actionlog._visit_member_201501 engine = myisam
 SELECT userid, uri, time, (case when (platform_type<2) then 'pc' else 'mobile' end) as p
 FROM actionlog.action_201501 where userid <> '' and uri like '%visit_member.php%';
@@ -13270,11 +13267,14 @@ FROM actionlog.action_201502 where userid <> '' and uri like '%visit_member.php%
 create table actionlog._visit_member_201503 engine = myisam
 SELECT userid, uri, time, (case when (platform_type<2) then 'pc' else 'mobile' end) as p
 FROM actionlog.action_201503 where userid <> '' and uri like '%visit_member.php%';
+create table actionlog._visit_member_201504 engine = myisam
+SELECT userid, uri, time, (case when (platform_type<2) then 'pc' else 'mobile' end) as p
+FROM actionlog.action_201504 where userid <> '' and uri like '%visit_member.php%';
 
-create table actionlog._visit_member engine = myisam select * from actionlog._visit_member_201412;
-insert ignore into actionlog._visit_member select * from actionlog._visit_member_201501;
+create table actionlog._visit_member engine = myisam select * from actionlog._visit_member_201501;
 insert ignore into actionlog._visit_member select * from actionlog._visit_member_201502;
 insert ignore into actionlog._visit_member select * from actionlog._visit_member_201503;
+insert ignore into actionlog._visit_member select * from actionlog._visit_member_201504;
 
 create table actionlog._visit_member_1 engine = myisam
 SELECT * FROM actionlog._visit_member
@@ -13296,15 +13296,15 @@ create table actionlog._visit_member_4 engine = myisam
 SELECT userid, pc, mobile, round((pc/(pc+mobile)),3) as p_pc, round((mobile/(pc+mobile)),3) as p_mobile 
 FROM actionlog._visit_member_3;
 
-create table plsport_playsport._prediction_201412 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201412 group by userid, createday;
 create table plsport_playsport._prediction_201501 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201501 group by userid, createday;
 create table plsport_playsport._prediction_201502 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201502 group by userid, createday;
 create table plsport_playsport._prediction_201503 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201503 group by userid, createday;
+create table plsport_playsport._prediction_201504 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201504 group by userid, createday;
 
-create table plsport_playsport._prediction engine = myisam select * from plsport_playsport._prediction_201412;
-insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201501;                    
-insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201502;  
-insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201503;
+create table plsport_playsport._prediction engine = myisam select * from plsport_playsport._prediction_201501;
+insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201502;                    
+insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201503;  
+insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201504;
 
 create table plsport_playsport._prediction_1 engine = myisam
 SELECT userid, count(createday) as predict_day_count
@@ -13336,15 +13336,14 @@ create table plsport_playsport._predict_list_3 engine = myisam
 SELECT a.userid, a.nickname, a.predict_day_count, a.pc, a.mobile, a.p_pc, a.p_mobile, b.last_time_login
 FROM plsport_playsport._predict_list_2 a left join plsport_playsport._last_time_login b on a.userid = b.userid;
 
-# 在這裡要先跑居住地
+# 在這裡要先跑居住地(step16_user_city.py)
 
-        ALTER TABLE plsport_playsport._city_info_ok_with_chinese ADD INDEX (`userid`);
-        ALTER TABLE plsport_playsport._city_info_ok_with_chinese convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._user_city ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._user_city convert to character set utf8 collate utf8_general_ci;
 
 create table plsport_playsport._predict_list_4 engine = myisam
-SELECT a.userid, a.nickname, a.predict_day_count, a.pc, a.mobile, a.p_pc, a.p_mobile, a.last_time_login, b.city1 as city
-FROM plsport_playsport._predict_list_3 a left join plsport_playsport._city_info_ok_with_chinese b on a.userid = b.userid;
-
+SELECT a.userid, a.nickname, a.predict_day_count, a.pc, a.mobile, a.p_pc, a.p_mobile, a.last_time_login, b.city
+FROM plsport_playsport._predict_list_3 a left join plsport_playsport._user_city b on a.userid = b.userid;
 
 SELECT 'userid', '暱稱', '預測點擊天數', 'pc_pv', 'mobile_pv', 'pc比例', 'mobile比例' ,'最後登入', '居住地' union (
 SELECT *
@@ -14171,7 +14170,6 @@ SELECT userid, uri, time, (case when (platform_type<2) then 'pc' else 'mobile' e
 FROM actionlog.action_201504
 where userid <> '' and uri like '%/forum%';
 
-
 create table actionlog._forum_log_1 engine = myisam
 SELECT * 
 FROM actionlog._forum_log
@@ -14355,7 +14353,7 @@ FROM actionlog._livescore10);
 
 
 # =================================================================================================
-# 任務: 使用者投注習慣問卷-分析任務 [新建] 2015-04-20 (柔雅))
+# 任務: 使用者投注習慣問卷-分析任務 [新建] 2015-04-20 (柔雅)
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4581&projectId=11
 #  TO eddy:
 # 
@@ -14365,7 +14363,6 @@ FROM actionlog._livescore10);
 # 2.試算，運彩盤一天大約可獲得多少注單。
 # 問卷回覆的網址
 # =================================================================================================
-
 
 create table plsport_playsport._ans engine = myisam
 SELECT a.mestamp, a.id, b.userid, a.bet, a.mode, a.q1, a.q2, a.q3, a.q4, a.q5, a.q6, a.q7, a.q8, a.q9, a.q10, a.q11
@@ -14410,8 +14407,6 @@ group by q6, q7, q8;
         update plsport_playsport._ans_3_1 set q8 = 'd_2001~3000元' where q8 = '2001~3000元';
         update plsport_playsport._ans_3_1 set q8 = 'e_3001元以上'  where q8 = '3001元以上';
 
-
-
 create table plsport_playsport._ans_3_2 engine = myisam
 SELECT q9, q10, q11, count(userid) as c 
 FROM plsport_playsport._ans_2
@@ -14429,8 +14424,6 @@ group by q9, q10, q11;
         update plsport_playsport._ans_3_2 set q11 = 'c_1000~2000元' where q11 = '1000~2000元';
         update plsport_playsport._ans_3_2 set q11 = 'd_2001~3000元' where q11 = '2001~3000元';
         update plsport_playsport._ans_3_2 set q11 = 'e_3001元以上'  where q11 = '3001元以上';
-
-
 
 create table plsport_playsport._ans_3_3 engine = myisam
 SELECT * FROM plsport_playsport._ans_2
@@ -14468,8 +14461,6 @@ SELECT q1, q4, q5, count(userid) as c
 FROM plsport_playsport._ans_3_3
 group by q1, q4, q5;
 
-
-
 create table plsport_playsport._member_signin_log_archive engine = myisam
 SELECT userid, date(signin_time) as d
 FROM plsport_playsport.member_signin_log_archive
@@ -14484,6 +14475,19 @@ create table plsport_playsport._member_signin_log_archive_2 engine = myisam
 SELECT d, count(userid) as c 
 FROM plsport_playsport._member_signin_log_archive_1
 group by d desc;
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

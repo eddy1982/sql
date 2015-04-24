@@ -214,25 +214,18 @@ group by postyear, postmonth1, board, boardtype;
 -- ======================================================================================
 use prediction;
 
-create table prediction.prediction_201503 engine = myisam
+create table prediction.prediction_201504 engine = myisam
 SELECT * FROM plsport_playsport.prediction
-where date(createon) between '2015-03-01' and '2015-03-31';
+where date(createon) between '2015-04-01' and '2015-04-31';
 
-create table p_201409 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201409;
-create table p_201410 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201410;
-create table p_201411 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201411;
-create table p_201412 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201412;
 create table p_201501 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201501;
 create table p_201502 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201502;
 create table p_201503 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201503;
-
+create table p_201504 engine = myisam
+select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201504;
 
         /*====使用者分群專用的====*/
         create table prediction.p_recently engine = myisam select * from prediction.p_201409; /*近4個月預測資料, 看使用者分群要篩至多久前的記錄*/

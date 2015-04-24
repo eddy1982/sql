@@ -37,39 +37,39 @@ where spendminute>0.4;
     PART.2 轉換問券成樞紐的形式
 ---------------------------------------------*/
 # 篩選出ver4.0的, 也就是新版的問券
-create table plsport_playsport.satisfactionquestionnaire_answer_ver_4 engine = myisam
+create table plsport_playsport.satisfactionquestionnaire_answer_ver_5 engine = myisam
 SELECT * FROM plsport_playsport.satisfactionquestionnaire_answer
-where version = 4.0;
+where version = 5.0;
 
-create table plsport_playsport.satisfactionquestionnaire_answer_ver_4_edited engine = myisam
+create table plsport_playsport.satisfactionquestionnaire_answer_ver_5_edited engine = myisam
 SELECT serialnumber, userid, version, completetime, spendminute, entrance, 
        forum_notused, forum_improve, forum_platform, 
        livescore_notused, livescore_improve, livescore_platform, 
        buyPrediction_notUsed, buyPrediction_improve,
-       ourweb, hearaboutus
-FROM plsport_playsport.satisfactionquestionnaire_answer_ver_4;
+       ourweb, hearaboutus, suggestion, whereDoYouLive
+FROM plsport_playsport.satisfactionquestionnaire_answer_ver_5;
 
 create table plsport_playsport._q_all_answer engine = myisam
 SELECT serialnumber, userid, version, completetime, spendminute, entrance, 
-       forum_notused, forum_platform,
-           (case when (forum_improve like '%0%') then 1 else 0 end) as f0,
-           (case when (forum_improve like '%1%') then 1 else 0 end) as f1,
-           (case when (forum_improve like '%3%') then 1 else 0 end) as f2,
-           (case when (forum_improve like '%5%') then 1 else 0 end) as f3,
-           (case when (forum_improve like '%7%') then 1 else 0 end) as f4,
-           (case when (forum_improve like '%8%') then 1 else 0 end) as f5,
-           (case when (forum_improve like '%9%') then 1 else 0 end) as f6,
-           (case when (forum_improve like '%10%') then 1 else 0 end) as f7, 
-       livescore_notused, livescore_platform,
-           (case when (livescore_improve like '%0%') then 1 else 0 end) as l0,
-           (case when (livescore_improve like '%1%') then 1 else 0 end) as l1,
-           (case when (livescore_improve like '%5%') then 1 else 0 end) as l2,
-           (case when (livescore_improve like '%6%') then 1 else 0 end) as l3,
+       forum_notused, 
+           (case when (forum_improve like '%0%') then 1 else 0 end) as f0,  /*沒有意見*/
+           (case when (forum_improve like '%1%') then 1 else 0 end) as f1,  /*小白亂版*/
+           (case when (forum_improve like '%3%') then 1 else 0 end) as f2,  /*工友管版不公*/
+           (case when (forum_improve like '%7%') then 1 else 0 end) as f3,  /*殺手廣告文太多*/
+           (case when (forum_improve like '%8%') then 1 else 0 end) as f4,  /*分析文沒用*/
+           (case when (forum_improve like '%9%') then 1 else 0 end) as f5,  /*廢文太多*/
+           (case when (forum_improve like '%10%') then 1 else 0 end) as f6, /*分身太多*/
+       livescore_notused, 
+           (case when (livescore_improve like '%0%') then 1 else 0 end) as l0, /*沒有意見*/
+           (case when (livescore_improve like '%1%') then 1 else 0 end) as l1, /*比分更新太慢*/
+           (case when (livescore_improve like '%5%') then 1 else 0 end) as l2, /*沒有比賽實況*/
+           (case when (livescore_improve like '%6%') then 1 else 0 end) as l3, /*沒有球員數據*/
+           (case when (livescore_improve like '%7%') then 1 else 0 end) as l4, /*比分常出錯*/
        buyPrediction_notUsed, 
-           (case when (buyPrediction_improve like '%0%') then 1 else 0 end) as p0,
-           (case when (buyPrediction_improve like '%2%') then 1 else 0 end) as p1,
-           (case when (buyPrediction_improve like '%5%') then 1 else 0 end) as p2,
-           (case when (buyPrediction_improve like '%6%') then 1 else 0 end) as p3,
+           (case when (buyPrediction_improve like '%0%') then 1 else 0 end) as p0, /*沒有意見*/
+           (case when (buyPrediction_improve like '%2%') then 1 else 0 end) as p1, /*不知道該怎麼選高手*/
+           (case when (buyPrediction_improve like '%5%') then 1 else 0 end) as p2, /*沒有串關推廌*/
+           (case when (buyPrediction_improve like '%6%') then 1 else 0 end) as p3, /*殺手戰績不易查詢*/
        (case when (ourweb is null) then 'no' end) as 'no_ans',
            (case when (ourweb like '%1-1%') then 1 else 0 end) as '1_1',
            (case when (ourweb like '%1-2%') then 1 else 0 end) as '1_2',
@@ -79,8 +79,8 @@ SELECT serialnumber, userid, version, completetime, spendminute, entrance,
            (case when (ourweb like '%5-2%') then 1 else 0 end) as '5_2',
            (case when (ourweb like '%6-1%') then 1 else 0 end) as '6_1',
            (case when (ourweb like '%6-2%') then 1 else 0 end) as '6_2',
-       hearAboutUS
-FROM plsport_playsport.satisfactionquestionnaire_answer_ver_4_edited
+       hearAboutUS, whereDoYouLive 
+FROM plsport_playsport.satisfactionquestionnaire_answer_ver_5_edited
 where userid not in ('yenhsun1982', 'monkey', 'chinginge', 'pauleanr', 'ydasam') # 工友都要排除掉
 and spendminute > 0.5; # 小於30秒完成問卷的人就不計
 
@@ -88,15 +88,33 @@ and spendminute > 0.5; # 小於30秒完成問卷的人就不計
     PART.3 [圖表程式化]輸出給R使用
 ---------------------------------------------*/
 # 輸出.csv檔給R使用
-select 'serialnumber','forum_notused','forum_platform','f0','f1','f2','f3','f4','f5','f6','f7',
-       'livescore_notused','livescore_platform','l0','l1','l2','l3',
-       'buyPrediction_notUsed','p0','p1','p2','p3','no_ans','1_1','1_2','3_1','3_2','5_1','5_2','6_1','6_2','hearAboutUS' union (
-select  serialnumber,forum_notused,forum_platform,f0,f1,f2,f3,f4,f5,f6,f7,
-        livescore_notused,livescore_platform,l0,l1,l2,l3,
-        buyPrediction_notUsed,p0,p1,p2,p3,no_ans,1_1,1_2,3_1,3_2,5_1,5_2,6_1,6_2,hearAboutUS
-into outfile 'C:/proc/r/web_analysis/questionnaire_ver_4.csv' 
+select 'serialnumber','forum_notused','f0','f1','f2','f3','f4','f5','f6',
+       'livescore_notused','l0','l1','l2','l3','l4',
+       'buyPrediction_notUsed','p0','p1','p2','p3','no_ans','1_1','1_2','3_1','3_2','5_1','5_2','6_1','6_2','hearAboutUS','whereDoYouLive' union (
+select  serialnumber,forum_notused,f0,f1,f2,f3,f4,f5,f6,
+        livescore_notused,l0,l1,l2,l3,l4,
+        buyPrediction_notUsed,p0,p1,p2,p3,no_ans,1_1,1_2,3_1,3_2,5_1,5_2,6_1,6_2,hearAboutUS,whereDoYouLive
+into outfile 'C:/proc/r/web_analysis/questionnaire_ver_5.csv' 
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
 FROM plsport_playsport._q_all_answer);
+
+
+/*--------------------------------------------
+查詢每個月問券的id
+---------------------------------------------*/
+select b.sn, b.ver, min(b.m) as m, b.c
+from (select a.sn, a.ver, a.m, count(sn) as c from (SELECT serialnumber as sn, version as ver, substr(completetime,1,7) as m 
+FROM plsport_playsport.satisfactionquestionnaire_answer) as a group by a.sn, a.ver, a.m) as b 
+where b.c > 160 group by b.sn, b.ver;
+
+
+
+
+
+
+
+
+
 
 /*--------------------------------------------
     PART.4 撈出意見的回饋,可以看出意見是那位使用者userid給的(這部分已經寫成python自動化, 基本上是用不到part.4)
