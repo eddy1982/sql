@@ -14214,6 +14214,11 @@ SELECT userid, date(max(signin_time)) as last_time_login
 FROM plsport_playsport.member_signin_log_archive
 GROUP BY userid;
 
+        ALTER TABLE plsport_playsport._last_time_login convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._forum_log_7 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._last_time_login ADD INDEX (`userid`);
+        ALTER TABLE actionlog._forum_log_7 ADD INDEX (`userid`);
+        
 create table actionlog._forum_log_8 engine = myisam
 SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pc, a.mobile, a.p_pc, a.p_mobile, b.last_time_login
 FROM actionlog._forum_log_7 a left join plsport_playsport._last_time_login b on a.userid = b.userid;
@@ -14477,15 +14482,63 @@ FROM plsport_playsport._member_signin_log_archive_1
 group by d desc;
 
 
+# =================================================================================================
+# 任務: [201404-B-8]手機網頁版header優化-ABtesting報告 [新建] 2015-04-24 (靜怡)
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4563&projectId=11
+# 說明
+# 目的：了解新的手機網頁版header使用者是否喜歡
+# 內容
+# - 測試時間：4/17~5/8
+# - 提供測試組
+# - 觀察指標
+#     版標以上的各連結點擊次數
+#     頭三標的點擊與購買金額
+#     總儲值金額
+# - 報告時間：5/12
+# EDDY
+# 詳細事件設定請參考http://pm.playsport.cc/index.php/tasksComments?projectId=11&tasksId=4551
+# =================================================================================================
 
+# 檢查abtesting分組情況
+# 分組名單 (userid%20)+1 in (1,2,3,4,5,6,7,8,9,10), 共50%的流量
 
+create table actionlog._check_HT_click engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201504
+where uri like '%rp=HT_%'
+and time between '2015-04-24 16:00:00' and now(); #壯兔已經修正平版誤擊後的時間, 和event的事件也都修正了
 
+create table actionlog._check_HT_click_1 engine = myisam
+SELECT userid, uri, time, platform_type, substr(uri,locate('&rp=',uri)+4,length(uri)) as ht
+FROM actionlog._check_ht_click;
 
+create table actionlog._check_HT_click_2 engine = myisam
+SELECT userid, uri, time, platform_type, (case when (locate('&',ht)=0) then ht else substr(ht,1,locate('&',ht)-1) end ) as ht
+FROM actionlog._check_ht_click_1;
 
+SELECT  platform_type, ht, count(userid) as c
+FROM actionlog._check_ht_click_2
+where substr(ht,1,3) = 'HT_' and userid <> ''
+group by platform_type, ht;
 
+create table plsport_playsport._events engine = myisam
+SELECT * FROM plsport_playsport.events
+where name like '%header%'
+and time between '2015-04-24 16:00:00' and now();
 
+create table plsport_playsport._events_1 engine = myisam
+select c.g, (case when (c.g<11) then 'A' else 'B' end) as abtest, c.userid, c.name, c.time
+from (
+    SELECT (b.id%20)+1 as g, a.userid, a.name, a.time 
+    FROM plsport_playsport._events a left join plsport_playsport.member b on a.userid = b.userid) as c;
 
+create table plsport_playsport._events_2 engine = myisam
+SELECT g, abtest, userid, name, substr(name,8,1) as abtest_g, time 
+FROM plsport_playsport._events_1;
 
+SELECT abtest, abtest_g, count(g) 
+FROM plsport_playsport._events_2
+group by abtest, abtest_g;
 
 
 
