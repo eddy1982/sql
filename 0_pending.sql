@@ -10350,7 +10350,7 @@ GROUP BY abtest;
 # b 4990
 
 # =================================================================================================
-# 任務: [201408-A-15]開發回文推功能-第三次發文推樣式ABtesting [新建] (靜怡))
+# 任務: [201408-A-15]開發回文推功能-第三次發文推樣式ABtesting [新建] (靜怡) 2015-04-28
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4436&projectId=11
 # 目的：找出發文推降低的原因
 # 內容
@@ -10383,20 +10383,91 @@ SELECT abtest, name, count(userid) as c
 FROM plsport_playsport._events_1
 GROUP BY abtest, name;
 
+# a	pushit_bottom_a	59881
+# a	pushit_bottom_b	2
+# b	pushit_bottom_a	5
+# b	pushit_bottom_b	72986
+
+CREATE TABLE plsport_playsport._events_3 engine = myisam
+select a.abtest, a.userid, count(a.userid) as click
+from (
+    SELECT abtest, userid, substr(name,length(name),length(name)+1) as p
+    FROM plsport_playsport._events_1) as a
+where a.abtest = a.p
+group by a.abtest, a.userid;
 
 
+SELECT abtest, count(userid) as user_count 
+FROM plsport_playsport._events_3
+group by abtest;
 
 
+SELECT 'abtest', 'userid', 'click' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_events_3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._events_3);
 
 
+create table plsport_playsport._events_1_for_d engine = myisam
+SELECT userid, g, abtest, name, substr(time,1,16) as t
+FROM plsport_playsport._events_1;
 
+create table actionlog._action_log_forumdetail_for_d engine = myisam
+SELECT userid, substr(time,1,16) as t, (case when (platform_type<2) then 1 else 2 end) as p
+FROM actionlog._action_log_forumdetail;
 
+        ALTER TABLE actionlog._action_log_forumdetail_for_d ADD INDEX (`t`,`userid`);
+        ALTER TABLE actionlog._action_log_forumdetail_for_d convert to character SET utf8 collate utf8_general_ci;
 
+create table actionlog._action_log_forumdetail_for_d1 engine = myisam
+SELECT userid, t, p 
+FROM actionlog._action_log_forumdetail_for_d
+group by userid, t, p;
 
+        ALTER TABLE actionlog._action_log_forumdetail_for_d1 ADD INDEX (`t`,`userid`);
+        ALTER TABLE actionlog._action_log_forumdetail_for_d1 convert to character SET utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._events_1_for_d ADD INDEX (`t`,`userid`);
+        ALTER TABLE plsport_playsport._events_1_for_d convert to character SET utf8 collate utf8_general_ci;
 
+create table plsport_playsport._events_2_for_d engine = myisam
+SELECT a.userid, a.g, a.abtest, a.name, a.t, b.p
+FROM plsport_playsport._events_1_for_d a left join actionlog._action_log_forumdetail_for_d1 b on a.userid = b.userid and a.t = b.t
+where b.p is not null;
 
+# a	2515
+# b	2623
 
+create table actionlog._action_log_forumdetail engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201503
+where uri like '%forumdetail.php%' and userid <> ''
+and time between '2015-03-25 13:36:00' and now();
 
+insert ignore into actionlog._action_log_forumdetail
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201504
+where uri like '%forumdetail.php%' and userid <> ''
+and time between '2015-03-25 13:36:00' and now();
+
+create table actionlog._forumdetail engine = myisam
+SELECT userid, count(uri) as v 
+FROM actionlog._action_log_forumdetail
+group by userid;
+
+        ALTER TABLE actionlog._forumdetail ADD INDEX (`userid`);
+        ALTER TABLE actionlog._forumdetail convert to character SET utf8 collate utf8_general_ci;
+
+create table actionlog._forumdetail_user_count engine = myisam
+SELECT (case when ((b.id%20)+1<11) then 'a' else 'b' end) as abtest, a.userid, a.v 
+FROM actionlog._forumdetail a left join plsport_playsport.member b on a.userid = b.userid;
+
+SELECT abtest, count(userid) as c 
+FROM actionlog._forumdetail_user_count
+group by abtest;
+
+# a	7973 > 2515
+# b	8015 > 2623
 
 
 
