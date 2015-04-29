@@ -2481,6 +2481,7 @@ ORDER BY time;
 # ----------------------------------------------------------------------
 
 # 主名單: 近550天內曾經儲值過的人, 並有符合電話格式(10碼)
+# update: 2015-04-29, 5月1日要發送
 CREATE TABLE textcampaign._list1 engine = myisam
 SELECT a.userid, a.phone, sum(a.price) as total_redeem
 FROM (
@@ -2507,7 +2508,7 @@ SELECT a.userid, count(a.userid) as c, (case when (a.userid is not null) then 'y
 FROM (
     SELECT * 
     FROM plsport_playsport.member_signin_log_archive
-    WHERE signin_time between subdate(now(),90) AND now() # 設定為3個月
+    WHERE signin_time between subdate(now(),91) AND now() # 設定為3個月
     ORDER BY signin_time) as a
 GROUP BY a.userid;
 
@@ -2532,53 +2533,68 @@ WHERE b.phone is null;
 CREATE TABLE textcampaign._list4 engine = myisam
 SELECT * 
 FROM textcampaign._list3
-WHERE recent_login is null;
+WHERE recent_login is null; #不要留近3個月內有登入的人
 
-# 主名單: 完整版(加入使用者id, 和最近一次登入日期)
-CREATE TABLE textcampaign._fail_number engine = myisam # 201501發送失敗的號碼
-SELECT concat('0',one) as phone, stas, date  
-FROM textcampaign.text_sent_status; # 前一次的發送狀態
+        # 主名單: 完整版(加入使用者id, 和最近一次登入日期)
+        create table plsport_playsport._fail_number engine = myisam
+        SELECT concat('0',one) as phone, stas 
+        FROM textcampaign.text_sent_status_0226
+        where stas = '失敗';
+        insert ignore into plsport_playsport._fail_number
+        SELECT concat('0',one) as phone, stas 
+        FROM textcampaign.text_sent_status
+        where stas = '失敗';
+        insert ignore into plsport_playsport._fail_number
+        SELECT concat('0',phone) as phone, stas 
+        FROM textcampaign.text_sent_status_0401
+        where stas = '失敗';     
 
 CREATE TABLE textcampaign._list5 engine = myisam
 SELECT c.phone, d.id, c.userid, c.total_redeem, c.last_time_login, 
-       (case when (d.id is not null) then 'retention_20150226' end) as text_campaign, ((d.id%10)+1) as abtest_group
+       (case when (d.id is not null) then 'retention_a_20150501' end) as text_campaign, ((d.id%10)+1) as abtest_group /*記得要指定campaign_name*/
 FROM (
     SELECT a.userid, a.phone, a.total_redeem, b.last_time_login
     FROM textcampaign._list4 a LEFT JOIN textcampaign._last_time_login b on a.userid = b.userid) as c 
 LEFT JOIN plsport_playsport.member as d on c.userid = d.userid; 
 
+#排除掉號碼已經失效的的名單
 CREATE TABLE textcampaign._list6 engine = myisam
 SELECT a.phone, a.id, a.userid, a.total_redeem, a.last_time_login, a.text_campaign, a.abtest_group
-FROM textcampaign._list5 a LEFT JOIN textcampaign._fail_number b on a.phone = b.phone
+FROM textcampaign._list5 a LEFT JOIN plsport_playsport._fail_number b on a.phone = b.phone
 WHERE b.stas is null;
 
 CREATE TABLE textcampaign._list7 engine = myisam
-SELECT phone, id, userid, total_redeem, last_time_login, text_campaign, abtest_group, 
-       (case when (abtest_group>6) then 'hold' else 'sent' end) as status # 60:40 發送/不發
-FROM textcampaign._list6;
+SELECT a.phone, a.id, a.userid, a.total_redeem, a.last_time_login, a.text_campaign, a.abtest_group
+FROM textcampaign._list6 a left join textcampaign.retention_c_20150501_full_list_dont_delete b on a.phone = b.phone
+where b.text_campaign is null;
 
+#發送60%的人, 40%的人保留
+CREATE TABLE textcampaign._list8 engine = myisam
+SELECT phone, id, userid, total_redeem, last_time_login, text_campaign, abtest_group, 
+       (case when (abtest_group<7) then 'sent' else 'hold' end) as status /*60:40 發送/不發*/
+FROM textcampaign._list7;
+
+CREATE TABLE textcampaign.retention_a_20150501_full_list_dont_delete engine = myisam
+SELECT * FROM textcampaign._list8; 
 
         # 給yoyo8簡訊發送
         SELECT 'phone', '使用者編號id', '簡訊行銷' UNION (
         SELECT phone, id, text_campaign
-        INTO outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150226_for_yoyo8.csv'
+        INTO outfile 'C:/Users/1-7_ASUS/Desktop/retention_a_20150501_for_yoyo8.csv'
         CHARACTER SET big5 fields terminated by ',' enclosed by '' lines terminated by '\r\n' 
-        FROM textcampaign._list7
+        FROM textcampaign._list8
         WHERE status = 'sent'); # 只撈出有要發送的
         # 一定要設定為big編碼, yoyo8規定的
 
         # 給工程部匯入兌換券發送系統
-        SELECT '使用者編號id', 'userid' UNION (
-        SELECT id, userid
-        INTO outfile 'C:/Users/1-7_ASUS/Desktop/retention_20150226_for_software_team.csv'
+        SELECT userid
+        INTO outfile 'C:/Users/1-7_ASUS/Desktop/retention_a_20150501_for_software_team.csv'
         fields terminated by ',' enclosed by '' lines terminated by '\r\n' 
-        FROM textcampaign._list7
-        WHERE status = 'sent'); # 只撈出有要發送的
+        FROM textcampaign._list8
+        WHERE status = 'sent'; # 只撈出有要發送的
+# 以上在2015-04-29有更新(for5月1日的名單) ---------------------------------------------------------- 
         
-        
-CREATE TABLE textcampaign.retention_20150226_full_list_dont_delete engine = myisam
-SELECT * FROM textcampaign._list7;   
-
+  
 # 另外，請您試算，與上一波名單有重覆的人數有多少。
         CREATE TABLE textcampaign._check engine = myisam
         SELECT a.phone, a.userid, a.text_campaign, b.text_campaign as last_time
@@ -2590,7 +2606,6 @@ SELECT * FROM textcampaign._list7;
 
         SELECT count(phone) # 3758
         FROM textcampaign._check;
-
 
 # 以下是分析的部分 (2015-03-03)-再次執行分析 (2015-03-10)----------------------
 
@@ -2724,7 +2739,8 @@ AND time between '2015-02-26 18:00:00' AND '2015-02-28 23:59:59';
 # 下面這份名單是針對短期的流失客 2015-03-30
 # 匯入 (1)pcash_log (2)coupon_used_detail (3)order_data
 
-create table plsport_playsport._who_spent_before_31_days engine = myisam
+# update 2015-04-29: 5月1日要發送一批
+create table plsport_playsport._who_spent_before_31_days engine = myisam /*誰在31天之前有購買預測*/
 select a.userid, sum(a.amount) as spent
 from ( 
     SELECT userid, amount, date 
@@ -2733,7 +2749,7 @@ from (
     and date between subdate(now(),61) and subdate(now(),31)) as a
 group by a.userid;
 
-create table plsport_playsport._who_use_conpon_before_31_days engine = myisam
+create table plsport_playsport._who_use_conpon_before_31_days engine = myisam /*誰在31天之前有用過抵用券*/
 select a.userid, count(userid) as coupon
 from (
     SELECT userid, date
@@ -2745,7 +2761,7 @@ group by a.userid;
         ALTER TABLE plsport_playsport._who_spent_before_31_days ADD INDEX (`userid`);
         ALTER TABLE plsport_playsport._who_use_conpon_before_31_days ADD INDEX (`userid`);
 
-        create table plsport_playsport._list_before_31_days engine = myisam
+        create table plsport_playsport._list_before_31_days engine = myisam /*曾在31天之前有購買過預測或用過抵用券的人*/
         select c.userid, c.spent, d.coupon
         from (
             SELECT a.userid, b.spent
@@ -2753,7 +2769,7 @@ group by a.userid;
             left join plsport_playsport._who_use_conpon_before_31_days as d on c.userid = d.userid
         where c.spent is not null or d.coupon is not null;
 
-create table plsport_playsport._who_spent_in_31_days engine = myisam
+create table plsport_playsport._who_spent_in_31_days engine = myisam/*誰在31天之內有購買過預測*/
 select a.userid, sum(a.amount) as spent
 from ( 
     SELECT userid, amount, date 
@@ -2762,7 +2778,7 @@ from (
     and date between subdate(now(),31) and now()) as a
 group by a.userid;
 
-create table plsport_playsport._who_use_coupon_in_31_days engine = myisam
+create table plsport_playsport._who_use_coupon_in_31_days engine = myisam/*誰在31天之內有用過抵用券*/
 select a.userid, count(userid) as coupon
 from (
     SELECT userid, date
@@ -2774,7 +2790,7 @@ group by a.userid;
         ALTER TABLE plsport_playsport._who_spent_in_31_days ADD INDEX (`userid`);
         ALTER TABLE plsport_playsport._who_use_coupon_in_31_days ADD INDEX (`userid`);
 
-        create table plsport_playsport._list_all engine = myisam
+        create table plsport_playsport._list_all engine = myisam /*曾在31天之內有購買過預測或用過抵用券的人*/
         select c.userid, c.spent, c.coupon, c.spent1, d.coupon as coupon1
         from (
             SELECT a.userid, a.spent, a.coupon, b.spent as spent1
@@ -2782,10 +2798,12 @@ group by a.userid;
             left join plsport_playsport._who_use_coupon_in_31_days as d on c.userid = d.userid
         where c.spent is not null or d.coupon is not null;
 
+#產生主名單:誰在31天之前有消費或用券, 但在31天之內完全沒有消費或用券
 create table plsport_playsport._list_all_1 engine = myisam
 SELECT * FROM plsport_playsport._list_all
 where spent1 is null and coupon1 is null;
 
+#撈全站手機號碼
 CREATE TABLE plsport_playsport._phone_number engine = myisam
 SELECT a.userid, a.phone, sum(a.price) as total_redeem
 FROM (
@@ -2797,6 +2815,7 @@ WHERE length(phone) = 10 AND substr(phone,1,2) = '09' AND phone regexp '^[[:digi
 GROUP BY a.userid
 ORDER BY a.userid;
 
+#誰不要收簡訊
 CREATE TABLE plsport_playsport._who_dont_want_text engine = myisam
 SELECT a.phone
 FROM (
@@ -2814,6 +2833,7 @@ SELECT a.userid, a.phone, a.spent, a.coupon, a.spent1, a.coupon1
 FROM plsport_playsport._list_all_2 a left join plsport_playsport._who_dont_want_text b on a.phone = b.phone
 where b.phone is null;
 
+        # 產生曾發送簡訊, 但號碼已經失效的的名單
         create table plsport_playsport._fail_number engine = myisam
         SELECT concat('0',one) as phone, stas 
         FROM textcampaign.text_sent_status_0226
@@ -2822,45 +2842,58 @@ where b.phone is null;
         SELECT concat('0',one) as phone, stas 
         FROM textcampaign.text_sent_status
         where stas = '失敗';
+        insert ignore into plsport_playsport._fail_number
+        SELECT concat('0',phone) as phone, stas 
+        FROM textcampaign.text_sent_status_0401
+        where stas = '失敗';      
         
         create table plsport_playsport._fail_number_1 engine = myisam
         SELECT phone, stas 
         FROM plsport_playsport._fail_number
         group by phone, stas;
 
+#排除掉號碼已經失效的的名單
 create table plsport_playsport._list_all_4 engine = myisam
 SELECT  a.userid, a.phone, a.spent, a.coupon, a.spent1, a.coupon1 
 FROM plsport_playsport._list_all_3 a left join plsport_playsport._fail_number_1 b on a.phone = b.phone
 where b.phone is null;
 
+#排除掉沒有號碼的人
 create table plsport_playsport._list_all_5 engine = myisam
 SELECT * FROM plsport_playsport._list_all_4
 where phone is not null;
 
+#排除掉上回有收到簡訊的人
 create table plsport_playsport._list_all_6 engine = myisam
-SELECT (b.id%10)+1 as g, (case when ((b.id%10)+1<7) then 'sent' else 'hold' end) as abtest, b.id, a.userid, a.phone, a.spent, a.coupon, a.spent1, a.coupon1, # 60%要發送
-       (case when (a.userid is not null) then 'retention_c_20150401' else '' end) as text_campaign
-FROM plsport_playsport._list_all_5 a left join plsport_playsport.member b on a.userid = b.userid;
+SELECT a.userid, a.phone, a.spent, a.coupon, a.spent1, a.coupon1
+FROM plsport_playsport._list_all_5 a left join textcampaign.retention_c_20150401_full_list_dont_delete b on a.userid = b.userid
+where b.text_campaign is null;
 
-create table textcampaign.retention_c_20150401_full_list_dont_delete engine = myisam
-SELECT * FROM plsport_playsport._list_all_6;
+#發送60%的人, 40%的人保留
+create table plsport_playsport._list_all_7 engine = myisam
+SELECT (b.id%10)+1 as g, (case when ((b.id%10)+1<7) then 'sent' else 'hold' end) as abtest, b.id, a.userid, a.phone, a.spent, a.coupon, a.spent1, a.coupon1, # 60%要發送
+       (case when (a.userid is not null) then 'retention_c_20150501' else '' end) as text_campaign
+FROM plsport_playsport._list_all_6 a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table textcampaign.retention_c_20150501_full_list_dont_delete engine = myisam
+SELECT * FROM plsport_playsport._list_all_7;
 
         # 給yoyo8簡訊發送
         SELECT 'phone', '使用者編號id', '簡訊行銷' UNION (
         SELECT phone, id, text_campaign
-        INTO outfile 'C:/Users/1-7_ASUS/Desktop/retention_c_20150401_for_yoyo8.csv'
+        INTO outfile 'C:/Users/1-7_ASUS/Desktop/retention_c_20150501_for_yoyo8.csv'
         CHARACTER SET big5 fields terminated by ',' enclosed by '' lines terminated by '\r\n' 
-        FROM textcampaign.retention_c_20150401_full_list_dont_delete
+        FROM textcampaign.retention_c_20150501_full_list_dont_delete
         WHERE abtest = 'sent'); # 只撈出有要發送的
         # 一定要設定為big編碼, yoyo8規定的
 
         # 給工程部匯入兌換券發送系統
-        SELECT '使用者編號id', 'userid' UNION (
-        SELECT id, userid
-        INTO outfile 'C:/Users/1-7_ASUS/Desktop/retention_c_20150401_for_software_team.csv'
+        SELECT userid
+        INTO outfile 'C:/Users/1-7_ASUS/Desktop/retention_c_20150501_for_software_team.csv'
         fields terminated by ',' enclosed by '' lines terminated by '\r\n' 
-        FROM textcampaign.retention_c_20150401_full_list_dont_delete
-        WHERE abtest = 'sent'); # 只撈出有要發送的
+        FROM textcampaign.retention_c_20150501_full_list_dont_delete
+        WHERE abtest = 'sent'; # 只撈出有要發送的
+# 針對近期流失客的名單產生至此-------------------------------------------------------------------
 
 
 # 以下是分析的部分 (2015-04-14)
@@ -2906,7 +2939,6 @@ ORDER BY outflowMember;
 CREATE TABLE textcampaign._full_list_2 engine = myisam
 SELECT a.phone, a.id, a.userid, a.text_campaign, a.abtest, a.stas, b.see  
 FROM textcampaign._full_list_1 a LEFT JOIN textcampaign._coupon_window_pop_up b on a.userid = b.userid;
-
 
 # 個人信箱獲得兌換券派送訊息( mailpcash_list蠻大的, 要捉很久)
 CREATE TABLE textcampaign._receive_coupon engine = myisam
@@ -2970,9 +3002,6 @@ FROM textcampaign._full_list_4 a left join textcampaign._coupon_used b on a.user
 SELECT * FROM textcampaign._full_list_5
 where abtest = 'sent'
 and coupon_used_count is not null;
-
-
-
 
 # 點擊補充
 SELECT * FROM actionlog.action_201502
