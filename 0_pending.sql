@@ -14612,6 +14612,163 @@ FROM plsport_playsport._events_2
 group by abtest, abtest_g;
 
 
+# =================================================================================================
+# 任務: 撈取亮單文相關數據 [新建] (學文) 2015-04-28
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4637&projectId=11
+# 要麻煩您撈近一年的
+# 1.每日有觀看討論區的會員數 (可以補上每日發文的會員數)
+# 2.每日有發表亮單文的會員數
+# 3.每日量討論區貼文數量
+# 4.每日亮單文數量
+# 麻煩您了!
+# 再麻煩您押個時間唷謝謝
+# =================================================================================================
+
+# 計算每日有觀看討論區的會員數
+create table actionlog._forum_201403 engine = myisam SELECT userid, uri, time FROM actionlog.action_201403 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201404 engine = myisam SELECT userid, uri, time FROM actionlog.action_201404 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201405 engine = myisam SELECT userid, uri, time FROM actionlog.action_201405 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201406 engine = myisam SELECT userid, uri, time FROM actionlog.action_201406 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201407 engine = myisam SELECT userid, uri, time FROM actionlog.action_201407 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201408 engine = myisam SELECT userid, uri, time FROM actionlog.action_201408 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201409 engine = myisam SELECT userid, uri, time FROM actionlog.action_201409 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201410 engine = myisam SELECT userid, uri, time FROM actionlog.action_201410 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201411 engine = myisam SELECT userid, uri, time FROM actionlog.action_201411 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201412 engine = myisam SELECT userid, uri, time FROM actionlog.action_201412 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201501 engine = myisam SELECT userid, uri, time FROM actionlog.action_201501 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201502 engine = myisam SELECT userid, uri, time FROM actionlog.action_201502 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201503 engine = myisam SELECT userid, uri, time FROM actionlog.action_201503 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201504 engine = myisam SELECT userid, uri, time FROM actionlog.action_201504 where uri like '%forumdetail.php%' and userid <> '';
+
+create table actionlog._forum1_201403 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201403) as a group by a.d, a.userid;
+create table actionlog._forum1_201404 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201404) as a group by a.d, a.userid;
+create table actionlog._forum1_201405 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201405) as a group by a.d, a.userid;
+create table actionlog._forum1_201406 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201406) as a group by a.d, a.userid;
+create table actionlog._forum1_201407 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201407) as a group by a.d, a.userid;
+create table actionlog._forum1_201408 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201408) as a group by a.d, a.userid;
+create table actionlog._forum1_201409 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201409) as a group by a.d, a.userid;
+create table actionlog._forum1_201410 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201410) as a group by a.d, a.userid;
+create table actionlog._forum1_201411 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201411) as a group by a.d, a.userid;
+create table actionlog._forum1_201412 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201412) as a group by a.d, a.userid;
+create table actionlog._forum1_201501 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201501) as a group by a.d, a.userid;
+create table actionlog._forum1_201502 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201502) as a group by a.d, a.userid;
+create table actionlog._forum1_201503 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201503) as a group by a.d, a.userid;
+create table actionlog._forum1_201504 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201504) as a group by a.d, a.userid;
+
+create table actionlog._forum2 engine = myisam SELECT d, count(userid) as user_count FROM actionlog._forum1_201403 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201404 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201405 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201406 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201407 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201408 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201409 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201410 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201411 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201412 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201501 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201502 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201503 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201504 group by d;
+
+# 計算每日上站的會員
+create table plsport_playsport._member_signin_log_archive engine = myisam
+SELECT userid, date(signin_time) as d 
+FROM plsport_playsport.member_signin_log_archive
+where year(signin_time)>2013;
+
+create table plsport_playsport._member_signin_log_archive_1 engine = myisam
+SELECT userid, d 
+FROM plsport_playsport._member_signin_log_archive
+group by userid, d;
+
+create table plsport_playsport._member_signin_log_archive_2 engine = myisam
+SELECT d, count(userid) as user_login 
+FROM plsport_playsport._member_signin_log_archive_1
+group by d;
+
+# 亮單文人數
+create table plsport_playsport._showoff_post engine = myisam
+SELECT subjectid, postuser, date(posttime) as d
+FROM plsport_playsport.forum
+where gametype = 3 and year(posttime)>2013;
+
+create table plsport_playsport._showoff_post_1 engine = myisam
+SELECT postuser, d 
+FROM plsport_playsport._showoff_post
+group by postuser, d;
+
+create table plsport_playsport._showoff_post_2 engine = myisam
+SELECT d, count(postuser) as showoff_user_count 
+FROM plsport_playsport._showoff_post_1
+group by d;
+
+# 每日貼文會員數
+create table plsport_playsport._post_user_count engine = myisam
+select a.d, a.postuser
+from (
+    SELECT subjectid, postuser, date(posttime) as d 
+    FROM plsport_playsport.forum
+    where year(posttime)>2013) as a
+group by a.d, a.postuser;
+
+create table plsport_playsport._post_user_count_1 engine = myisam
+SELECT d, count(postuser) as post_user_count 
+FROM plsport_playsport._post_user_count
+group by d;
+
+# 貼文數
+create table plsport_playsport._post_count engine = myisam
+select a.d, count(a.subjectid) as post_count
+from (
+    SELECT subjectid, postuser, date(posttime) as d 
+    FROM plsport_playsport.forum
+    where year(posttime)>2013) as a
+group by a.d;
+
+select a.m, sum(a.post_count)
+from (
+    SELECT substr(d,1,7) as m, post_count 
+    FROM plsport_playsport._post_count) as a
+group by a.m;
+
+# 亮單文數
+create table plsport_playsport._showoff_post_count engine = myisam
+select a.d, count(a.subjectid) as show_post_count
+from (
+    SELECT subjectid, postuser, date(posttime) as d 
+    FROM plsport_playsport.forum
+    where year(posttime)>2013 and gametype = 3) as a
+group by a.d;
+
+create table plsport_playsport._list_1 engine = myisam
+SELECT a.d, a.user_login, b.post_user_count
+FROM plsport_playsport._member_signin_log_archive_2 a left join plsport_playsport._post_user_count_1 b on a.d = b.d;
+
+create table plsport_playsport._list_2 engine = myisam
+SELECT a.d, a.user_login, a.post_user_count, b.showoff_user_count
+FROM plsport_playsport._list_1 a left join plsport_playsport._showoff_post_2 b on a.d = b.d;
+
+create table plsport_playsport._list_3 engine = myisam
+SELECT a.d, a.user_login, a.post_user_count, a.showoff_user_count, b.post_count
+FROM plsport_playsport._list_2 a left join plsport_playsport._post_count b on a.d = b.d;
+
+create table plsport_playsport._list_4 engine = myisam
+SELECT a.d, a.user_login, a.post_user_count, a.showoff_user_count, a.post_count, b.show_post_count
+FROM plsport_playsport._list_3 a left join plsport_playsport._showoff_post_count b on a.d = b.d;
+
+create table plsport_playsport._list_5 engine = myisam
+SELECT a.d, a.user_login, b.user_count as see_forum_user_count, a.post_user_count, a.showoff_user_count, a.post_count, a.show_post_count
+FROM plsport_playsport._list_4 a left join actionlog._forum2 b on a.d = b.d
+where a.d > '2014-03-31'
+order by a.d;
+
+SELECT 'd', 'user', 'see_forum', 'post_user', 'show_user', 'post_count', 'show_count'union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_list_5.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list_5);
+
+
 
 
 

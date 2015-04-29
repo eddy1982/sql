@@ -130,7 +130,7 @@ SELECT allianceid, alliancename as board,
              when (allianceid = 111) then '其它'
              when (allianceid = 112) then '其它'
              when (allianceid = 113) then '其它'
-             when (allianceid = 114) then '棒球' else '不清楚'end ) as boardtype
+             when (allianceid = 114) then '棒球' else '不清楚' end ) as boardtype
 FROM plsport_playsport.alliance
 order by allianceid;
 
