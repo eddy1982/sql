@@ -5,44 +5,32 @@
 use actionlog;
 
 /*(1)簡化table*/
-create table _action_201409 engine = myisam select userid, uri, time from action_201409;
-create table _action_201410 engine = myisam select userid, uri, time from action_201410;
-create table _action_201411 engine = myisam select userid, uri, time from action_201411;
-create table _action_201412 engine = myisam select userid, uri, time from action_201412;
 create table _action_201501 engine = myisam select userid, uri, time from action_201501;
 create table _action_201502 engine = myisam select userid, uri, time from action_201502;
 create table _action_201503 engine = myisam select userid, uri, time from action_201503;
+create table _action_201504 engine = myisam select userid, uri, time from action_201504;
 
 /*(2)計算每個月的登入人數, 排除重覆的人*/
-create table __action_201409_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201409 group by userid;
-create table __action_201410_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201410 group by userid;
-create table __action_201411_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201411 group by userid;
-create table __action_201412_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from _action_201412 group by userid;
 create table __action_201501_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201501 group by userid;
 create table __action_201502_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201502 group by userid;
 create table __action_201503_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201503 group by userid;
+create table __action_201504_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from _action_201504 group by userid;
 -- note: 算完就可以drop, 要不然很佔空間
 
 -- 2014/1/2新增, 排除異常名單, 機器人
 -- 先執行 8_user_find_the robot_register
 
-        ALTER TABLE  actionlog.__action_201503_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+        ALTER TABLE  actionlog.__action_201504_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
         ALTER TABLE  plsport_playsport._problem_members CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 
-select count(a.userid) from actionlog.__action_201409_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201410_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201411_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201412_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201501_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201502_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201503_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+select count(a.userid) from actionlog.__action_201504_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 
 -- ======================================================================================
 --  準備其它資料表
