@@ -14668,6 +14668,7 @@ create table actionlog._forum_201501 engine = myisam SELECT userid, uri, time FR
 create table actionlog._forum_201502 engine = myisam SELECT userid, uri, time FROM actionlog.action_201502 where uri like '%forumdetail.php%' and userid <> '';
 create table actionlog._forum_201503 engine = myisam SELECT userid, uri, time FROM actionlog.action_201503 where uri like '%forumdetail.php%' and userid <> '';
 create table actionlog._forum_201504 engine = myisam SELECT userid, uri, time FROM actionlog.action_201504 where uri like '%forumdetail.php%' and userid <> '';
+create table actionlog._forum_201505 engine = myisam SELECT userid, uri, time FROM actionlog.action_201505 where uri like '%forumdetail.php%' and userid <> '';
 
 create table actionlog._forum1_201403 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201403) as a group by a.d, a.userid;
 create table actionlog._forum1_201404 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201404) as a group by a.d, a.userid;
@@ -14683,6 +14684,7 @@ create table actionlog._forum1_201501 engine = myisam select a.d, a.userid from 
 create table actionlog._forum1_201502 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201502) as a group by a.d, a.userid;
 create table actionlog._forum1_201503 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201503) as a group by a.d, a.userid;
 create table actionlog._forum1_201504 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201504) as a group by a.d, a.userid;
+create table actionlog._forum1_201505 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201505) as a group by a.d, a.userid;
 
 create table actionlog._forum2 engine = myisam SELECT d, count(userid) as user_count FROM actionlog._forum1_201403 group by d;
 insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201404 group by d;
@@ -14698,15 +14700,16 @@ insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM 
 insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201502 group by d;
 insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201503 group by d;
 insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201504 group by d;
+insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201505 group by d;
 
 # 計算每日上站的會員
 create table plsport_playsport._member_signin_log_archive engine = myisam
-SELECT userid, date(signin_time) as d 
+SELECT userid, date(signin_time) as d
 FROM plsport_playsport.member_signin_log_archive
 where year(signin_time)>2013;
 
 create table plsport_playsport._member_signin_log_archive_1 engine = myisam
-SELECT userid, d 
+SELECT userid, d
 FROM plsport_playsport._member_signin_log_archive
 group by userid, d;
 
@@ -14816,12 +14819,16 @@ FROM plsport_playsport._list_5);
 
 
 
+
+
+
+
 # 2015-01-29 
 # 用google map反查使用者位置, 需使用python
 
 CREATE TABLE plsport_playsport._user_location engine = myisam 
 SELECT * FROM plsport_playsport.app_action_log
-WHERE app = 1 AND os = 1 #app=1即時比分, os=1是ANDriod 
+WHERE app = 1 AND os = 1 # app=1即時比分, os=1是ANDriod 
 AND appversion in ('2.3.2') AND latitude is not null;
 
 CREATE TABLE plsport_playsport._user_location_1 engine = myisam 
@@ -15011,5 +15018,15 @@ from (
 group by a.h;
 
 
+
+
+create table revenue._pcash_log_with_detailed_info engine = myisam
+select c.userid, c.amount, c.c_date, c.c_month, c.c_year, c.ym,
+      c.id, c.sellerid, c.sale_allianceid, d.alliancename, c.sale_date, c.sale_price, c.killtype, c.killmedal
+from (
+   SELECT a.userid, a.amount, a.c_date, a.c_month, a.c_year, a.ym, 
+          b.id, b.sellerid, b.sale_allianceid, b.sale_date, b.sale_price, b.killtype, b.killmedal
+   FROM revenue._pcash_log a left join revenue._predict_seller_with_medal b on a.id_this_type = b.id) as c
+left join revenue._alliance as d on c.sale_allianceid = d.allianceid
 
 
