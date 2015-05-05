@@ -267,7 +267,7 @@ select a.userid, count(a.id) as c
 from (
     SELECT id, serialnumber, userid, version, completetime 
     FROM plsport_playsport.satisfactionquestionnaire_answer
-    where version = 4.0 #只限做過版本4.0的人
+    where version = 5.0 #只限做過版本4.0的人
     order by completetime) as a
 group by a.userid;
 
@@ -289,7 +289,7 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2015-03-01' and '2015-03-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2015-04-01' and '2015-04-30') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
 
 
@@ -303,9 +303,14 @@ ALTER TABLE questionnaire._existed_list CHANGE `userid` `userid` VARCHAR(20) CHA
 ALTER TABLE questionnaire._fill_question_in_4_month CHANGE `userid` `userid` VARCHAR(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 ALTER TABLE questionnaire._signin_list CHANGE `userid` `userid` VARCHAR(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 
-create table questionnaire._list engine = myisam /*上月份的名單, 但排除掉之前有做過問卷的人*/
+create table questionnaire._list engine = myisam /*上月份的名單, 但排除掉近4個月做過問卷的人*/
 SELECT a.userid FROM questionnaire._signin_list a left join questionnaire._fill_question_in_4_month b on a.userid = b.userid
 where b.userid is null;/*排除掉*/
+
+create table questionnaire._list1 engine = myisam /*再排除掉有做過5.0問券的人*/
+SELECT a.userid FROM questionnaire._list a left join questionnaire._existed_list b on a.userid = b.userid
+where b.userid is null;
+
 
 /*--------------------------------------------
   排除2:
@@ -313,24 +318,24 @@ where b.userid is null;/*排除掉*/
   使用8_user_find_the robot_register
 ---------------------------------------------*/
 create table questionnaire._problem_members engine = myisam select * from plsport_playsport._problem_members;
-ALTER TABLE  questionnaire._list ADD INDEX (`userid`);
-ALTER TABLE  questionnaire._list CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+ALTER TABLE  questionnaire._list1 ADD INDEX (`userid`);
+ALTER TABLE  questionnaire._list1 CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 ALTER TABLE  questionnaire._problem_members ADD INDEX (`userid`);
-ALTER TABLE  questionnaire._problem_members CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+ALTER TABLE  questionnaire._problem_members CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 
-create table questionnaire._list1 engine = myisam /*排除掉機器人*/
+create table questionnaire._list2 engine = myisam /*排除掉機器人*/
 SELECT a.userid
-FROM questionnaire._list a left join plsport_playsport._problem_members b on a.userid = b.userid
+FROM questionnaire._list1 a left join plsport_playsport._problem_members b on a.userid = b.userid
 where b.userid is null; /*排除掉*/
-
-/*最後只是要mapping上member裡的userid名稱, 問卷名單才匯的進去*/
-use questionnaire;
-ALTER TABLE questionnaire._list1 ADD INDEX (`userid`);
-ALTER TABLE questionnaire._list1 CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 
 /*--------------------------------------------
     完成名單最後階段
 ---------------------------------------------*/
+/*最後只是要mapping上member裡的userid名稱, 問卷名單才匯的進去*/
+use questionnaire;
+ALTER TABLE questionnaire._list2 ADD INDEX (`userid`);
+ALTER TABLE questionnaire._list2 CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+
 create table questionnaire._list_full engine = myisam 
 SELECT b.userid # 完成的名單, 使用member資料表的userid, 要不然問卷系統不能判斷大小寫的差異, 此為問券的bug
 FROM questionnaire._list1 a left join plsport_playsport.member b on a.userid = b.userid;
@@ -345,26 +350,24 @@ delete from questionnaire._list_full where userid = 'yenhsun1982';
 create table questionnaire._list_limit_3000 engine = myisam
 SELECT * FROM questionnaire._list_full
 where userid <> '' # 不知道為什麼會有一些\N出現, 所以排掉
-order by rand() # 隨機抽出3000名受測者
+order by rand()    # 隨機抽出3000名受測者
 limit 0, 3000;
 
 # 再把工友放進去
 insert into questionnaire._list_limit_3000 values ('monkey'),('chinginge'),('pauleanr'),('yenhsun1982');
 
-#重要, 第一次執行要注意工友是否有2筆????
-
+    #重要, 第一次執行要注意工友是否有2筆????
     # 輸出到桌面
     SELECT userid
     into outfile 'C:/Users/1-7_ASUS/Desktop/questionnaire_list.csv'
     fields terminated by ',' enclosed by '' lines terminated by '\r\n' 
     FROM questionnaire._list_limit_3000; 
-
+    
 # 檢查產生的名單中, 有沒有之前填寫過滿意度的名單
 ALTER TABLE  `_list_limit_3000` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 ALTER TABLE  `_existed_list` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 select a.userid from _list_limit_3000 a inner join _existed_list b on a.userid = b.userid;
 # select的結果應該是空的
-
 
 ALTER TABLE  `_list_limit_3000` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 ALTER TABLE  `_fill_question_in_4_month` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
