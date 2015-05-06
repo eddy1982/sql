@@ -11509,57 +11509,48 @@ FROM plsport_playsport._qu_with_use_time_1;
 
 # 先匯入events(已寫成.py)
 
-create table actionlog.action_201412_with_userid engine = myisam
-SELECT * FROM actionlog.action_201412
-where userid <> '';
-
-create table actionlog.action_201504_with_userid engine = myisam
-SELECT * FROM actionlog.action_201504
-where userid <> '';
-
-
 # (1)先撈出所有即時比分的pv
-CREATE TABLE actionlog._livescore engine = myisam SELECT userid, uri, time FROM actionlog.action_201412_with_userid WHERE uri LIKE '%/livescore%';
-INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201501_with_userid WHERE uri LIKE '%/livescore%';
-INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201502_with_userid WHERE uri LIKE '%/livescore%';
-INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201503_with_userid WHERE uri LIKE '%/livescore%';
-INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201504_with_userid WHERE uri LIKE '%/livescore%';
-
+CREATE TABLE actionlog._livescore engine = myisam SELECT userid, uri, time FROM actionlog.action_201412 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201505 WHERE uri LIKE '%/livescore%' and userid <> '';
 # 預測比例
-CREATE TABLE actionlog._predictgame engine = myisam SELECT userid, uri, time FROM actionlog.action_201412_with_userid WHERE uri LIKE '%/predictgame.php%';
-INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201501_with_userid WHERE uri LIKE '%/predictgame.php%';
-INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201502_with_userid WHERE uri LIKE '%/predictgame.php%';
-INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201503_with_userid WHERE uri LIKE '%/predictgame.php%';
-INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201504_with_userid WHERE uri LIKE '%/predictgame.php%';
-
+CREATE TABLE actionlog._predictgame engine = myisam SELECT userid, uri, time FROM actionlog.action_201412 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201505 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
 # 賽事數據
-CREATE TABLE actionlog._games_data engine = myisam SELECT userid, uri, time FROM actionlog.action_201412_with_userid WHERE uri LIKE '%/games_data.php%';
-INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201501_with_userid WHERE uri LIKE '%/games_data.php%';
-INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201502_with_userid WHERE uri LIKE '%/games_data.php%';
-INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201503_with_userid WHERE uri LIKE '%/games_data.php%';
-INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201504_with_userid WHERE uri LIKE '%/games_data.php%';
-
+CREATE TABLE actionlog._games_data engine = myisam SELECT userid, uri, time FROM actionlog.action_201412 WHERE uri LIKE '%/games_data.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%/games_data.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%/games_data.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%/games_data.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/games_data.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201505 WHERE uri LIKE '%/games_data.php%' and userid <> '';
         # 預測比例(所有人)
         CREATE TABLE actionlog._predictgame_without_login engine = myisam SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%/predictgame.php%';
         INSERT IGNORE INTO actionlog._predictgame_without_login SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%/predictgame.php%';
         INSERT IGNORE INTO actionlog._predictgame_without_login SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%/predictgame.php%';
         INSERT IGNORE INTO actionlog._predictgame_without_login SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/predictgame.php%';
-
+        INSERT IGNORE INTO actionlog._predictgame_without_login SELECT userid, uri, time FROM actionlog.action_201505 WHERE uri LIKE '%/predictgame.php%';
         # 賽事數據(所有人)
         CREATE TABLE actionlog._games_data_without_login engine = myisam SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%/games_data.php%';
         INSERT IGNORE INTO actionlog._games_data_without_login SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%/games_data.php%';
         INSERT IGNORE INTO actionlog._games_data_without_login SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%/games_data.php%';
         INSERT IGNORE INTO actionlog._games_data_without_login SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/games_data.php%';
-        
+        INSERT IGNORE INTO actionlog._games_data_without_login SELECT userid, uri, time FROM actionlog.action_201505 WHERE uri LIKE '%/games_data.php%'; 
 # (2)再區分出那些人是只看NBA
 
-
+# 處理造訪即時比分頁預設的聯盟(NBA OR MLB)
 CREATE TABLE actionlog._livescore_1_1 engine = myisam
 SELECT a.userid, a.uri, a.time, (case when (locate('&',a.t)=0) then a.t else substr(a.t,1,locate('&',a.t)-1) end) as p
 FROM (
     SELECT userid, uri, time, (case when (locate('aid=',uri)=0) then 3 else substr(uri, locate('aid=',uri)+4, length(uri)) end) as t
     FROM actionlog._livescore
-    where time between '2014-12-01 00:00:00' and '2015-03-31 23:59:59') as a; # 4/1之前, 如果造訪livescore.php, 預設聯盟是NBA
+    where time between '2014-12-01 00:00:00' and '2015-04-31 23:59:59') as a; # 4/1之前, 如果造訪livescore.php, 預設聯盟是NBA
 
 CREATE TABLE actionlog._livescore_1_2 engine = myisam
 SELECT a.userid, a.uri, a.time, (case when (locate('&',a.t)=0) then a.t else substr(a.t,1,locate('&',a.t)-1) end) as p
@@ -11568,7 +11559,7 @@ FROM (
     FROM actionlog._livescore
     where time between '2015-04-01 00:00:00' and now()) as a;                 # 4/1之後, 如果造訪livescore.php, 預設聯盟是MLB
 
-
+# merge
 create table actionlog._livescore_1 engine = myisam
 SELECT * FROM actionlog._livescore_1_1;
 insert ignore into actionlog._livescore_1
@@ -11577,8 +11568,7 @@ SELECT * FROM actionlog._livescore_1_2;
 CREATE TABLE actionlog._livescore_2 engine = myisam
 SELECT * 
 FROM actionlog._livescore_1
-WHERE length(p) in (1,2)
-AND p = 3; # 只篩選出aid是NBA
+WHERE length(p) in (1,2) AND p = 1; # 只篩選出aid是NBA
 
 CREATE TABLE plsport_playsport._livescore_usage engine = myisam
 SELECT a.userid, a.d, count(a.userid) as c
@@ -11592,30 +11582,31 @@ GROUP BY a.userid, a.d;
         SELECT d, count(userid) as user_count
         FROM plsport_playsport._livescore_usage
         GROUP BY d;
- 
-CREATE TABLE plsport_playsport._click_record_team_open engine = myisam # 有登入的
-SELECT id, userid, name, date(time) as d
-FROM plsport_playsport.events
-WHERE userid <> ''
-AND name LIKE '%livescore_record_team%';
 
-CREATE TABLE plsport_playsport._click_record_team_open_without_login engine = myisam # 所有人(含沒登入的)
-SELECT id, userid, name, date(time) as d
-FROM plsport_playsport.events
-WHERE name LIKE '%livescore_record_team%';
-
-        # b.統計”數據▼”的點擊量，(所有人(含沒登入的))
-        SELECT d, count(name) as c 
-        FROM plsport_playsport._click_record_team_open_without_login
-        GROUP BY d;
-
-        # c.及使用比例(多少使用者使用)
-        SELECT a.d, count(a.userid) as user_click_count
-        FROM (
-            SELECT userid, d, count(name) as c 
-            FROM plsport_playsport._click_record_team_open
-            GROUP BY userid, d) as a
-        GROUP BY a.d;
+# MLB 沒有隔日數據, 數據▼ 
+# CREATE TABLE plsport_playsport._click_record_team_open engine = myisam # 有登入的
+# SELECT id, userid, name, date(time) as d
+# FROM plsport_playsport.events
+# WHERE userid <> ''
+# AND name LIKE '%livescore_record_team%';
+# 
+# CREATE TABLE plsport_playsport._click_record_team_open_without_login engine = myisam # 所有人(含沒登入的)
+# SELECT id, userid, name, date(time) as d
+# FROM plsport_playsport.events
+# WHERE name LIKE '%livescore_record_team%';
+# 
+#         # b.統計”數據▼”的點擊量，(所有人(含沒登入的))
+#         SELECT d, count(name) as c 
+#         FROM plsport_playsport._click_record_team_open_without_login
+#         GROUP BY d;
+# 
+#         # c.及使用比例(多少使用者使用)
+#         SELECT a.d, count(a.userid) as user_click_count
+#         FROM (
+#             SELECT userid, d, count(name) as c 
+#             FROM plsport_playsport._click_record_team_open
+#             GROUP BY userid, d) as a
+#         GROUP BY a.d;
 
 
 CREATE TABLE plsport_playsport._livescore_nextday_1 engine = myisam
@@ -11623,7 +11614,7 @@ SELECT a.userid, a.uri, a.time, substr(a.c,1,8) as nextday
 FROM (
     SELECT userid, uri, time, (case when (locate('gamedate=', uri)=0) then "" else substr(uri,locate('gamedate=', uri)+9,length(uri)) end) as c
     FROM actionlog._livescore_2
-    WHERE p = 3) as a; # 只限看NBA
+    WHERE p = 1) as a; # 只限看MLB
 
         CREATE TABLE plsport_playsport._livescore_nextday_2 engine = myisam
         SELECT userid, uri, date(time) as today, str_to_date(nextday, '%Y%m%d') as nextday, datediff(str_to_date(nextday, '%Y%m%d'), date(time)) as s
@@ -14668,7 +14659,7 @@ create table actionlog._forum_201501 engine = myisam SELECT userid, uri, time FR
 create table actionlog._forum_201502 engine = myisam SELECT userid, uri, time FROM actionlog.action_201502 where uri like '%forumdetail.php%' and userid <> '';
 create table actionlog._forum_201503 engine = myisam SELECT userid, uri, time FROM actionlog.action_201503 where uri like '%forumdetail.php%' and userid <> '';
 create table actionlog._forum_201504 engine = myisam SELECT userid, uri, time FROM actionlog.action_201504 where uri like '%forumdetail.php%' and userid <> '';
-create table actionlog._forum_201505 engine = myisam SELECT userid, uri, time FROM actionlog.action_201505 where uri like '%forumdetail.php%' and userid <> '';
+
 
 create table actionlog._forum1_201403 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201403) as a group by a.d, a.userid;
 create table actionlog._forum1_201404 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201404) as a group by a.d, a.userid;
@@ -14684,7 +14675,7 @@ create table actionlog._forum1_201501 engine = myisam select a.d, a.userid from 
 create table actionlog._forum1_201502 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201502) as a group by a.d, a.userid;
 create table actionlog._forum1_201503 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201503) as a group by a.d, a.userid;
 create table actionlog._forum1_201504 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201504) as a group by a.d, a.userid;
-create table actionlog._forum1_201505 engine = myisam select a.d, a.userid from ( SELECT userid, uri, date(time) as d FROM actionlog._forum_201505) as a group by a.d, a.userid;
+
 
 create table actionlog._forum2 engine = myisam SELECT d, count(userid) as user_count FROM actionlog._forum1_201403 group by d;
 insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201404 group by d;
@@ -14700,7 +14691,7 @@ insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM 
 insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201502 group by d;
 insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201503 group by d;
 insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201504 group by d;
-insert ignore into actionlog._forum2 SELECT d, count(userid) as user_count FROM actionlog._forum1_201505 group by d;
+
 
 # 計算每日上站的會員
 create table plsport_playsport._member_signin_log_archive engine = myisam
