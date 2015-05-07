@@ -15022,11 +15022,17 @@ from (SELECT userid, nickname, day_count, total_spent, three_month_spent, one_mo
       order by three_month_spent desc) as dt,
      (select count(distinct userid) as cnt from plsport_playsport._list_6) as ct;
 
+create table plsport_playsport._list_8 engine = myisam
+SELECT * 
+FROM plsport_playsport._list_7
+where percentile > 0.49;
+
+
 SELECT 'userid', '暱稱', '網站登入天數','站內總消費額','近三個月站內消費額','級距','近一個月站內消費額','電腦使用比例','手機使用比例','最近上站日','居住地' union (
 SELECT *
-into outfile 'C:/Users/1-7_ASUS/Desktop/_list_7.txt'
+into outfile 'C:/Users/1-7_ASUS/Desktop/_list_8.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM plsport_playsport._list_7);
+FROM plsport_playsport._list_8);
 
 
 
@@ -15047,8 +15053,112 @@ FROM plsport_playsport._list_7);
 # d. 手機、電腦使用比例
 # =================================================================================================
 
+CREATE TABLE actionlog._livescore engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201501 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time, platform_type FROM actionlog.action_201502 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time, platform_type FROM actionlog.action_201503 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time, platform_type FROM actionlog.action_201504 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time, platform_type FROM actionlog.action_201505 WHERE uri LIKE '%/livescore%' and userid <> '';
+
+update actionlog._livescore set platform_type=2 where platform_type=3;
+
+# 處理造訪即時比分頁預設的聯盟(NBA OR MLB)
+CREATE TABLE actionlog._livescore_1_1 engine = myisam
+SELECT a.userid, a.uri, a.time, platform_type, (case when (locate('&',a.t)=0) then a.t else substr(a.t,1,locate('&',a.t)-1) end) as p
+FROM (
+    SELECT userid, uri, time, platform_type, (case when (locate('aid=',uri)=0) then 3 else substr(uri, locate('aid=',uri)+4, length(uri)) end) as t
+    FROM actionlog._livescore
+    where time between '2014-12-01 00:00:00' and '2015-04-31 23:59:59') as a; # 4/1之前, 如果造訪livescore.php, 預設聯盟是NBA
+
+CREATE TABLE actionlog._livescore_1_2 engine = myisam
+SELECT a.userid, a.uri, a.time, platform_type, (case when (locate('&',a.t)=0) then a.t else substr(a.t,1,locate('&',a.t)-1) end) as p
+FROM (
+    SELECT userid, uri, time, platform_type, (case when (locate('aid=',uri)=0) then 1 else substr(uri, locate('aid=',uri)+4, length(uri)) end) as t
+    FROM actionlog._livescore
+    where time between '2015-04-01 00:00:00' and now()) as a; 
+
+create table actionlog._livescore_with_allianceid engine = myisam
+SELECT * FROM actionlog._livescore_1_1;
+insert ignore into actionlog._livescore_with_allianceid
+SELECT * FROM actionlog._livescore_1_2;
+
+create table actionlog._livescore_with_mlb engine = myisam
+SELECT * FROM actionlog._livescore_with_allianceid
+where p=1;
+
+create table actionlog._livescore_with_mlb_pv engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._livescore_with_mlb
+group by userid;
+
+create table actionlog._livescore_with_mlb_pv_p engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._livescore_with_mlb_pv, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._livescore_with_mlb_pv) as ct;
+
+create table actionlog._livescore_with_device engine = myisam
+select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+from (
+    SELECT userid, (case when (platform_type=1) then 1 else 0 end) as pc, (case when (platform_type=2) then 1 else 0 end) as mobile
+    FROM actionlog._livescore_with_mlb) as a
+group by a.userid;
+
+create table actionlog._livescore_with_device1 engine = myisam
+SELECT userid, round((pc/(pc+mobile)),3) as pc_p, round((mobile/(pc+mobile)),3) as mobile_p
+FROM actionlog._livescore_with_device;
+
+# 最近一次的登入時間
+CREATE TABLE plsport_playsport._last_login_time engine = myisam
+SELECT userid, max(signin_time) as last_login
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+ALTER TABLE actionlog._livescore_with_mlb_pv_p convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._livescore_with_device1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._last_login_time convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._livescore_with_mlb_pv_p ADD INDEX (`userid`);
+ALTER TABLE actionlog._livescore_with_device1 ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport._last_login_time ADD INDEX (`userid`);
+
+create table plsport_playsport._livescore_list1 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile 
+FROM actionlog._livescore_with_mlb_pv_p a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._livescore_list2 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, b.pc_p, b.mobile_p
+FROM plsport_playsport._livescore_list1 a left join actionlog._livescore_with_device1 b on a.userid = b.userid;
+
+create table plsport_playsport._livescore_list3 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pc_p, a.mobile_p, date(b.last_login) as d
+FROM plsport_playsport._livescore_list2 a left join plsport_playsport._last_login_time b on a.userid = b.userid;
 
 
+        create table plsport_playsport._qu engine = myisam
+        SELECT userid, `1429069219` as q
+        FROM plsport_playsport.questionnaire_201504151141419829_answer;
+
+
+create table plsport_playsport._livescore_list4 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pc_p, a.mobile_p, a.d, b.q
+FROM plsport_playsport._livescore_list3 a left join plsport_playsport._qu b on a.userid = b.userid
+order by a.pv desc;
+
+create table plsport_playsport._livescore_list5 engine = myisam
+SELECT * FROM plsport_playsport._livescore_list4
+where pv_percentile > 0.49 and q in (4,5);
+
+ALTER TABLE `_livescore_list5` CHANGE `q` `q` VARCHAR(10) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL;
+
+update plsport_playsport._livescore_list5 set q='需要' where q=4;
+update plsport_playsport._livescore_list5 set q='非常需要' where q=5;
+
+
+SELECT '帳號', '暱稱', 'MLB即時比分pv', '級距%','電腦使用比例','手機使用比例','最後登入','問券第二題' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_livescore_list5.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._livescore_list5);
 
 
 
