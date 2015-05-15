@@ -15035,6 +15035,44 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._list_8);
 
 
+# to Eddy ：Tue, May 12, 2015 at 6:01 PM
+# 請提供近三個月的ARPU，謝謝！
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4688&projectId=11
+# 近三個月站內消費額
+create table plsport_playsport._spent_three_month engine = myisam
+SELECT userid, sum(amount) as three_month_spent
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date(date) between '2015-02-07' and '2015-05-07'
+group by userid;
+
+
+        create table plsport_playsport._spent_2 engine = myisam
+        select count(a.userid) as user_count, sum(a.total_spent) as total_spent
+        from (
+            SELECT userid, sum(amount) as total_spent
+            FROM plsport_playsport.pcash_log
+            where payed = 1 and type = 1
+            and date(date) between '2015-02-07' and '2015-03-07'
+            group by userid) as a;
+        insert ignore into plsport_playsport._spent_2
+        select count(a.userid) as user_count, sum(a.total_spent) as total_spent
+        from (
+            SELECT userid, sum(amount) as total_spent
+            FROM plsport_playsport.pcash_log
+            where payed = 1 and type = 1
+            and date(date) between '2015-03-08' and '2015-04-07'
+            group by userid) as a;
+        insert ignore into plsport_playsport._spent_2
+        select count(a.userid) as user_count, sum(a.total_spent) as total_spent
+        from (
+            SELECT userid, sum(amount) as total_spent
+            FROM plsport_playsport.pcash_log
+            where payed = 1 and type = 1
+            and date(date) between '2015-04-08' and '2015-05-07'
+            group by userid) as a;
+
+
 
 # =================================================================================================
 # 任務: [201410-B-3] 棒球即時比分賽事數據 - MVP測試名單 [新建] 2015-05-06 (阿達)
@@ -15153,12 +15191,206 @@ ALTER TABLE `_livescore_list5` CHANGE `q` `q` VARCHAR(10) CHARACTER SET utf8 COL
 update plsport_playsport._livescore_list5 set q='需要' where q=4;
 update plsport_playsport._livescore_list5 set q='非常需要' where q=5;
 
-
 SELECT '帳號', '暱稱', 'MLB即時比分pv', '級距%','電腦使用比例','手機使用比例','最後登入','問券第二題' union (
 SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/_livescore_list5.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._livescore_list5);
+
+
+# =================================================================================================
+# 任務: [研究]討論區的紅人在銷售上是否更好 [新建]
+#     添加備註 	    編輯詳情 	
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4179&projectId=11
+#     • 更多動作
+# 
+# 說明: 在討論區中活躍度高的人, 在賣牌的銷售上是否更好
+# 負責人: eddy
+# 研究內容:
+# 
+# 1. 討論區活躍度(紅人)定義
+# 2. 使用者個人的討論區活躍度和賣牌銷售是否有正相關?
+# 3. 有在寫分析文的人和沒在寫的人其賣牌銷售是否有差異?
+# 4. 在討論區活躍度高的人也代表個人頁造訪率也高, 紅人們的個人頁>購牌轉換率有什麼差別?
+#    (例如:有的殺手不需靠在討論區互動也能賣的很好, 有的紅人則是靠大量在站上曝光才熱賣, 他們差在那?)
+# =================================================================================================
+
+create table plsport_playsport._forum engine = myisam
+SELECT a.subjectid, (case when (a.includeprediction=1) then 1 else 0 end) as predict, a.allianceid, b.alliancename, a.gametype, (case when (gametype=1) then 1 else 0 end) as isanalysis,
+       a.subject, a.viewtimes, a.postuser, a.posttime, date(a.posttime) as d, a.replycount, a.pushcount
+FROM plsport_playsport.forum a left join plsport_playsport.alliance b on a.allianceid = b.allianceid
+where date(posttime) between '2014-01-01' and subdate(now(),1) #取到今天的前一天就好
+and a.allianceid  <> 999;
+
+# 如果有跨日, 取正負4小時來判斷是否為同一天
+# 例, 如果一個人在5號02:00發文, 那會取正負4小時, 即前一天4號22:00~隔天5號06:00來判斷
+# 會判斷該使用者4號或5號有沒有賣牌, 如果有賣牌, 即判定賣牌和貼文有連結
+
+create table plsport_playsport._forum1 engine = myisam
+SELECT subjectid, predict, allianceid, alliancename, gametype, isanalysis, subject, viewtimes, postuser, posttime, 
+       date(addtime(posttime, '04:00:00')) as range1, date(subtime(posttime, '04:00:00')) as range2, replycount, pushcount #正負4小時
+FROM plsport_playsport._forum;
+
+        create table plsport_playsport._forum1_1 engine = myisam
+        SELECT * FROM plsport_playsport._forum1
+        where range1 = range2;#沒跨日的
+
+        create table plsport_playsport._forum1_2 engine = myisam
+        SELECT * FROM plsport_playsport._forum1
+        where range1 <> range2;#有跨日的
+
+        create table plsport_playsport._forum1_2_a engine = myisam
+        SELECT subjectid, predict, allianceid, alliancename, gametype, isanalysis, subject, viewtimes, postuser, posttime, range1 as d, replycount, pushcount 
+        FROM plsport_playsport._forum1_2;
+        insert ignore into plsport_playsport._forum1_2_a
+        SELECT subjectid, predict, allianceid, alliancename, gametype, isanalysis, subject, viewtimes, postuser, posttime, range2 as d, replycount, pushcount 
+        FROM plsport_playsport._forum1_2;
+        insert ignore into plsport_playsport._forum1_2_a
+        SELECT subjectid, predict, allianceid, alliancename, gametype, isanalysis, subject, viewtimes, postuser, posttime, range1 as d, replycount, pushcount  
+        FROM plsport_playsport._forum1_1;
+
+# 每個上架的預測, 總共收益多少金額
+create table plsport_playsport._revenue_detail engine = myisam
+SELECT id_bought, sum(buy_price) as revenue
+FROM plsport_playsport.predict_buyer
+group by id_bought;
+
+        ALTER TABLE plsport_playsport.predict_seller ADD INDEX (`id`);
+        ALTER TABLE plsport_playsport._revenue_detail ADD INDEX (`id_bought`);
+
+# (a)每個上架的預測(主名單) left join 總共收益多少金額
+create table plsport_playsport._seller_detail engine = myisam
+SELECT a.id, a.sellerid, a.mode, a.sale_allianceid, a.sale_date, date(a.sale_date) as d, a.promotion, a.analysis_flag, a.buyer_count, a.sale_price, b.revenue
+FROM plsport_playsport.predict_seller a left join plsport_playsport._revenue_detail b on a.id = b.id_bought
+where date(sale_date) between '2014-01-01' and subdate(now(),1);
+
+        ALTER TABLE plsport_playsport._seller_detail ADD INDEX (`sale_allianceid`, `d`, `sellerid`);
+        ALTER TABLE plsport_playsport._forum1_2_a ADD INDEX (`allianceid`, `d`, `postuser`);
+
+# 把(a)和 plsport_playsport._forum1_2_a 做left join
+create table plsport_playsport._seller_detail_1 engine = myisam
+SELECT a.id, a.sellerid, a.mode, a.sale_allianceid, a.sale_date, a.promotion, a.analysis_flag, a.buyer_count, a.sale_price, a.revenue, 
+       b.gametype as post_type, b.subject, b.predict, b.posttime, b.viewtimes, b.replycount, b.pushcount, 
+       ifnull((abs(time_to_sec(timediff(a.sale_date,b.posttime)))), 0) as timegap
+FROM plsport_playsport._seller_detail a left join plsport_playsport._forum1_2_a b 
+on a.sale_allianceid =  b.allianceid and a.d = b.d and a.sellerid = b.postuser;
+
+        # 如果id 產生duplicate, 那只取最小的timegap
+        create table plsport_playsport._get_lowerest_timegap engine = myisam
+        select f.id, ifnull(f.timegap, 0) as timegap
+        from (
+            SELECT id, min(timegap) as timegap
+            FROM plsport_playsport._seller_detail_1
+            group by id) as f;
+
+        ALTER TABLE plsport_playsport._seller_detail_1 ADD INDEX (`id`,`timegap`);
+        ALTER TABLE plsport_playsport._get_lowerest_timegap ADD INDEX (`id`,`timegap`);
+
+# 如果id 產生duplicate, 那只取最小的timegap
+create table plsport_playsport._seller_detail_2 engine = myisam
+select a. id, a.sellerid, a.mode, a.sale_allianceid, a.sale_date, a.promotion, a.analysis_flag, a.buyer_count, a.sale_price, a.revenue, 
+       a.post_type, a.subject, a.predict, a.posttime, a.viewtimes, a.replycount, a.pushcount, a.timegap
+from plsport_playsport._seller_detail_1 as a inner join plsport_playsport._get_lowerest_timegap as b on a.id = b.id and a.timegap = b.timegap;
+
+create table plsport_playsport._seller_detail_3 engine = myisam
+SELECT a.id, a.sellerid, a.mode, a.sale_allianceid, b.alliancename, a.sale_date, date(a.sale_date) as d, a.promotion, a.analysis_flag, a.buyer_count, a.sale_price, a.revenue, (case when (a.post_type is not null) then 1 else 0 end) as ispost,
+       a.post_type, a.predict as inc_predict, a.posttime, a.viewtimes, a.replycount, a.pushcount, abs((time_to_sec(timediff(a.sale_date,posttime)))/3600) as timegap
+FROM plsport_playsport._seller_detail_2 a left join plsport_playsport.alliance b on a.sale_allianceid = b.allianceid;
+
+        update plsport_playsport._seller_detail_3 set ispost=0 where timegap >= 8;
+        ALTER TABLE `_seller_detail_3` CHANGE `mode` `mode` VARCHAR(4) NOT NULL COMMENT '賣的盤別,1北富銀,2國際盤';
+        update plsport_playsport._seller_detail_3 set mode='運彩' where mode = 1;
+        update plsport_playsport._seller_detail_3 set mode='國際' where mode = 2;
+
+# 補上近10日在討論區上的人氣
+create table plsport_playsport._forum2_with_10_days engine = myisam 
+select a.d, a.allianceid, a.postuser, sum(a.viewtimes) as viewtimes, sum(a.replycount) as replycount, sum(pushcount) as pushcount
+from (
+    SELECT date(posttime) as d, allianceid, postuser, viewtimes, replycount, pushcount
+    FROM plsport_playsport._forum1) as a
+group by a.d, a.allianceid, a.postuser;
+
+        # 這段是要給python跑的
+        # C:\proc\python\calculate\calculate_10_days_forum_population.py
+
+        # 在這裡執行calculate_10_days_forum_population.py
+        # SELECT (case when (postuser is not null) then '2015-05-11' end) as d ,allianceid, postuser, 
+        #        sum(viewtimes) as viewtime10, sum(replycount) as replycount10, sum(pushcount) as pushcount10 
+        # FROM plsport_playsport._forum2_with_10_days
+        # where d between subdate(now(),10) and '2015-05-1'
+        # group by allianceid, postuser;
+
+        # 執行完上面的.py會產生plsport_playsport._forum2_with_10_days_python
+
+        ALTER TABLE plsport_playsport._seller_detail_3 ADD INDEX (`d`,`sale_allianceid`,`sellerid`);
+        ALTER TABLE plsport_playsport._forum2_with_10_days_python ADD INDEX (`d`,`allianceid`,`postuser`);
+        ALTER TABLE plsport_playsport._seller_detail_3 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._forum2_with_10_days_python convert to character set utf8 collate utf8_general_ci;
+        
+        ALTER TABLE `_forum2_with_10_days_python` CHANGE `postuser` `postuser` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE `_forum2_with_10_days_python` CHANGE `d` `d` DATE NULL DEFAULT NULL;
+        
+create table plsport_playsport._seller_detail_4 engine = myisam
+SELECT a.id, a.sellerid, a.mode, a.sale_allianceid, a.alliancename, a.sale_date, (case when (a.promotion<>'') then 1 else 0 end) as promotion, a.analysis_flag, a.buyer_count, a.sale_price, a.revenue, a.ispost,
+       a.post_type, a.inc_predict, a.posttime, a.viewtimes, a.replycount, a.pushcount, a.timegap, b.viewtime10, b.replycount10, b.pushcount10
+FROM plsport_playsport._seller_detail_3 a left join plsport_playsport._forum2_with_10_days_python b 
+on a.sale_allianceid = b.allianceid and a.d = b.d and a.sellerid = b.postuser;      
+        
+# 以每個上架的預測來看的資料
+select 'id','sellerid','mode','sale_allianceid','alliancename','sale_date','promotion','analysis_flag','buyer_count','sale_price','revenue',
+       'ispost','post_type','inc_predict','posttime','viewtimes','replycount','pushcount','timegap','viewtimes10','replycount10','pushcount10' union (
+SELECT * 
+into outfile 'C:/Users/1-7_ASUS/Desktop/_seller_detail_4.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._seller_detail_4);
+
+
+# 以每個殺手的角度來看的資料
+create table plsport_playsport._seller_detail_5_by_user engine = myisam
+SELECT sellerid, sum(revenue) as total_earn, sum(promotion) as promotion, sum(analysis_flag) as analysis_flag ,sum(ispost) as post_count, sum(inc_predict) as inc_predict, 
+       sum(viewtimes) as viewtimes, sum(replycount) as replycount, sum(pushcount) as pushcount 
+FROM plsport_playsport._seller_detail_4
+group by sellerid;
+
+
+# 分析文數量計算
+create table plsport_playsport._analysis_post_count engine = myisam
+SELECT sellerid, sum(post_type) as analysis_post_count
+FROM plsport_playsport._seller_detail_4
+where post_type = 1
+group by sellerid;
+
+create table plsport_playsport._seller_detail_6 engine = myisam
+SELECT a.sellerid, a.total_earn, a.promotion, a.analysis_flag , a.post_count, b.analysis_post_count, a.inc_predict, a.viewtimes, a.replycount, a.pushcount 
+FROM plsport_playsport._seller_detail_5_by_user a left join plsport_playsport._analysis_post_count b on a.sellerid = b.sellerid;
+
+select 'sellerid','total_earn','promotion','analysis_flag','post_count','analysis_post_count','inc_predict','viewtimes','replycount','pushcount' union (
+SELECT * 
+into outfile 'C:/Users/1-7_ASUS/Desktop/_seller_detail_6.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._seller_detail_6);
+
+
+
+
+
+
+# 有沒有寫過分析文
+select a.isanalysis, count(sellerid) ,sum(a.total_earn)
+from (
+    SELECT sellerid, total_earn, (case when (analysis_post_count is not null) then 1 else 0 end) as isanalysis
+    FROM plsport_playsport._seller_detail_6) as a
+group by a.isanalysis;
+
+# 有沒有標示殺手小叮嚀
+select a.isflag, count(sellerid) ,sum(a.total_earn)
+from (
+    SELECT sellerid, total_earn, (case when (analysis_flag is not null) then 1 else 0 end) as isflag
+    FROM plsport_playsport._seller_detail_6) as a
+group by a.isanalysis;
+
+
+
 
 
 
