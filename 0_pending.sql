@@ -15555,6 +15555,12 @@ FROM plsport_playsport._seller_detail_6);
 
 
 
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> 9fcb9a2c93c3b2d47a8eff30cd326e064ea3d687
 # 有沒有寫過分析文
 select a.isanalysis, count(sellerid) ,sum(a.total_earn)
 from (
@@ -15573,6 +15579,7 @@ group by a.isanalysis;
 
 
 
+<<<<<<< HEAD
 
 
 
@@ -15597,6 +15604,8 @@ group by a.isanalysis;
 
 
 
+=======
+>>>>>>> 9fcb9a2c93c3b2d47a8eff30cd326e064ea3d687
 
 
 
