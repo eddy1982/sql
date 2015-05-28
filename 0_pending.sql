@@ -3014,17 +3014,208 @@ WHERE uri LIKE '%utm_content=retention_c_20150401%'
 AND time between '2015-04-01 18:00:00' AND '2015-04-03 23:59:59';
 
 
+# 2015-05-25
+# (1)
+# 2015/05/01  18:00發送
+# 發送手段: 針對近期流失客，領取兌換券
+# 文案:【【限時回饋】玩運彩贏錢預測，馬上登入、領券免費看！贏錢好容易！《限時兩天，先領先贏》http://playsport.cc/ad/19
+# 程式執行時間:2天(05/01 18:00 - 05/03 22:00)
+# 筆數:1800
+# 
+# (2)
+# 2015/05/01  18:00發送
+# 發送手段: 針對近期流失客，領取兌換券
+# 文案:【限時回饋】玩運彩贏錢預測，馬上登入、領券免費看！贏錢好容易！《限時兩天，先領先贏》 http://playsport.cc/ad/20
+# 程式執行時間:2天(05/01 18:00 - 05/03 22:00)
+# 筆數:328
+
+
+# 先匯入yoyo8的簡訊發送狀態記錄
+create table textcampaign.text_sent_status_0501_a engine = myisam
+SELECT concat(0,phone) as phone, type, stas, date, time, text_contect, campaign 
+FROM textcampaign.text_sent_status_0501 where campaign = 'a';
+
+create table textcampaign.text_sent_status_0501_c engine = myisam
+SELECT concat(0,phone) as phone, type, stas, date, time, text_contect, campaign 
+FROM textcampaign.text_sent_status_0501 where campaign = 'c';
+
+# 主名單
+create table textcampaign.text_sent_status_0501_a_1 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, b.stas
+FROM textcampaign.retention_a_20150501_full_list_dont_delete a left join textcampaign.text_sent_status_0501_a b on a.phone = b.phone;
+
+create table textcampaign.text_sent_status_0501_c_1 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.abtest as status, b.stas
+FROM textcampaign.retention_c_20150501_full_list_dont_delete a left join textcampaign.text_sent_status_0501_c b on a.phone = b.phone;
+
+# 回網站跳出訊息
+CREATE TABLE textcampaign._coupon_window_pop_up engine = myisam
+SELECT userid, outflowMember, (case when (outflowMember is not null) then 'see_pop' else '' end) as see
+FROM plsport_playsport.showMessage
+WHERE outflowmember is not null
+AND outflowMember between '2015-05-01 18:00:00' AND '2015-05-03 22:00:00'
+ORDER BY outflowMember;
+
+# 有誰回網站看到領取抵用券提示視窗
+create table textcampaign.text_sent_status_0501_a_2 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, a.stas, b.see
+FROM textcampaign.text_sent_status_0501_a_1 a left join textcampaign._coupon_window_pop_up b on a.userid = b.userid;
+
+create table textcampaign.text_sent_status_0501_c_2 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, a.stas, b.see
+FROM textcampaign.text_sent_status_0501_c_1 a left join textcampaign._coupon_window_pop_up b on a.userid = b.userid;
+
+
+# 個人信箱獲得兌換券派送訊息( mailpcash_list蠻大的, 要捉很久)
+CREATE TABLE textcampaign._receive_coupon engine = myisam
+SELECT tou, title, date, remarks 
+FROM plsport_playsport.mailpcash_list
+WHERE title LIKE '%恭喜獲得兌換券%'
+AND date between '2015-05-01 18:00:00' AND '2015-05-03 22:00:00';
+
+# 有誰實際領取到抵用券
+create table textcampaign.text_sent_status_0501_a_3 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, a.stas, a.see, b.title 
+FROM textcampaign.text_sent_status_0501_a_2 a left join textcampaign._receive_coupon b on a.userid = b.tou;
+
+create table textcampaign.text_sent_status_0501_c_3 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, a.stas, a.see, b.title 
+FROM textcampaign.text_sent_status_0501_c_2 a left join textcampaign._receive_coupon b on a.userid = b.tou;
+
+
+CREATE TABLE textcampaign._spent engine = myisam
+SELECT userid, sum(amount) as spent
+FROM plsport_playsport.pcash_log
+WHERE payed = 1 AND type = 1
+AND date between '2015-05-01 18:00:00' AND '2015-05-15 23:59:59'
+GROUP BY userid;
+
+# 加上期間內消費多少金額
+create table textcampaign.text_sent_status_0501_a_4 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, a.stas, a.see, a.title, b.spent
+FROM textcampaign.text_sent_status_0501_a_3 a left join textcampaign._spent b on a.userid = b.userid;
+
+create table textcampaign.text_sent_status_0501_c_4 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, a.stas, a.see, a.title, b.spent
+FROM textcampaign.text_sent_status_0501_c_3 a left join textcampaign._spent b on a.userid = b.userid;
+
+
+
+# a/b testing 計算機
+# A>B
+# C>D
+#長期
+#A
+SELECT * FROM textcampaign.text_sent_status_0501_a_4
+where status = 'sent' and stas = '成功';
+#B
+SELECT * FROM textcampaign.text_sent_status_0501_a_4
+where status = 'sent' and stas = '成功' and spent is not null;
+#C
+SELECT * FROM textcampaign.text_sent_status_0501_a_4
+where status = 'hold' and stas is null;
+#D
+SELECT * FROM textcampaign.text_sent_status_0501_a_4
+where status = 'hold' and stas is null and spent is not null;
+
+#短期
+#A
+SELECT * FROM textcampaign.text_sent_status_0501_c_4
+where status = 'sent' and stas = '成功';
+#B
+SELECT * FROM textcampaign.text_sent_status_0501_c_4
+where status = 'sent' and stas = '成功' and spent is not null;
+#C
+SELECT * FROM textcampaign.text_sent_status_0501_c_4
+where status = 'hold' and stas is null;
+#D
+SELECT * FROM textcampaign.text_sent_status_0501_c_4
+where status = 'hold' and stas is null and spent is not null;
+
+# 誰有回來網站
+SELECT * FROM textcampaign.text_sent_status_0501_a_4
+where see is not null;
+SELECT * FROM textcampaign.text_sent_status_0501_c_4
+where see is not null;
+
+# 誰有回來網站
+SELECT * FROM textcampaign.text_sent_status_0501_a_4
+where title is not null;
+SELECT * FROM textcampaign.text_sent_status_0501_c_4
+where title is not null;
+
+
+# 計算在期間內, 有使用抵用券的記錄
+CREATE TABLE textcampaign._coupon_used engine = myisam
+SELECT userid, count(id) as coupon_used_count 
+FROM plsport_playsport.coupon_used_detail
+WHERE type = 1
+AND date between '2015-05-01 18:00:00' AND '2015-05-15 23:59:59'
+GROUP BY userid; 
+
+
+create table textcampaign.text_sent_status_0501_a_5 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, a.stas, a.see, a.title, a.spent, b.coupon_used_count 
+FROM textcampaign.text_sent_status_0501_a_4 a left join textcampaign._coupon_used b on a.userid = b.userid;
+
+create table textcampaign.text_sent_status_0501_c_5 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, a.stas, a.see, a.title, a.spent, b.coupon_used_count 
+FROM textcampaign.text_sent_status_0501_c_4 a left join textcampaign._coupon_used b on a.userid = b.userid;
+
+# 有誰在期間內用過抵用券
+SELECT * FROM textcampaign.text_sent_status_0501_a_5
+where status = 'sent' and stas = '成功' and see is not null and title is not null 
+and coupon_used_count is not null;
+
+SELECT * FROM textcampaign.text_sent_status_0501_c_5
+where status = 'sent' and stas = '成功' and see is not null and title is not null 
+and coupon_used_count is not null;
+
+
+# 有誰點過簡訊的連結
+create table textcampaign._who_click_text_message engine = myisam 
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201505
+where uri like '%retention%'
+and time between '2015-05-01 18:00:00' and '2015-05-03 22:59:59';
+
+# 點過簡訊的連結次數
+select a.cam, count(a.uri) as c
+from (
+    SELECT userid, uri, time, platform_type, substr(uri, locate('utm_campaign=',uri)+23,1) as cam
+    FROM textcampaign._who_click_text_message) as a
+group by a.cam;
+
+create table textcampaign._who_have_redeem engine = myisam
+SELECT userid, sum(amount) as redeem, count(amount) as redeem_count 
+FROM plsport_playsport.pcash_log
+where payed = 1 and type in (3,4)
+and date between '2015-05-01 18:00:00' AND '2015-05-15 23:59:59'
+group by userid;
+
+
+create table textcampaign.text_sent_status_0501_a_6 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, a.stas, a.see, a.title, a.spent, a.coupon_used_count, b.redeem, b.redeem_count 
+FROM textcampaign.text_sent_status_0501_a_5 a left join textcampaign._who_have_redeem b on a.userid = b.userid;
+
+create table textcampaign.text_sent_status_0501_c_6 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, a.stas, a.see, a.title, a.spent, a.coupon_used_count, b.redeem, b.redeem_count 
+FROM textcampaign.text_sent_status_0501_c_5 a left join textcampaign._who_have_redeem b on a.userid = b.userid;
 
 
 
 
+SELECT * FROM textcampaign.text_sent_status_0501_a_6
+where status = 'sent' and stas = '成功' and spent is not null;
 
+SELECT * FROM textcampaign.text_sent_status_0501_a_6
+where status = 'hold' and stas is null and spent is not null;
 
+SELECT * FROM textcampaign.text_sent_status_0501_c_6
+where status = 'sent' and stas = '成功' and spent is not null;
 
-
-
-
-
+SELECT * FROM textcampaign.text_sent_status_0501_c_6
+where status = 'hold' and stas is null and spent is not null;
 
 
 
@@ -13914,7 +14105,7 @@ insert ignore into plsport_playsport._analysis_post_4 SELECT * FROM plsport_play
             FROM (
                 SELECT userid, subjectid, substr(gamedate,1,6) as m 
                 FROM plsport_playsport.analysis_king
-                WHERE substr(gamedate,1,6) between '201201' AND '201412') as a #從以前到現在都算, 記得要調整區間
+                WHERE substr(gamedate,1,6) between '200901' AND '201412') as a #從以前到現在都算, 記得要調整區間
             GROUP BY a.userid, a.m
             ORDER BY a.m) as b 
         WHERE b.subjectid_count >11
@@ -13925,6 +14116,7 @@ insert ignore into plsport_playsport._analysis_post_4 SELECT * FROM plsport_play
         SELECT userid, best_analysis_king 
         FROM plsport_playsport._analysis_king_whoisbest
         group by userid;
+
 
 create table plsport_playsport._analysis_post_5 engine = myisam
 select c.month, c.postuser, d.nickname, c.views, c.views_p, c.best_analysis_king
@@ -13960,17 +14152,6 @@ create table plsport_playsport._analysis_list engine = myisam
 SELECT poster 
 FROM plsport_playsport.analysis_cost
 group by poster;
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -14798,10 +14979,25 @@ FROM actionlog.action_201505
 where uri like '%buy_predict.php%' and userid <> ''
 and time between '2015-04-24 16:00:00' and now(); 
 
+create table actionlog._usersearch engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201504
+where uri like '%usersearch.php%' and userid <> ''
+and time between '2015-04-24 16:00:00' and now(); 
+insert ignore into actionlog._usersearch
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201505
+where uri like '%usersearch.php%' and userid <> ''
+and time between '2015-04-24 16:00:00' and now(); 
+
+
         ALTER TABLE actionlog._forum convert to character set utf8 collate utf8_general_ci;
         ALTER TABLE actionlog._buypredict convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._usersearch convert to character set utf8 collate utf8_general_ci;
         ALTER TABLE actionlog._forum  ADD INDEX (`userid`);
         ALTER TABLE actionlog._buypredict ADD INDEX (`userid`);
+        ALTER TABLE actionlog._usersearch ADD INDEX (`userid`);
+
 
 create table actionlog._forum_1 engine = myisam
 SELECT b.id, a.userid, a.uri, a.time, a.platform_type 
@@ -14811,6 +15007,11 @@ where platform_type = 2;
 create table actionlog._buypredict_1 engine = myisam
 SELECT b.id, a.userid, a.uri, a.time, a.platform_type 
 FROM actionlog._buypredict a left join plsport_playsport.member b on a.userid = b.userid 
+where platform_type = 2;
+
+create table actionlog._usersearch_1 engine = myisam
+SELECT b.id, a.userid, a.uri, a.time, a.platform_type 
+FROM actionlog._usersearch a left join plsport_playsport.member b on a.userid = b.userid 
 where platform_type = 2;
 
 create table actionlog._forum_2 engine = myisam
@@ -14827,6 +15028,13 @@ from (
     FROM actionlog._buypredict_1) as a
 group by a.g, a.userid;
 
+create table actionlog._usersearch_2 engine = myisam
+select a.g, a.userid, count(uri) as usersearch_pv
+from (
+    SELECT (case when ((id%20)+1 <11) then 'a' else 'b' end) as g, userid, uri, time, platform_type
+    FROM actionlog._usersearch_1) as a
+group by a.g, a.userid;
+
 
 SELECT 'abtest', 'userid', 'forum_pv' union (
 SELECT *
@@ -14839,6 +15047,13 @@ SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/buypredict_pv.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._buypredict_2);
+
+SELECT 'abtest', 'userid', 'usersearch_pv' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/usersearch_pv.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._usersearch_2);
+
 
 
 # a/b 2組的收益有不同嗎?
@@ -14863,6 +15078,35 @@ SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/redeem.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._order_data_mobile_1);
+
+
+
+create table plsport_playsport._ht3_revenue engine = myisam
+SELECT buyerid, buy_date, buy_price, position, cons, substr(position,5,1) as abtest
+FROM plsport_playsport._predict_buyer_with_cons
+where buy_date between '2015-04-24 16:00:00' and now()
+and substr(position,1,4) = 'HT_M';
+
+create table plsport_playsport._ht3_revenue_1 engine = myisam
+SELECT abtest, buyerid as userid, sum(buy_price) as reveune 
+FROM plsport_playsport._ht3_revenue
+group by abtest, buyerid;
+
+SELECT 'abtest', 'userid', 'reveune' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/ht3_revenue.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._ht3_revenue_1);
+
+
+
+
+
+
+
+
+
+
 
 
 
