@@ -15613,7 +15613,7 @@ create table plsport_playsport._livescore_list5 engine = myisam
 SELECT * FROM plsport_playsport._livescore_list4
 where pv_percentile > 0.49 and q in (4,5);
 
-ALTER TABLE `_livescore_list5` CHANGE `q` `q` VARCHAR(10) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL;
+ALTER TABLE plsport_playsport._livescore_list5 CHANGE `q` `q` VARCHAR(10) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL;
 
 update plsport_playsport._livescore_list5 set q='需要' where q=4;
 update plsport_playsport._livescore_list5 set q='非常需要' where q=5;
@@ -15797,14 +15797,6 @@ into outfile 'C:/Users/1-7_ASUS/Desktop/_seller_detail_6.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._seller_detail_6);
 
-
-
-<<<<<<< HEAD
-=======
-
-
-
->>>>>>> 9fcb9a2c93c3b2d47a8eff30cd326e064ea3d687
 # 有沒有寫過分析文
 select a.isanalysis, count(sellerid) ,sum(a.total_earn)
 from (
@@ -15823,7 +15815,81 @@ group by a.isanalysis;
 
 
 
-<<<<<<< HEAD
+# =================================================================================================
+# 小魔女 2015-05-29
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4740&projectId=11
+# To Eddy：
+# 請於 6/2(二)下午二點於屏東縣屏東市廣東路171號，協助訪談重度消費者~小魔女~
+# 1. 請先研究使用者使用行為
+# 2. 訪談完請上傳錄音檔，並於兩週後交訪談報告，檔名範例 中度消費者_小球
+# =================================================================================================
+
+create table actionlog._user_a7361416 engine = myisam
+SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201501 where userid = 'a7361416';
+insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201502 where userid = 'a7361416';
+insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201503 where userid = 'a7361416';
+insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201504 where userid = 'a7361416';
+insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201505 where userid = 'a7361416';
+insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201412 where userid = 'a7361416';
+insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201411 where userid = 'a7361416';
+insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201410 where userid = 'a7361416';
+insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201409 where userid = 'a7361416';
+insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201408 where userid = 'a7361416';
+
+
+
+SELECT user_agent, count(uri)
+FROM actionlog._user_a7361416
+group by user_agent;
+
+
+SELECT platform_type, count(uri)
+FROM actionlog._user_a7361416
+group by platform_type;
+
+# 1	28165
+# 2	10789
+# 3	3289
+
+
+create table actionlog._user_a7361416_1 engine = myisam
+SELECT userid, uri, time, platform_type, date(time) as d, substr(time,12,2) as h
+FROM actionlog._user_a7361416
+order by time desc;
+
+SELECT d, count(uri) as c 
+FROM actionlog._user_a7361416_1
+group by d;
+
+SELECT platform_type, h, count(uri) as c
+FROM actionlog._user_a7361416_1
+group by platform_type, h;
+
+create table actionlog._user_a7361416_1_payway engine = myisam
+SELECT userid, name, createon, price, payway, platform_type, substr(createon,1,7) as m
+FROM plsport_playsport.order_data
+where userid = 'a7361416'
+and sellconfirm = 1;
+
+create table actionlog._user_a7361416_1_action engine = myisam
+select b.userid, b.uri, b.time, b.platform_type, b.page, (case when (locate('&',b.act)>0) then substr(b.act,1,locate('&',b.act)-1) else '' end) as act
+from (
+    select a.userid, a.uri, a.time, a.platform_type, a.page, (case when (locate('action=', uri)>0) then substr(uri, locate('action=', uri)+7,length(uri)) else '' end) as act
+    from (
+        SELECT userid, uri, time, platform_type, substr(uri,2,locate('.php',uri)-2) as page
+        FROM actionlog._user_a7361416_1) as a) as b;
+
+create table actionlog._user_a7361416_1_action_1 engine = myisam
+select b.userid, b.uri, b.time, b.platform_type, (case when (b.page='') then 'index' else b.page end) as page, b.act, b.dur
+from (
+    select a.userid, a.uri, a.time, a.platform_type, a.page, a.act, (case when (locate('&',a.dur)>0) then substr(a.dur,1,(locate('&',a.dur)-1)) else '' end) as dur
+    from (
+        SELECT userid, uri, time, platform_type, page, act, (case when (locate('during=',uri))>0 then substr(uri,(locate('during=',uri)+7), length(uri)) else '' end) as dur
+        FROM actionlog._user_a7361416_1_action) as a) as b;
+
+SELECT page, act, dur, count(uri) as c 
+FROM actionlog._user_a7361416_1_action_1
+group by page, act, dur;
 
 
 
@@ -15838,18 +15904,6 @@ group by a.isanalysis;
 
 
 
-
-
-
-
-
-
-
-
-
-
-=======
->>>>>>> 9fcb9a2c93c3b2d47a8eff30cd326e064ea3d687
 
 
 
