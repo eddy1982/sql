@@ -13604,11 +13604,19 @@ FROM actionlog.action_201503 where userid <> '' and uri like '%visit_member.php%
 create table actionlog._visit_member_201504 engine = myisam
 SELECT userid, uri, time, (case when (platform_type<2) then 'pc' else 'mobile' end) as p
 FROM actionlog.action_201504 where userid <> '' and uri like '%visit_member.php%';
+create table actionlog._visit_member_201505 engine = myisam
+SELECT userid, uri, time, (case when (platform_type<2) then 'pc' else 'mobile' end) as p
+FROM actionlog.action_201505 where userid <> '' and uri like '%visit_member.php%';
+create table actionlog._visit_member_201506 engine = myisam
+SELECT userid, uri, time, (case when (platform_type<2) then 'pc' else 'mobile' end) as p
+FROM actionlog.action_201506 where userid <> '' and uri like '%visit_member.php%';
 
 create table actionlog._visit_member engine = myisam select * from actionlog._visit_member_201501;
 insert ignore into actionlog._visit_member select * from actionlog._visit_member_201502;
 insert ignore into actionlog._visit_member select * from actionlog._visit_member_201503;
 insert ignore into actionlog._visit_member select * from actionlog._visit_member_201504;
+insert ignore into actionlog._visit_member select * from actionlog._visit_member_201505;
+insert ignore into actionlog._visit_member select * from actionlog._visit_member_201506;
 
 create table actionlog._visit_member_1 engine = myisam
 SELECT * FROM actionlog._visit_member
@@ -13630,15 +13638,20 @@ create table actionlog._visit_member_4 engine = myisam
 SELECT userid, pc, mobile, round((pc/(pc+mobile)),3) as p_pc, round((mobile/(pc+mobile)),3) as p_mobile 
 FROM actionlog._visit_member_3;
 
+
 create table plsport_playsport._prediction_201501 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201501 group by userid, createday;
 create table plsport_playsport._prediction_201502 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201502 group by userid, createday;
 create table plsport_playsport._prediction_201503 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201503 group by userid, createday;
 create table plsport_playsport._prediction_201504 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201504 group by userid, createday;
+create table plsport_playsport._prediction_201505 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201505 group by userid, createday;
+create table plsport_playsport._prediction_201506 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201506 group by userid, createday;
 
 create table plsport_playsport._prediction engine = myisam select * from plsport_playsport._prediction_201501;
-insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201502;                    
-insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201503;  
+insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201502;
+insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201503;
 insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201504;
+insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201505;
+insert ignore into plsport_playsport._prediction select * from plsport_playsport._prediction_201506;
 
 create table plsport_playsport._prediction_1 engine = myisam
 SELECT userid, count(createday) as predict_day_count
@@ -13665,6 +13678,10 @@ FROM plsport_playsport._prediction_1 a left join plsport_playsport.member b on a
 create table plsport_playsport._predict_list_2 engine = myisam
 SELECT a.userid, a.nickname, a.predict_day_count, b.pc, b.mobile, b.p_pc, b.p_mobile
 FROM plsport_playsport._predict_list_1 a left join actionlog._visit_member_4 b on a.userid = b.userid;
+
+        ALTER TABLE plsport_playsport._predict_list_2 ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._last_time_login ADD INDEX (`userid`);
+
 
 create table plsport_playsport._predict_list_3 engine = myisam
 SELECT a.userid, a.nickname, a.predict_day_count, a.pc, a.mobile, a.p_pc, a.p_mobile, b.last_time_login
@@ -14462,6 +14479,80 @@ SELECT *
 into outfile 'C:/proc/python/data/everyday_killer_type_stat.csv'
 fields terminated by ',' enclosed by '' lines terminated by '\r\n'
 FROM plsport_playsport._main_table_1);
+
+
+# 以下的部分開始分析 2015-06-03
+
+# 每天的販售數量
+
+create table plsport_playsport.__sell_count_everyday engine = myisam
+SELECT d, killtype, count(sellerid) as sell_count
+FROM plsport_playsport._predict_seller_with_medal_1
+where year(sale_date) > 2012
+group by d, killtype;
+
+SELECT 'date', 'killtype', 'sell_count' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/__sell_count_everyday.csv'
+fields terminated by ',' enclosed by '' lines terminated by '\r\n'
+FROM plsport_playsport.__sell_count_everyday);
+
+
+select substr(b.ym,1,4) as y, substr(b.ym,6,2) as m, b.killtype, count(b.sellerid) as killer_count
+from (
+    select a.sellerid, a.ym, a.killtype
+    from (
+        SELECT sellerid, sale_date, substr(sale_date,1,7) as ym,  killtype 
+        FROM plsport_playsport._predict_seller_with_medal_1) as a
+    group by a.sellerid, a.ym, a.killtype) as b
+group by b.ym, b.killtype;
+
+
+
+create table plsport_playsport._pcash_log engine = myisam
+select userid, amount, date(date) as c_date, month(date) as c_month, year(date) as c_year, substr(date,1,7) as ym, id_this_type
+from plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date between '2013-01-01 00:00:00' and now();
+
+        ALTER TABLE  plsport_playsport._pcash_log ADD INDEX (`id_this_type`);       
+        ALTER TABLE  plsport_playsport._predict_seller_with_medal ADD INDEX (`id`);
+        ALTER TABLE  plsport_playsport.alliance ADD INDEX (`allianceid`);
+
+create table plsport_playsport._pcash_log_with_detailed_info engine = myisam
+select c.userid, c.amount, c.c_date, c.c_month, c.c_year, c.ym,
+       c.id, c.sellerid, c.sale_allianceid, d.alliancename, c.sale_date, c.sale_price, c.killtype, c.killmedal
+from (
+    SELECT a.userid, a.amount, a.c_date, a.c_month, a.c_year, a.ym, 
+           b.id, b.sellerid, b.sale_allianceid, b.sale_date, b.sale_price, b.killtype, b.killmedal
+    FROM plsport_playsport._pcash_log a left join plsport_playsport._predict_seller_with_medal b on a.id_this_type = b.id) as c
+left join plsport_playsport.alliance as d on c.sale_allianceid = d.allianceid;
+
+
+# 每月買牌的人數(用不到)
+select a.ym, a.killtype, count(a.userid) as buyer_count
+from (
+    SELECT ym, killtype, userid, count(userid) as buyer_count
+    FROM plsport_playsport._pcash_log_with_detailed_info
+    group by ym, killtype, userid) as a
+where a.killtype is not null
+group by a.ym, a.killtype;
+
+# 每月購買數
+SELECT ym, killtype, count(sale_price) as buy_count 
+FROM plsport_playsport._pcash_log_with_detailed_info
+where killtype is not null
+group by ym, killtype;
+
+
+
+
+
+
+
+
+
+
 
 
 # =================================================================================================
@@ -15836,12 +15927,9 @@ insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent
 insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201409 where userid = 'a7361416';
 insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201408 where userid = 'a7361416';
 
-
-
 SELECT user_agent, count(uri)
 FROM actionlog._user_a7361416
 group by user_agent;
-
 
 SELECT platform_type, count(uri)
 FROM actionlog._user_a7361416
@@ -15850,7 +15938,6 @@ group by platform_type;
 # 1	28165
 # 2	10789
 # 3	3289
-
 
 create table actionlog._user_a7361416_1 engine = myisam
 SELECT userid, uri, time, platform_type, date(time) as d, substr(time,12,2) as h
@@ -15891,6 +15978,199 @@ SELECT page, act, dur, count(uri) as c
 FROM actionlog._user_a7361416_1_action_1
 group by page, act, dur;
 
+
+
+# =================================================================================================
+# 任務: [201504-D-2] 網站放置廣告 - 統計 [新建] (阿達) 2015-06-01
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4652&projectId=11
+# 統計放置站外廣告是否影響使用者行為
+# 
+# 6/4 A/B testing報告 
+# 內容
+# 1. A/B testing名單 (30%)
+# 2. 統計A/B testing結果
+# 統計看文章篇數、文章內頁pv、站內購買業績是否有差異
+# =================================================================================================
+
+create table actionlog._forum engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201504
+where userid <> '' and time between '2015-04-29 00:00:00' and now()
+and uri like '%/forum%';
+
+insert ignore into actionlog._forum
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201505
+where userid <> '' and time between '2015-04-29 00:00:00' and now()
+and uri like '%/forum%';
+
+
+create table actionlog._forum_1 engine = myisam
+SELECT userid, uri, time, platform_type, (case when (locate('subjectid',uri)>0) then substr(uri,locate('subjectid',uri)+10,length(uri)) else '' end) as sid 
+FROM actionlog._forum;
+
+create table actionlog._forum_2 engine = myisam
+SELECT userid, uri, time, platform_type, (case when (locate('&',sid)>0) then substr(sid,1,locate('&',sid)-1) else '' end) as sid
+FROM actionlog._forum_1;
+
+        ALTER TABLE actionlog._forum_2 CHANGE `sid` `sid` VARCHAR(50) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL;
+        ALTER TABLE actionlog._forum_2 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._forum_2 ADD INDEX (`userid`,`sid`,`platform_type`); # it takes arount 1276 secs
+        
+create table actionlog._forum_3 engine = myisam
+SELECT userid, sid, platform_type 
+FROM actionlog._forum_2
+group by userid, sid, platform_type;
+
+create table actionlog._forum_4 engine = myisam
+SELECT userid, platform_type, count(sid) as read_count 
+FROM actionlog._forum_3
+where sid <> ''
+group by userid, platform_type;
+
+create table actionlog._forum_4_1 engine = myisam
+SELECT userid, count(sid) as read_count 
+FROM actionlog._forum_3
+where sid <> ''
+group by userid;
+
+
+create table actionlog._forum_4_with_read_count_by_devices engine = myisam
+SELECT (case when (((b.id%20)+1)<7) then 'a' else 'b' end) as abtest, a.userid, a.platform_type, a.read_count
+FROM actionlog._forum_4 a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table actionlog._forum_4_with_read_count_all_devices engine = myisam
+SELECT (case when (((b.id%20)+1)<7) then 'a' else 'b' end) as abtest, a.userid, a.read_count
+FROM actionlog._forum_4_1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+
+create table actionlog._forum_4_with_forum_pv_by_devices engine = myisam
+SELECT userid, platform_type, count(uri) as forum_pv 
+FROM actionlog._forum_2
+where uri like '%forumdetail.php%'
+group by userid, platform_type;
+
+create table actionlog._forum_4_with_forum_pv_all_devices engine = myisam
+SELECT userid, count(uri) as forum_pv 
+FROM actionlog._forum_2
+where uri like '%forumdetail.php%'
+group by userid;
+
+create table actionlog._forum_4_with_forum_pv_by_devices_1 engine = myisam
+SELECT (case when (((b.id%20)+1)<7) then 'a' else 'b' end) as abtest, a.userid, a.platform_type, a.forum_pv 
+FROM actionlog._forum_4_with_forum_pv_by_devices a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table actionlog._forum_4_with_forum_pv_all_devices_1 engine = myisam
+SELECT (case when (((b.id%20)+1)<7) then 'a' else 'b' end) as abtest, a.userid, a.forum_pv 
+FROM actionlog._forum_4_with_forum_pv_all_devices a left join plsport_playsport.member b on a.userid = b.userid;
+
+
+SELECT 'abtest', 'userid', 'platform', 'read_count' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_4_with_read_count_by_devices.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forum_4_with_read_count_by_devices);
+
+SELECT 'abtest', 'userid',  'read_count' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_4_with_read_count_all_devices.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forum_4_with_read_count_all_devices);
+
+SELECT 'abtest', 'userid', 'platform', 'forum_pv' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_4_with_forum_pv_by_devices.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forum_4_with_forum_pv_by_devices_1);
+
+SELECT 'abtest', 'userid', 'forum_pv' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_4_with_forum_pv_all_devices.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forum_4_with_forum_pv_all_devices_1);
+
+
+create table plsport_playsport._pcash_log engine = myisam 
+SELECT userid, sum(amount) as spent 
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date between '2015-04-29 00:00:00' and now()
+group by userid;
+
+create table actionlog._forum_4_with_read_count_all_devices_and_spent engine = myisam
+SELECT a.abtest, a.userid, a.read_count, b.spent
+FROM actionlog._forum_4_with_read_count_all_devices a left join plsport_playsport._pcash_log b on a.userid = b.userid;
+
+
+SELECT 'abtest', 'userid', 'read_count', 'spent' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_4_with_read_count_all_devices_and_spent.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forum_4_with_read_count_all_devices_and_spent);
+
+
+
+
+# =================================================================================================
+# 任務: [201412-G-8]文章列表改版-問卷分析 [新建]
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4834&projectId=11
+# 說明
+# 目的:了解兩個時間區段的問卷結果
+#  
+# 內容
+# - 區分兩個時間的問卷結果
+# - 第二次問卷上線時間為5/28 12:00~5/31 12:00
+# - 問卷統計：http://www.playsport.cc/questionnaire.php?question=201505121108521342&action=statistics
+# =================================================================================================
+
+create table plsport_playsport._qu engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201505121108521342_answer
+where spend_minute>0.3
+order by spend_minute;
+
+create table plsport_playsport._qu_1 engine = myisam
+SELECT userid, write_time, q1, q2, q3 
+FROM plsport_playsport._qu;
+
+create table plsport_playsport._qu_2 engine = myisam
+SELECT userid, write_time as d, q1, q2, (case when (locate('1',q3)>0) then 1 else 0 end) as f1,
+                                        (case when (locate('2',q3)>0) then 1 else 0 end) as f2,
+                                        (case when (locate('3',q3)>0) then 1 else 0 end) as f3,
+                                        (case when (locate('4',q3)>0) then 1 else 0 end) as f4,
+                                        (case when (locate('5',q3)>0) then 1 else 0 end) as f5,
+                                        (case when (locate('6',q3)>0) then 1 else 0 end) as f6
+FROM plsport_playsport._qu_1;
+
+create table plsport_playsport._qu_2_1 engine = myisam
+SELECT * FROM plsport_playsport._qu_2
+where d between '2015-05-01 12:00:00' and '2015-05-28 12:00:00';
+
+create table plsport_playsport._qu_2_2 engine = myisam
+SELECT * FROM plsport_playsport._qu_2
+where d between '2015-05-28 12:00:00' and '2015-05-31 12:00:00';
+
+
+SELECT q1, count(userid) as c 
+FROM plsport_playsport._qu_2_1
+group by q1;
+
+SELECT q2, count(userid) as c 
+FROM plsport_playsport._qu_2_1
+group by q2;
+
+SELECT sum(f1),sum(f2),sum(f3),sum(f4),sum(f5),sum(f6) 
+FROM plsport_playsport._qu_2_1;
+
+SELECT q1, count(userid) as c 
+FROM plsport_playsport._qu_2_2
+group by q1;
+
+SELECT q2, count(userid) as c 
+FROM plsport_playsport._qu_2_2
+group by q2;
+
+SELECT sum(f1),sum(f2),sum(f3),sum(f4),sum(f5),sum(f6) 
+FROM plsport_playsport._qu_2_2;
 
 
 
