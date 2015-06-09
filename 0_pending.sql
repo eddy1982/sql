@@ -14770,8 +14770,17 @@ group by ym, killtype;
 
 
 
+# 各價格帶每月的收益佔比%
+SELECT ym, amount, sum(amount) as t 
+FROM plsport_playsport._pcash_log_with_detailed_info
+group by ym, amount;
 
 
+# 每月各價值上架數
+SELECT m, sale_price, count(sellerid) as c 
+FROM plsport_playsport._predict_seller_with_medal
+where year(sale_date)> 2012
+group by m, sale_price;
 
 
 

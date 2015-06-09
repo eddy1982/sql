@@ -9,6 +9,8 @@ create table _action_201501 engine = myisam select userid, uri, time from action
 create table _action_201502 engine = myisam select userid, uri, time from action_201502;
 create table _action_201503 engine = myisam select userid, uri, time from action_201503;
 create table _action_201504 engine = myisam select userid, uri, time from action_201504;
+create table _action_201505 engine = myisam select userid, uri, time from action_201505;
+
 
 /*(2)計算每個月的登入人數, 排除重覆的人*/
 create table __action_201501_usercount engine = myisam
@@ -19,18 +21,22 @@ create table __action_201503_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201503 group by userid;
 create table __action_201504_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201504 group by userid;
+create table __action_201505_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from _action_201505 group by userid;
 -- note: 算完就可以drop, 要不然很佔空間
 
 -- 2014/1/2新增, 排除異常名單, 機器人
 -- 先執行 8_user_find_the robot_register
 
-        ALTER TABLE  actionlog.__action_201504_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
-        ALTER TABLE  plsport_playsport._problem_members CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+        ALTER TABLE  actionlog.__action_201505_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE  plsport_playsport._problem_members CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 
 select count(a.userid) from actionlog.__action_201501_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201502_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201503_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201504_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+select count(a.userid) from actionlog.__action_201505_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+
 
 -- ======================================================================================
 --  準備其它資料表
@@ -202,9 +208,13 @@ group by postyear, postmonth1, board, boardtype;
 -- ======================================================================================
 use prediction;
 
-create table prediction.prediction_201504 engine = myisam
+create table prediction.prediction_201505 engine = myisam
 SELECT * FROM plsport_playsport.prediction
-where date(createon) between '2015-04-01' and '2015-04-31';
+where date(createon) between '2015-05-01' and '2015-05-31';
+create table prediction.prediction_201506 engine = myisam
+SELECT * FROM plsport_playsport.prediction
+where date(createon) between '2015-06-01' and '2015-06-30';
+
 
 create table p_201501 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201501;
@@ -214,6 +224,10 @@ create table p_201503 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201503;
 create table p_201504 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201504;
+create table p_201505 engine = myisam
+select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201505;
+create table p_201506 engine = myisam
+select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201506;
 
         /*====使用者分群專用的====*/
         create table prediction.p_recently engine = myisam select * from prediction.p_201409; /*近4個月預測資料, 看使用者分群要篩至多久前的記錄*/
