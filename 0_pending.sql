@@ -11923,39 +11923,29 @@ FROM plsport_playsport._qu_with_use_time_1;
 # 先匯入events(已寫成.py)
 
 # (1)先撈出所有即時比分的pv
-CREATE TABLE actionlog._livescore engine = myisam SELECT userid, uri, time FROM actionlog.action_201412 WHERE uri LIKE '%/livescore%' and userid <> '';
-INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%/livescore%' and userid <> '';
-INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%/livescore%' and userid <> '';
-INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%/livescore%' and userid <> '';
-INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/livescore%' and userid <> '';
+CREATE TABLE actionlog._livescore engine = myisam SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/livescore%' and userid <> '';
 INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201505 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201506 WHERE uri LIKE '%/livescore%' and userid <> '';
+
 # 預測比例
-CREATE TABLE actionlog._predictgame engine = myisam SELECT userid, uri, time FROM actionlog.action_201412 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
-INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
-INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
-INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
-INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
+CREATE TABLE actionlog._predictgame engine = myisam SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
 INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201505 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._predictgame SELECT userid, uri, time FROM actionlog.action_201506 WHERE uri LIKE '%/predictgame.php%' and userid <> '';
 # 賽事數據
-CREATE TABLE actionlog._games_data engine = myisam SELECT userid, uri, time FROM actionlog.action_201412 WHERE uri LIKE '%/games_data.php%' and userid <> '';
-INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%/games_data.php%' and userid <> '';
-INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%/games_data.php%' and userid <> '';
-INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%/games_data.php%' and userid <> '';
-INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/games_data.php%' and userid <> '';
+CREATE TABLE actionlog._games_data engine = myisam SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/games_data.php%' and userid <> '';
 INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201505 WHERE uri LIKE '%/games_data.php%' and userid <> '';
+INSERT IGNORE INTO actionlog._games_data SELECT userid, uri, time FROM actionlog.action_201506 WHERE uri LIKE '%/games_data.php%' and userid <> '';
+
         # 預測比例(所有人)
-        CREATE TABLE actionlog._predictgame_without_login engine = myisam SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%/predictgame.php%';
-        INSERT IGNORE INTO actionlog._predictgame_without_login SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%/predictgame.php%';
-        INSERT IGNORE INTO actionlog._predictgame_without_login SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%/predictgame.php%';
-        INSERT IGNORE INTO actionlog._predictgame_without_login SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/predictgame.php%';
+        CREATE TABLE actionlog._predictgame_without_login engine = myisam SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/predictgame.php%';
         INSERT IGNORE INTO actionlog._predictgame_without_login SELECT userid, uri, time FROM actionlog.action_201505 WHERE uri LIKE '%/predictgame.php%';
+        INSERT IGNORE INTO actionlog._predictgame_without_login SELECT userid, uri, time FROM actionlog.action_201506 WHERE uri LIKE '%/predictgame.php%';        
         # 賽事數據(所有人)
-        CREATE TABLE actionlog._games_data_without_login engine = myisam SELECT userid, uri, time FROM actionlog.action_201501 WHERE uri LIKE '%/games_data.php%';
-        INSERT IGNORE INTO actionlog._games_data_without_login SELECT userid, uri, time FROM actionlog.action_201502 WHERE uri LIKE '%/games_data.php%';
-        INSERT IGNORE INTO actionlog._games_data_without_login SELECT userid, uri, time FROM actionlog.action_201503 WHERE uri LIKE '%/games_data.php%';
-        INSERT IGNORE INTO actionlog._games_data_without_login SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/games_data.php%';
+        CREATE TABLE actionlog._games_data_without_login engine = myisam SELECT userid, uri, time FROM actionlog.action_201504 WHERE uri LIKE '%/games_data.php%';
         INSERT IGNORE INTO actionlog._games_data_without_login SELECT userid, uri, time FROM actionlog.action_201505 WHERE uri LIKE '%/games_data.php%'; 
+        INSERT IGNORE INTO actionlog._games_data_without_login SELECT userid, uri, time FROM actionlog.action_201506 WHERE uri LIKE '%/games_data.php%';       
 # (2)再區分出那些人是只看NBA
+
 
 # 處理造訪即時比分頁預設的聯盟(NBA OR MLB)
 CREATE TABLE actionlog._livescore_1_1 engine = myisam
@@ -12341,7 +12331,7 @@ FROM plsport_playsport._order_data_check_2_for_r);
 
 # =================================================================================================
 # 任務: 貼圖使用狀況研究 [新建] (福利班) 2015-02-13
-# 
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4451&projectId=11
 # 目標：
 #     1. 瞭解貼圖使用情形
 #     2. 瞭解貼圖是否提高回文數量
@@ -12350,13 +12340,14 @@ FROM plsport_playsport._order_data_check_2_for_r);
 #     2. 從貼圖上線之後，回文中只有新貼圖，佔所有貼圖的比例；是否對照上線前，僅使用舊貼圖就回文的比例？
 # 第一批上線時間 2014/10/27
 # 第二批上線時間 2015/2/3
+# 第三批上線時間 2015/4/10~6/1
 # =================================================================================================
 # 先匯入forumcontent
-
+           
 CREATE TABLE plsport_playsport._forumcontent engine = myisam
 SELECT * 
 FROM plsport_playsport.forumcontent
-WHERE postdate between '2015-02-03 00:00:00' AND now();
+WHERE postdate between '2015-04-10 00:00:00' AND now();
 # WHERE postdate between '2015-02-03 00:00:00' AND now();
 # WHERE postdate between '2014-10-28 00:00:00' AND now();
 
@@ -12386,12 +12377,18 @@ SELECT subjectid, userid, content, postdate,
        (case when (locate('/includes/images/smiley/playsport18.png',content)>0) then 1 else 0 end) as p18,
        (case when (locate('/includes/images/smiley/playsport19.png',content)>0) then 1 else 0 end) as p19,
        (case when (locate('/includes/images/smiley/playsport20.png',content)>0) then 1 else 0 end) as p20,
-       (case when (locate('/includes/images/smiley/playsport21.png',content)>0) then 1 else 0 end) as p21       
+       (case when (locate('/includes/images/smiley/playsport21.png',content)>0) then 1 else 0 end) as p21,
+       (case when (locate('/includes/images/smiley/playsport22.png',content)>0) then 1 else 0 end) as p22,
+       (case when (locate('/includes/images/smiley/playsport23.png',content)>0) then 1 else 0 end) as p23,
+       (case when (locate('/includes/images/smiley/playsport24.png',content)>0) then 1 else 0 end) as p24,
+       (case when (locate('/includes/images/smiley/playsport25.png',content)>0) then 1 else 0 end) as p25,
+       (case when (locate('/includes/images/smiley/playsport26.png',content)>0) then 1 else 0 end) as p26
 FROM plsport_playsport._forumcontent_1;
 
 CREATE TABLE plsport_playsport._forumcontent_2_all_icon_stat engine = myisam
 SELECT sum(p01), sum(p02), sum(p03), sum(p04), sum(p05), sum(p06), sum(p07), sum(p08), sum(p09), sum(p10), 
-       sum(p11), sum(p12), sum(p13), sum(p14), sum(p15), sum(p16), sum(p17), sum(p18), sum(p19), sum(p20), sum(p21)
+       sum(p11), sum(p12), sum(p13), sum(p14), sum(p15), sum(p16), sum(p17), sum(p18), sum(p19), sum(p20), 
+       sum(p21), sum(p22), sum(p23), sum(p24), sum(p25), sum(p26)
 FROM plsport_playsport._forumcontent_2;
 
 CREATE TABLE plsport_playsport._forumcontent_1_1 engine = myisam
@@ -12420,7 +12417,6 @@ FROM (
     SELECT date(postdate) as d, subjectid 
     FROM plsport_playsport._forumcontent_1_3) as a
 GROUP BY a.d;
-
 
 
 CREATE TABLE plsport_playsport._forumcontent_2_1 engine = myisam
@@ -16380,7 +16376,6 @@ create table plsport_playsport._qu_2_2 engine = myisam
 SELECT * FROM plsport_playsport._qu_2
 where d between '2015-05-28 12:00:00' and '2015-05-31 12:00:00';
 
-
 SELECT q1, count(userid) as c 
 FROM plsport_playsport._qu_2_1
 group by q1;
@@ -16402,6 +16397,125 @@ group by q2;
 
 SELECT sum(f1),sum(f2),sum(f3),sum(f4),sum(f5),sum(f6) 
 FROM plsport_playsport._qu_2_2;
+
+
+
+# =================================================================================================
+# 任務: [201504-C-4]即時比分頁新增宣傳單元-ABtesting報告 [新建] (靜怡) 2015-06-12
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4839&projectId=11
+# 說明
+# 
+# 目的：了解宣傳單元是否影響使用者行為
+# 
+# 內容
+# - 測試時間：6/11~7/2
+# - 設定測試組別
+# - 觀察指標
+# 
+#     每100人次的點擊率大於即時比分benner廣告的點擊率 
+#     即時比PV不受影響
+#     廣告位置點擊狀況
+#     購買預測金額
+# - 報告時間：7/7
+# =================================================================================================
+
+# ABtesting已於6/11 10:30上線
+
+# 檢查banner點擊的部分
+        create table actionlog._livescoreAdvertising engine = myisam 
+        SELECT userid, uri, time, platform_type 
+        FROM actionlog.action_201506
+        where time between '2015-06-11 10:30:00' and now()
+        and uri like '%customTraceCode=livescoreAdvertising%';
+
+                ALTER TABLE actionlog._livescoreAdvertising convert to character set utf8 collate utf8_general_ci;
+
+        create table actionlog._livescoreAdvertising_1 engine = myisam 
+        SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as g, a.userid, a.uri, a.time, a.platform_type, substr(uri,length(uri),1) as abtest
+        FROM actionlog._livescoreadvertising a left join plsport_playsport.member b on a.userid = b.userid
+        where a.userid <> '';
+
+        SELECT g, abtest, count(uri) as c 
+        FROM actionlog._livescoreadvertising_1
+        group by g, abtest;
+
+# 檢查購牌位置點擊的部分
+        create table actionlog._livescore_LSC engine = myisam 
+        SELECT userid, uri, time, platform_type 
+        FROM actionlog.action_201506
+        where time between '2015-06-11 10:30:00' and now()
+        and uri like '%rp=LSC%';
+
+                ALTER TABLE actionlog._livescore_LSC convert to character set utf8 collate utf8_general_ci;
+
+        create table actionlog._livescore_LSC_1 engine = myisam
+        SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as g, a.userid, a.uri, a.time, a.platform_type 
+        FROM actionlog._livescore_lsc a left join plsport_playsport.member b on a.userid = b.userid
+        where a.userid <> '';
+
+        SELECT g, count(uri) as c 
+        FROM actionlog._livescore_lsc_1
+        group by g;
+
+
+
+
+
+
+
+
+
+# =================================================================================================
+#  TO eddy: (柔雅) 2015-06-12
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4428&projectId=11
+# 由於第二次問卷上架的填寫人數沒有增加，
+# 因此麻煩你，直接替我們分析，
+# 有填答的寫手，第二題的寫文意願是否有增加，
+# 規則為:
+# 有回覆的使用者，對照他過去的發文情況，與他回覆願意的發文數量，
+# 是否有增加，以月為單位、不分聯盟來統計。
+# 問卷網址: http://psadmin.info/administration/questionnaire.php?action=previewQuestionnaire&...
+# 但這個有一點急，麻煩您再回覆可以完成的時間，感謝!
+# =================================================================================================
+
+# import questionnaire_201505271339324837_answer
+
+ALTER TABLE plsport_playsport.questionnaire_201505271339324837_answer CHANGE `1432691628` q1 INT(1);
+ALTER TABLE plsport_playsport.questionnaire_201505271339324837_answer CHANGE `1432691934` q2 INT(1);
+
+create table plsport_playsport._qu engine = myisam
+SELECT userid, write_time, q1, q2 
+FROM plsport_playsport.questionnaire_201505271339324837_answer;
+
+create table plsport_playsport._analysis_post_1 engine = myisam
+SELECT subjectid, allianceid, subject, postuser, substr(posttime,1,7) as ym
+FROM plsport_playsport.forum
+where gametype = 1;
+
+create table plsport_playsport._analysis_post_2 engine = myisam
+SELECT ym, postuser, count(subjectid) as analysis_post_count 
+FROM plsport_playsport._analysis_post_1
+group by ym, postuser;
+
+create table plsport_playsport._analysis_post_3 engine = myisam
+SELECT a.ym, a.postuser, a.analysis_post_count 
+FROM plsport_playsport._analysis_post_2 a inner join plsport_playsport._qu b on a.postuser = b.userid;
+
+
+SELECT 'ym', 'postuser', 'analysis_post_count' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_analysis_post_3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._analysis_post_3);
+
+SELECT 'userid', 'write_time', 'q1', 'q2' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_qu.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._qu);
+
+
+
 
 
 
