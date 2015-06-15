@@ -16748,7 +16748,3 @@ from (
           b.id, b.sellerid, b.sale_allianceid, b.sale_date, b.sale_price, b.killtype, b.killmedal
    FROM revenue._pcash_log a left join revenue._predict_seller_with_medal b on a.id_this_type = b.id) as c
 left join revenue._alliance as d on c.sale_allianceid = d.allianceid
-
-
-
-
