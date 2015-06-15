@@ -14390,6 +14390,7 @@ group by poster;
 
 
 
+
 # =================================================================================================
 # 任務: [201404-B-5]手機網頁版header優化-MVP測試名單撈取 [新建] (靜怡) 20154-03-26
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4474&projectId=11
@@ -16747,5 +16748,7 @@ from (
           b.id, b.sellerid, b.sale_allianceid, b.sale_date, b.sale_price, b.killtype, b.killmedal
    FROM revenue._pcash_log a left join revenue._predict_seller_with_medal b on a.id_this_type = b.id) as c
 left join revenue._alliance as d on c.sale_allianceid = d.allianceid
+
+
 
 
