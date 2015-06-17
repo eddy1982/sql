@@ -14764,9 +14764,6 @@ where killtype is not null
 group by ym, killtype;
 
 
-
-
-
 # 各價格帶每月的收益佔比%
 SELECT ym, amount, sum(amount) as t 
 FROM plsport_playsport._pcash_log_with_detailed_info
@@ -14778,6 +14775,99 @@ SELECT m, sale_price, count(sellerid) as c
 FROM plsport_playsport._predict_seller_with_medal
 where year(sale_date)> 2012
 group by m, sale_price;
+
+
+
+# 開會討論後補充
+# 各聯盟當選殺手人數, 只看NBA, 日棒, MLB
+
+
+create table plsport_playsport.__sell_count_everyday_mlb engine = myisam
+SELECT d, killtype, count(sellerid) as sell_count
+FROM plsport_playsport._predict_seller_with_medal_1
+where year(sale_date) > 2012
+and sale_allianceid = 1
+group by d, killtype;
+
+create table plsport_playsport.__sell_count_everyday_jpb engine = myisam
+SELECT d, killtype, count(sellerid) as sell_count
+FROM plsport_playsport._predict_seller_with_medal_1
+where year(sale_date) > 2012
+and sale_allianceid = 2
+group by d, killtype;
+
+create table plsport_playsport.__sell_count_everyday_nba engine = myisam
+SELECT d, killtype, count(sellerid) as sell_count
+FROM plsport_playsport._predict_seller_with_medal_1
+where year(sale_date) > 2012
+and sale_allianceid = 3
+group by d, killtype;
+
+
+SELECT 'date', 'killtype', 'sell_count', 'year', 'month' union (
+SELECT d, killtype, sell_count, year(d) as y, month(d) as m
+into outfile 'C:/Users/1-7_ASUS/Desktop/__sell_count_everyday_mlb.csv'
+fields terminated by ',' enclosed by '' lines terminated by '\r\n'
+FROM plsport_playsport.__sell_count_everyday_mlb);
+
+SELECT 'date', 'killtype', 'sell_count', 'year', 'month' union (
+SELECT d, killtype, sell_count, year(d) as y, month(d) as m
+into outfile 'C:/Users/1-7_ASUS/Desktop/__sell_count_everyday_jpb.csv'
+fields terminated by ',' enclosed by '' lines terminated by '\r\n'
+FROM plsport_playsport.__sell_count_everyday_jpb);
+
+SELECT 'date', 'killtype', 'sell_count', 'year', 'month' union (
+SELECT d, killtype, sell_count, year(d) as y, month(d) as m
+into outfile 'C:/Users/1-7_ASUS/Desktop/__sell_count_everyday_nba.csv'
+fields terminated by ',' enclosed by '' lines terminated by '\r\n'
+FROM plsport_playsport.__sell_count_everyday_nba);
+
+
+
+# 重新執行plsport_playsport._pcash_log_with_detailed_info
+
+
+
+# 每月購買數
+SELECT substr(ym,1,4) as y, substr(ym,6,2) as m, killtype, count(sale_price) as buy_count 
+FROM plsport_playsport._pcash_log_with_detailed_info
+where killtype is not null and sale_allianceid = 1
+group by ym, killtype;
+
+
+SELECT substr(ym,1,4) as y, substr(ym,6,2) as m, killtype, count(sale_price) as buy_count 
+FROM plsport_playsport._pcash_log_with_detailed_info
+where killtype is not null and sale_allianceid = 2
+group by ym, killtype;
+
+
+SELECT substr(ym,1,4) as y, substr(ym,6,2) as m, killtype, count(sale_price) as buy_count 
+FROM plsport_playsport._pcash_log_with_detailed_info
+where killtype is not null and sale_allianceid = 3
+group by ym, killtype;
+
+
+
+select b.ym, b.sale_price, b.sell_count
+from (
+    select a.ym, a.sale_price, count(a.sellerid) as sell_count
+    from (
+        SELECT substr(d,1,7) as ym, sale_price, sellerid
+        FROM plsport_playsport._predict_seller_with_medal_1
+        where year(sale_date) > 2013
+        and sale_allianceid = 3) as a # 改allianceid即可 (1,2,3)
+    group by a.ym, a.sale_price) as b;
+
+
+SELECT ym, sale_price, count(sale_price) as buy_count 
+FROM plsport_playsport._pcash_log_with_detailed_info
+where  sale_allianceid = 3 and c_year > 2013
+group by ym, sale_price;
+
+
+
+
+
 
 
 
@@ -16093,11 +16183,10 @@ FROM plsport_playsport._seller_detail_4);
 
 # 以每個殺手的角度來看的資料
 create table plsport_playsport._seller_detail_5_by_user engine = myisam
-SELECT sellerid, sum(revenue) as total_earn, sum(promotion) as promotion, sum(analysis_flag) as analysis_flag ,sum(ispost) as post_count, sum(inc_predict) as inc_predict, 
+SELECT sellerid, sum(buyer_count) as total_buy_count ,sum(revenue) as total_earn, sum(promotion) as promotion, sum(analysis_flag) as analysis_flag ,sum(ispost) as post_count, sum(inc_predict) as inc_predict, 
        sum(viewtimes) as viewtimes, sum(replycount) as replycount, sum(pushcount) as pushcount 
 FROM plsport_playsport._seller_detail_4
 group by sellerid;
-
 
 # 分析文數量計算
 create table plsport_playsport._analysis_post_count engine = myisam
@@ -16106,15 +16195,41 @@ FROM plsport_playsport._seller_detail_4
 where post_type = 1
 group by sellerid;
 
+# 分析文數量計算(歷史的)
+create table plsport_playsport._analysis_post_count_1 engine = myisam
+SELECT postuser, count(subjectid) as analysis_post_new
+FROM plsport_playsport._forum
+where gametype = 1
+and date(posttime) between '2014-01-01' and subdate(now(),1)
+group by postuser;
+
+# 新增:最讚分析文數量
+create table plsport_playsport._analysis_post_count_best engine = myisam
+SELECT userid, count(subjectid) as best_post 
+FROM plsport_playsport.analysis_king
+where date(got_time) between '2014-01-01' and subdate(now(),1)
+group by userid;
+
+
 create table plsport_playsport._seller_detail_6 engine = myisam
-SELECT a.sellerid, a.total_earn, a.promotion, a.analysis_flag , a.post_count, b.analysis_post_count, a.inc_predict, a.viewtimes, a.replycount, a.pushcount 
+SELECT a.sellerid, a.total_buy_count, a.total_earn, a.promotion, a.analysis_flag , a.post_count, b.analysis_post_count, a.inc_predict, a.viewtimes, a.replycount, a.pushcount 
 FROM plsport_playsport._seller_detail_5_by_user a left join plsport_playsport._analysis_post_count b on a.sellerid = b.sellerid;
 
-select 'sellerid','total_earn','promotion','analysis_flag','post_count','analysis_post_count','inc_predict','viewtimes','replycount','pushcount' union (
+create table plsport_playsport._seller_detail_7 engine = myisam
+SELECT a.sellerid, a.total_buy_count, a.total_earn, a.promotion, a.analysis_flag , a.post_count, a.analysis_post_count, b.best_post, a.inc_predict, a.viewtimes, a.replycount, a.pushcount 
+FROM plsport_playsport._seller_detail_6 a left join plsport_playsport._analysis_post_count_best b on a.sellerid = b.userid;
+
+create table plsport_playsport._seller_detail_8 engine = myisam
+SELECT a.sellerid, a.total_buy_count, a.total_earn, a.promotion, a.analysis_flag , a.post_count, a.analysis_post_count, b.analysis_post_new, a.best_post, a.inc_predict, a.viewtimes, a.replycount, a.pushcount 
+FROM plsport_playsport._seller_detail_7 a left join plsport_playsport._analysis_post_count_1 b on a.sellerid = b.postuser;
+
+
+select 'sellerid','total_buy_count','total_earn','promotion','analysis_flag','post_count','analysis_post_count','analysis_post_new','best_post', 'inc_predict','viewtimes','replycount','pushcount' union (
 SELECT * 
 into outfile 'C:/Users/1-7_ASUS/Desktop/_seller_detail_6.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM plsport_playsport._seller_detail_6);
+FROM plsport_playsport._seller_detail_8);
+
 
 # 有沒有寫過分析文
 select a.isanalysis, count(sellerid) ,sum(a.total_earn)
@@ -16457,12 +16572,6 @@ FROM plsport_playsport._qu_2_2;
         SELECT g, count(uri) as c 
         FROM actionlog._livescore_lsc_1
         group by g;
-
-
-
-
-
-
 
 
 
