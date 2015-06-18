@@ -16626,6 +16626,42 @@ FROM plsport_playsport._qu);
 
 
 
+# =================================================================================================
+# 任務: 新增單日銷售人數最高的排行榜 [新建] (學文) 2015-06-17
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4902&projectId=11
+# TO EDDY
+# 要麻煩您在賺錢殺手那邊新增一個 單日銷售人數最高的排行榜
+# 條件:不分聯盟，上一個月單日銷售人數最高的前五名
+# 例如現在六月，要列出五月份中單日銷售人數最高的前五名，含日期、聯盟、販售人數(販售人數不含用兌換券的)
+# 再麻煩您押個時間!謝謝喔!
+# =================================================================================================
+
+
+create table plsport_playsport._predict_seller_list_with_allianceidname_rank engine = myisam
+select a.sellerid, a.nickname, a.alliancename, a.d, a.earn
+from (
+    SELECT sellerid, nickname, alliancename, d, sum(amount) as earn 
+    FROM plsport_playsport._predict_seller_list_with_allianceidname
+    group by sellerid, alliancename, d) as a
+order by a.earn desc
+limit 0,100;
+
+create table plsport_playsport._predict_seller_list_with_allianceidname_rank_top10 engine = myisam
+SELECT a.sellerid, a.nickname, a.alliancename, a.d, a.earn 
+FROM plsport_playsport._predict_seller_list_with_allianceidname_rank a inner join 
+    (SELECT sellerid, d, max(earn)
+     FROM plsport_playsport._predict_seller_list_with_allianceidname_rank
+     group by sellerid) as b on a.sellerid = b.sellerid and a.d = b.d
+limit 0,10;
+
+# 以上已寫成1_calculate_top30_seller_for_each_month.py
+# 只要執行.py, 賺錢殺手全頁的資訊都會一起更新, 因為寫在一起
+
+
+
+
+
+
 
 
 
