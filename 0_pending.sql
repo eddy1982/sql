@@ -16636,7 +16636,6 @@ FROM plsport_playsport._qu);
 # 再麻煩您押個時間!謝謝喔!
 # =================================================================================================
 
-
 create table plsport_playsport._predict_seller_list_with_allianceidname_rank engine = myisam
 select a.sellerid, a.nickname, a.alliancename, a.d, a.earn
 from (
@@ -16656,6 +16655,143 @@ limit 0,10;
 
 # 以上已寫成1_calculate_top30_seller_for_each_month.py
 # 只要執行.py, 賺錢殺手全頁的資訊都會一起更新, 因為寫在一起
+
+
+
+# =================================================================================================
+# 任務: [研究]討論區的文章量是否影響業績 [新建] 2015-06-22
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4178&projectId=11
+# 說明: 討論區每日的文章多寡, 是否對業績造成長期或短期(當天)影響?
+# 負責人: eddy
+# 研究內容:
+# 
+# 1. 每日的討論區文章數是否對整體業績有影響?
+# 2. 各聯盟的文章數多寡是否對該聯盟的業績有影響?
+# 3. 分析文會影響業績嗎? 會看分析文的人是否買更多? (ARPU提升)
+# To Eddy：
+# 
+# 或許可以把*回文比考慮進去
+# 註：回文比 = 回文總數 / 文章總數
+# 任務狀態: 新建
+# =================================================================================================
+
+create table plsport_playsport._forum engine = myisam
+SELECT a.subjectid, a.subject, a.allianceid, b.alliancename, concat(a.allianceid,'_',b.alliancename) as alli, a.gametype,  a.postuser, 
+       a.posttime, date(a.posttime) as d, a.viewtimes, a.replycount, a.pushcount
+FROM plsport_playsport.forum a left join plsport_playsport.alliance b on a.allianceid = b.allianceid
+where year(posttime) > 2012
+and b.alliancename is not null
+and a.gametype <> 7
+and a.postuser not like '%xiaojita%'; # 亂發文機器人
+
+ALTER TABLE plsport_playsport._forum CHANGE `gametype` `gametype` VARCHAR(15) NOT NULL;
+
+update plsport_playsport._forum set gametype = '0_全部' where gametype = '0';
+update plsport_playsport._forum set gametype = '1_分析' where gametype = '1';
+update plsport_playsport._forum set gametype = '2_Live' where gametype = '2';
+update plsport_playsport._forum set gametype = '3_亮單' where gametype = '3';
+update plsport_playsport._forum set gametype = '4_感謝' where gametype = '4';
+update plsport_playsport._forum set gametype = '8_新聞' where gametype = '8';
+
+create table plsport_playsport._forum_all engine = myisam
+SELECT d, count(subjectid) as post_count 
+FROM plsport_playsport._forum
+group by d;
+
+create table plsport_playsport._forum_gametype engine = myisam
+SELECT d, gametype, count(subjectid) as gametype_c 
+FROM plsport_playsport._forum
+group by d, gametype;
+
+create table plsport_playsport._forum_alliance engine = myisam
+SELECT d, alli, count(subjectid) as alli_count 
+FROM plsport_playsport._forum
+group by d, alli;
+
+
+
+SELECT 'subjectid', 'allianceid', 'alliancename', 'alli', 'gametype', 'postuser', 'posttime', 'd', 'viewtimes', 'replycount', 'pushcount' union (
+SELECT subjectid, allianceid, alliancename, alli, gametype, postuser, posttime, d, viewtimes, replycount, pushcount
+into outfile 'C:/proc/r/forum/_forum.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum);
+
+SELECT 'd', 'post_count' union (
+SELECT *
+into outfile 'C:/proc/r/forum/_forum_all.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_all);
+
+SELECT 'd', 'gametype', 'gametype_count' union (
+SELECT *
+into outfile 'C:/proc/r/forum/_forum_gametype.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_gametype);
+
+SELECT 'd', 'alliance', 'alli_count' union (
+SELECT *
+into outfile 'C:/proc/r/forum/_forum_alliance.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_alliance);
+
+
+# 每個上架的預測, 總共收益多少金額
+create table plsport_playsport._revenue_detail engine = myisam
+SELECT id_bought, sum(buy_price) as revenue
+FROM plsport_playsport.predict_buyer
+group by id_bought;
+
+        ALTER TABLE plsport_playsport.predict_seller ADD INDEX (`id`);
+        ALTER TABLE plsport_playsport._revenue_detail ADD INDEX (`id_bought`);
+
+# (a)每個上架的預測(主名單) left join 總共收益多少金額
+create table plsport_playsport._seller_detail engine = myisam
+SELECT a.id, a.sellerid, a.mode, a.sale_allianceid, a.sale_date, date(a.sale_date) as d, a.promotion, a.analysis_flag, a.buyer_count, a.sale_price, b.revenue
+FROM plsport_playsport.predict_seller a left join plsport_playsport._revenue_detail b on a.id = b.id_bought
+where date(sale_date) between '2013-01-01' and subdate(now(),1);
+
+create table plsport_playsport._sale_all engine = myisam
+SELECT sale_date, d, sellerid, mode, sale_allianceid, revenue 
+FROM plsport_playsport._seller_detail;
+
+        create table plsport_playsport._sale_all_by_all engine = myisam
+        SELECT d, sum(revenue) as revenue 
+        FROM plsport_playsport._sale_all
+        group by d;
+
+        create table plsport_playsport._sale_all_by_mode engine = myisam
+        SELECT d, mode, sum(revenue) as revenue_by_mode
+        FROM plsport_playsport._sale_all
+        group by d, mode;
+        
+        ALTER TABLE plsport_playsport._sale_all_by_mode CHANGE `mode` `mode` VARCHAR(10) NOT NULL;
+        update plsport_playsport._sale_all_by_mode set mode = '1_運彩' where mode = '1';
+        update plsport_playsport._sale_all_by_mode set mode = '2_國際' where mode = '2';
+        
+        create table plsport_playsport._sale_all_by_allianceid engine = myisam
+        SELECT d, sale_allianceid, sum(revenue) as revenue_by_allianceid
+        FROM plsport_playsport._sale_all
+        group by d, sale_allianceid;
+        
+        SELECT 'd', 'revenue' union (
+        SELECT *
+        into outfile 'C:/proc/r/forum/_sale_all_by_all.csv'
+        fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+        FROM plsport_playsport._sale_all_by_all);
+
+        SELECT 'd', 'mode', 'revenue' union (
+        SELECT *
+        into outfile 'C:/proc/r/forum/_sale_all_by_mode.csv'
+        fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+        FROM plsport_playsport._sale_all_by_mode);
+
+        SELECT 'd', 'sale_allianceid', 'revenue' union (
+        SELECT *
+        into outfile 'C:/proc/r/forum/_sale_all_by_allianceid.csv'
+        fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+        FROM plsport_playsport._sale_all_by_allianceid);
+
+
 
 
 
