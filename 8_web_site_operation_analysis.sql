@@ -211,6 +211,7 @@ use prediction;
 create table prediction.prediction_201505 engine = myisam
 SELECT * FROM plsport_playsport.prediction
 where date(createon) between '2015-05-01' and '2015-05-31';
+
 create table prediction.prediction_201506 engine = myisam
 SELECT * FROM plsport_playsport.prediction
 where date(createon) between '2015-06-01' and '2015-06-30';

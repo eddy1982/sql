@@ -13810,6 +13810,9 @@ FROM plsport_playsport._list_8);
 # - 需求欄位:暱稱、ID、預測點擊天數、電腦與手機使用比、最後登入時間，居住地
 # =================================================================================================
 
+# 要先準備好 (1)最新的prediction (2)跑user_city.py
+
+
 create table actionlog._visit_member_201501 engine = myisam
 SELECT userid, uri, time, (case when (platform_type<2) then 'pc' else 'mobile' end) as p
 FROM actionlog.action_201501 where userid <> '' and uri like '%visit_member.php%';
@@ -13855,7 +13858,6 @@ group by a.userid;
 create table actionlog._visit_member_4 engine = myisam
 SELECT userid, pc, mobile, round((pc/(pc+mobile)),3) as p_pc, round((mobile/(pc+mobile)),3) as p_mobile 
 FROM actionlog._visit_member_3;
-
 
 create table plsport_playsport._prediction_201501 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201501 group by userid, createday;
 create table plsport_playsport._prediction_201502 engine = myisam SELECT userid, createday, count(userid) as c FROM prediction.p_201502 group by userid, createday;
@@ -16675,6 +16677,8 @@ limit 0,10;
 # 任務狀態: 新建
 # =================================================================================================
 
+# part1.
+
 create table plsport_playsport._forum engine = myisam
 SELECT a.subjectid, a.subject, a.allianceid, b.alliancename, concat(a.allianceid,'_',b.alliancename) as alli, a.gametype,  a.postuser, 
        a.posttime, date(a.posttime) as d, a.viewtimes, a.replycount, a.pushcount
@@ -16708,6 +16712,12 @@ SELECT d, alli, count(subjectid) as alli_count
 FROM plsport_playsport._forum
 group by d, alli;
 
+create table plsport_playsport._forum_prr engine = myisam
+select a.d, a.post, a.reply, round((a.reply/a.post),1) as prr
+from (
+    SELECT d, count(subjectid) as post, sum(replycount) as reply 
+    FROM plsport_playsport._forum
+    group by d) as a;
 
 
 SELECT 'subjectid', 'allianceid', 'alliancename', 'alli', 'gametype', 'postuser', 'posttime', 'd', 'viewtimes', 'replycount', 'pushcount' union (
@@ -16733,6 +16743,48 @@ SELECT *
 into outfile 'C:/proc/r/forum/_forum_alliance.csv'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._forum_alliance);
+
+SELECT 'd', 'post', 'reply','prr' union (
+SELECT *
+into outfile 'C:/proc/r/forum/_forum_prr.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_prr);
+
+
+
+SELECT gametype, count(subjectid) as c 
+FROM plsport_playsport._forum
+group by gametype;
+
+create table plsport_playsport._forum1 engine = myisam
+SELECT subjectid, pushcount 
+FROM plsport_playsport._forum;
+
+create table plsport_playsport._forum_push_percentile engine = myisam
+select subjectid, pushcount, round((cnt-rank+1)/cnt,2) as pushcount_percentile
+from (SELECT subjectid, pushcount, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._forum1, (SELECT @curRank := 0) r
+      order by pushcount desc) as dt,
+     (select count(distinct subjectid) as cnt from plsport_playsport._forum1) as ct;
+
+SELECT pushcount_percentile, max(pushcount) 
+FROM plsport_playsport._forum_push_percentile
+group by pushcount_percentile;
+
+create table plsport_playsport._forum_push engine = myisam
+SELECT d, count(subjectid) as good_push 
+FROM plsport_playsport._forum
+where pushcount>37
+group by d;
+
+SELECT 'd', 'good_push' union (
+SELECT *
+into outfile 'C:/proc/r/forum/_forum_push.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_push);
+
+
+
 
 
 # 每個上架的預測, 總共收益多少金額
@@ -16790,6 +16842,296 @@ FROM plsport_playsport._seller_detail;
         into outfile 'C:/proc/r/forum/_sale_all_by_allianceid.csv'
         fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
         FROM plsport_playsport._sale_all_by_allianceid);
+
+
+# part2. 計算使用者看那些特定的文章
+
+create table actionlog._action_201401_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201401 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201402_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201402 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201403_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201403 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201404_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201404 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201405_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201405 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201406_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201406 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201407_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201407 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201408_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201408 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201409_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201409 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201410_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201410 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201411_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201411 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201412_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201412 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201501_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201501 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201502_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201502 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201503_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201503 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201504_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201504 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201505_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201505 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201506_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201506 where uri like '%/forumdetail.php%' and userid <> '';
+
+create table actionlog._action_fs_201401 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201401_fd) as a;
+create table actionlog._action_fs_201402 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201402_fd) as a;
+create table actionlog._action_fs_201403 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201403_fd) as a;
+create table actionlog._action_fs_201404 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201404_fd) as a;
+create table actionlog._action_fs_201405 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201405_fd) as a;
+create table actionlog._action_fs_201406 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201406_fd) as a;
+create table actionlog._action_fs_201407 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201407_fd) as a;
+create table actionlog._action_fs_201408 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201408_fd) as a;
+create table actionlog._action_fs_201409 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201409_fd) as a;
+create table actionlog._action_fs_201410 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201410_fd) as a;
+create table actionlog._action_fs_201411 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201411_fd) as a;
+create table actionlog._action_fs_201412 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201412_fd) as a;
+create table actionlog._action_fs_201501 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201501_fd) as a;
+create table actionlog._action_fs_201502 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201502_fd) as a;
+create table actionlog._action_fs_201503 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201503_fd) as a;
+create table actionlog._action_fs_201504 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201504_fd) as a;
+create table actionlog._action_fs_201505 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201505_fd) as a;
+create table actionlog._action_fs_201506 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201506_fd) as a;
+
+ALTER TABLE actionlog._action_fs_201401 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201402 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201403 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201404 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201405 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201406 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201407 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201408 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201409 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201410 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201411 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201412 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201501 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201502 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201503 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201504 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201505 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._action_fs_201506 CHANGE `s` `s` CHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+create table actionlog._action_fsg_201401 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201401 group by userid, d, s;
+create table actionlog._action_fsg_201402 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201402 group by userid, d, s;
+create table actionlog._action_fsg_201403 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201403 group by userid, d, s;
+create table actionlog._action_fsg_201404 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201404 group by userid, d, s;
+create table actionlog._action_fsg_201405 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201405 group by userid, d, s;
+create table actionlog._action_fsg_201406 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201406 group by userid, d, s;
+create table actionlog._action_fsg_201407 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201407 group by userid, d, s;
+create table actionlog._action_fsg_201408 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201408 group by userid, d, s;
+create table actionlog._action_fsg_201409 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201409 group by userid, d, s;
+create table actionlog._action_fsg_201410 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201410 group by userid, d, s;
+create table actionlog._action_fsg_201411 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201411 group by userid, d, s;
+create table actionlog._action_fsg_201412 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201412 group by userid, d, s;
+create table actionlog._action_fsg_201501 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201501 group by userid, d, s;
+create table actionlog._action_fsg_201502 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201502 group by userid, d, s;
+create table actionlog._action_fsg_201503 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201503 group by userid, d, s;
+create table actionlog._action_fsg_201504 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201504 group by userid, d, s;
+create table actionlog._action_fsg_201505 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201505 group by userid, d, s;
+create table actionlog._action_fsg_201506 engine = myisam SELECT userid, d, s FROM actionlog._action_fs_201506 group by userid, d, s;
+
+        ALTER TABLE plsport_playsport._forum ADD INDEX (`subjectid`);
+        ALTER TABLE actionlog._action_fsg_201401 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201402 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201403 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201404 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201405 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201406 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201407 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201408 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201409 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201410 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201411 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201412 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201501 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201502 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201503 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201504 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201505 ADD INDEX (`s`);
+        ALTER TABLE actionlog._action_fsg_201506 ADD INDEX (`s`);
+
+create table actionlog._action_fsgs_201401 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201401 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201402 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201402 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201403 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201403 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201404 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201404 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201405 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201405 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201406 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201406 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201407 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201407 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201408 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201408 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201409 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201409 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201410 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201410 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201411 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201411 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201412 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201412 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201501 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201401 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201502 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201402 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201503 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201403 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201504 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201404 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201505 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201405 a left join plsport_playsport._forum b on a.s = b.subjectid;
+create table actionlog._action_fsgs_201506 engine = myisam SELECT a.userid, a.d, a.s, b.alli, b.gametype FROM actionlog._action_fsg_201406 a left join plsport_playsport._forum b on a.s = b.subjectid;
+
+        ALTER TABLE actionlog._action_fsgs_201401 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201402 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201403 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201404 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201405 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201406 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201407 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201408 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201409 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201410 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201411 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201412 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201501 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201502 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201503 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201504 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201505 ADD INDEX (`userid`,`alli`,`gametype`);
+        ALTER TABLE actionlog._action_fsgs_201506 ADD INDEX (`userid`,`alli`,`gametype`);
+
+create table actionlog._action_fsgsf_201401 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201401 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201402 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201402 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201403 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201403 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201404 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201404 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201405 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201405 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201406 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201406 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201407 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201407 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201408 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201408 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201409 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201409 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201410 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201410 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201411 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201411 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201412 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201412 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201501 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201501 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201502 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201502 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201503 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201503 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201504 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201504 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201505 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201505 where alli is not null group by userid, d, alli, gametype;
+create table actionlog._action_fsgsf_201506 engine = myisam SELECT userid, d, alli, gametype, count(s) as view_count FROM actionlog._action_fsgs_201506 where alli is not null group by userid, d, alli, gametype;
+
+        create table plsport_playsport._spent_list engine = myisam
+        SELECT userid, sum(amount) as spent 
+        FROM plsport_playsport.pcash_log
+        where payed = 1 and type = 1
+        and year(date) > 2013
+        group by userid;
+
+        ALTER TABLE plsport_playsport._spent_list ADD INDEX (`userid`);
+        ALTER TABLE actionlog._action_fsgsf_201401 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201402 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201403 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201404 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201405 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201406 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201407 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201408 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201409 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201410 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201411 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201412 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201501 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201502 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201503 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201504 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201505 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._action_fsgsf_201506 convert to character set utf8 collate utf8_general_ci;
+        
+
+create table actionlog._action_fsgsfs engine = myisam SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201401 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201402 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201403 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201404 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201405 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201406 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201407 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201408 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201409 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201410 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201411 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201412 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201501 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201502 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201503 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201504 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201505 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+insert ignore into actionlog._action_fsgsfs SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
+FROM actionlog._action_fsgsf_201506 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
+
+create table actionlog._action_fsgsfs_1 engine = myisam
+SELECT userid, alli, gametype, sum(view_count) as view_count 
+FROM actionlog._action_fsgsfs
+group by userid, alli, gametype;
+
+create table actionlog._action_fsgsfs_1_by_all engine = myisam
+SELECT userid, sum(view_count) as view_count 
+FROM actionlog._action_fsgsfs_1
+group by userid;
+
+create table actionlog._action_fsgsfs_1_by_gametype engine = myisam
+SELECT userid, gametype, sum(view_count) as view_count 
+FROM actionlog._action_fsgsfs_1
+group by userid, gametype;
+
+create table actionlog._action_fsgsfs_1_by_alliance engine = myisam
+SELECT userid, alli, sum(view_count) as view_count 
+FROM actionlog._action_fsgsfs_1
+group by userid, alli;
+
+
+SELECT 'userid', 'spent'union (
+SELECT *
+into outfile 'C:/proc/r/forum/_spent_list.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._spent_list);
+
+SELECT 'userid', 'count_all' union (
+SELECT *
+into outfile 'C:/proc/r/forum/_action_fsgsfs_1_by_all.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._action_fsgsfs_1_by_all);
+
+SELECT 'userid', 'gametype', 'count_gametype' union (
+SELECT *
+into outfile 'C:/proc/r/forum/_action_fsgsfs_1_by_gametype.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._action_fsgsfs_1_by_gametype);
+
+SELECT 'userid', 'alliance', 'count_alliance' union (
+SELECT *
+into outfile 'C:/proc/r/forum/_action_fsgsfs_1_by_alliance.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._action_fsgsfs_1_by_alliance);
+
+
+
+
+
+
 
 
 
