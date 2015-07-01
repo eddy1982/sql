@@ -16817,20 +16817,19 @@ limit 0,10;
         # 
         #     任務狀態: 重新開啟
 
-create table plsport_playsport._predict_seller_list_with_allianceidname_rank_top_one engine = myisam
-select a.sellerid, a.nickname, a.alliancename, a.total_sell, a.total_sell_count
-from (
-    SELECT sellerid, nickname, alliancename, sum(amount) as total_sell, count(amount) as total_sell_count 
-    FROM plsport_playsport._predict_seller_list_with_allianceidname
-    group by sellerid, alliancename) as a inner join 
-            (select b.alliancename, max(b.total_sell) as max_sell
-                from (
-                    SELECT sellerid, nickname, alliancename, sum(amount) as total_sell, count(amount) as total_sell_count 
-                    FROM plsport_playsport._predict_seller_list_with_allianceidname
-                    group by sellerid, alliancename) as b
-                group by b.alliancename) as c on a.alliancename = c.alliancename and a.total_sell = c.max_sell
-order by a.total_sell desc;
-
+        create table plsport_playsport._predict_seller_list_with_allianceidname_rank_top_one engine = myisam
+        select a.sellerid, a.nickname, a.alliancename, a.total_sell, a.total_sell_count
+        from (
+            SELECT sellerid, nickname, alliancename, sum(amount) as total_sell, count(amount) as total_sell_count 
+            FROM plsport_playsport._predict_seller_list_with_allianceidname
+            group by sellerid, alliancename) as a inner join 
+                    (select b.alliancename, max(b.total_sell) as max_sell
+                        from (
+                            SELECT sellerid, nickname, alliancename, sum(amount) as total_sell, count(amount) as total_sell_count 
+                            FROM plsport_playsport._predict_seller_list_with_allianceidname
+                            group by sellerid, alliancename) as b
+                        group by b.alliancename) as c on a.alliancename = c.alliancename and a.total_sell = c.max_sell
+        order by a.total_sell desc;
 
 
 # =================================================================================================
@@ -17302,21 +17301,108 @@ FROM actionlog._action_fsgsfs_1_by_alliance);
 
 
 
+# =================================================================================================
+# 任務: [201506-A-2] 討論區文章搜尋 - 電訪名單 [新建] (阿達) 2015-07-01
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4934&projectId=11
+# 說明
+# 提供電訪名單
+# 負責人：Eddy
+# 時間：
+#
+# 1. 電訪名單
+# 條件：
+# 問卷第一題回答需要或非常需要
+# 近一個月討論區pv前50%
+# 欄位：
+# 帳號、暱稱、討論區pv及全站佔比、手機/電腦使用比例、問卷第一題答案
+# http://www.playsport.cc/questionnaire.php?question=201506031444432350&action=statistics
+# =================================================================================================
+
+create table actionlog._forum_201506 engine = myisam
+SELECT userid, uri, time, (case when (platform_type=2) then 'mobile' else 'pc' end) as p
+FROM actionlog.action_201506 where userid <> '' and uri like '%/forum%';
+create table actionlog._forum_201507 engine = myisam
+SELECT userid, uri, time, (case when (platform_type=2) then 'mobile' else 'pc' end) as p
+FROM actionlog.action_201507 where userid <> '' and uri like '%/forum%';
+
+create table actionlog._forum engine = myisam select * from actionlog._forum_201506;
+insert ignore into actionlog._forum select * from actionlog._forum_201507;
+
+create table actionlog._forum_1 engine = myisam
+SELECT * 
+FROM actionlog._forum
+where time between subdate(now(),31) and now();
+
+create table actionlog._forum_2 engine = myisam
+SELECT userid, p, count(p) as pv
+FROM actionlog._forum_1
+group by userid, p;
 
 
+create table actionlog._forum_3 engine = myisam
+select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+from (
+    SELECT userid, (case when (p='pc') then pv else 0 end) as pc,
+                   (case when (p='mobile') then pv else 0 end) as mobile
+    FROM actionlog._forum_2) as a
+group by a.userid;
+
+create table actionlog._forum_4 engine = myisam
+SELECT userid, (pc+mobile) as pv, round((pc/(pc+mobile)),3) as pc_p, round((mobile/(pc+mobile)),3) as mobile_p
+FROM actionlog._forum_3;
+
+create table actionlog._forum_5 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, pc_p, mobile_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, pc_p, mobile_p
+      FROM actionlog._forum_4, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._forum_4) as ct;
+
+        ALTER TABLE actionlog._forum_5 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._forum_6 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.pc_p, a.mobile_p
+FROM actionlog._forum_5 a left join plsport_playsport.member b on a.userid = b.userid;
+
+        create table plsport_playsport._qu engine = myisam
+        SELECT userid,  `1433313772` as q
+        FROM plsport_playsport.questionnaire_201506031444432350_answer;
+
+        # 最近一次的登入時間
+        CREATE TABLE plsport_playsport._last_login_time engine = myisam
+        SELECT userid, max(signin_time) as last_login
+        FROM plsport_playsport.member_signin_log_archive
+        GROUP BY userid;
+        
+        ALTER TABLE plsport_playsport._last_login_time convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._forum_7 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pc_p, a.mobile_p, b.q
+FROM actionlog._forum_6 a left join plsport_playsport._qu b on a.userid = b.userid
+where b.q in (1,2)
+order by pv desc;
+
+        ALTER TABLE actionlog._forum_7 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._forum_7 ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._last_login_time ADD INDEX (`userid`);
+        
+create table actionlog._forum_8 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pc_p, a.mobile_p, a.q, date(b.last_login) as last_login
+from actionlog._forum_7 a left join plsport_playsport._last_login_time b on a.userid = b.userid
+where a.pv_percentile>0.49;
+
+        ALTER TABLE actionlog._forum_8 CHANGE `q` `q` VARCHAR(20) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL;
+        update actionlog._forum_8 set q = '非常需要' where q = '1';
+        update actionlog._forum_8 set q = '需要'     where q = '2';
+
+# 帳號、暱稱、討論區pv及全站佔比、手機/電腦使用比例、問卷第一題答案
 
 
-
-
-
-
-
-
-
-
-
-
-
+SELECT 'userid', '暱稱', '討論區pv', '全站佔比','電腦使用比例','手機使用比例','問券答案','最後一次登入' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_8.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forum_8);
 
 
 
@@ -17543,4 +17629,47 @@ from (
    SELECT a.userid, a.amount, a.c_date, a.c_month, a.c_year, a.ym, 
           b.id, b.sellerid, b.sale_allianceid, b.sale_date, b.sale_price, b.killtype, b.killmedal
    FROM revenue._pcash_log a left join revenue._predict_seller_with_medal b on a.id_this_type = b.id) as c
-left join revenue._alliance as d on c.sale_allianceid = d.allianceid
+left join revenue._alliance as d on c.sale_allianceid = d.allianceid;
+
+
+
+
+
+
+# 新增table
+DROP TABLE IF EXISTS `actionlog`.`app_action_log`;
+
+CREATE TABLE `actionlog`.`app_action_log` 
+( `abtestGroup` VARCHAR(10) NOT NULL , 
+  `remark`      VARCHAR(60) NOT NULL , 
+  `deviceModel` VARCHAR(60) NOT NULL , 
+  `ip`          VARCHAR(20) NOT NULL , 
+  `app`         VARCHAR(10) NOT NULL , 
+  `userid`      VARCHAR(30) NOT NULL , 
+  `appVersion`  VARCHAR(15) NOT NULL , 
+  `datetime`    VARCHAR(30) NOT NULL , 
+  `deviceid`    VARCHAR(30) NOT NULL , 
+  `deviceOsVersion` VARCHAR(30) NOT NULL , 
+  `action`      VARCHAR(30) NOT NULL , 
+  `os`          VARCHAR(10) NOT NULL
+) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
+
+TRUNCATE TABLE `actionlog`.`app_action_log`;
+
+LOAD DATA LOCAL INFILE 'D:/mongo/data/app_action_log_201506.csv'
+INTO TABLE `actionlog`.`app_action_log`
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
+
+create table actionlog.app_action_log1 engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, userid, appVersion, 
+       (STR_TO_DATE(concat(substr(datetime,1,10),' ',substr(datetime,12,8)), '%Y-%m-%d %h:%i:%s') + interval 8 hour) as datetime, 
+       deviceid, deviceOsVersion, action, os 
+FROM actionlog.app_action_log
+order by datetime desc;
+
+DROP TABLE IF EXISTS `actionlog`.`app_action_log`;
+RENAME TABLE `actionlog`.`app_action_log1` to `actionlog`.`app_action_log`;
+
