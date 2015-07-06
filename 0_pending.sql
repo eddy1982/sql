@@ -16402,76 +16402,89 @@ group by a.isanalysis;
 
 
 # =================================================================================================
-# 小魔女 2015-05-29
+# 小魔女 2015-05-29 (userid: a7361416)
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4740&projectId=11
 # To Eddy：
 # 請於 6/2(二)下午二點於屏東縣屏東市廣東路171號，協助訪談重度消費者~小魔女~
 # 1. 請先研究使用者使用行為
 # 2. 訪談完請上傳錄音檔，並於兩週後交訪談報告，檔名範例 中度消費者_小球
+# hugr86  重度買牌客(台中鳥日高鐵)
 # =================================================================================================
 
-create table actionlog._user_a7361416 engine = myisam
-SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201501 where userid = 'a7361416';
-insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201502 where userid = 'a7361416';
-insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201503 where userid = 'a7361416';
-insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201504 where userid = 'a7361416';
-insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201505 where userid = 'a7361416';
-insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201412 where userid = 'a7361416';
-insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201411 where userid = 'a7361416';
-insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201410 where userid = 'a7361416';
-insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201409 where userid = 'a7361416';
-insert ignore into actionlog._user_a7361416 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201408 where userid = 'a7361416';
+create table actionlog._user_hugr86 engine = myisam SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201501 where userid = 'hugr86';
+insert ignore into actionlog._user_hugr86 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201502 where userid = 'hugr86';
+insert ignore into actionlog._user_hugr86 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201503 where userid = 'hugr86';
+insert ignore into actionlog._user_hugr86 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201504 where userid = 'hugr86';
+insert ignore into actionlog._user_hugr86 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201505 where userid = 'hugr86';
+insert ignore into actionlog._user_hugr86 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201506 where userid = 'hugr86';
+insert ignore into actionlog._user_hugr86 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201507 where userid = 'hugr86';
+
+insert ignore into actionlog._user_hugr86 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201412 where userid = 'a7361416';
+insert ignore into actionlog._user_hugr86 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201411 where userid = 'a7361416';
+insert ignore into actionlog._user_hugr86 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201410 where userid = 'a7361416';
+insert ignore into actionlog._user_hugr86 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201409 where userid = 'a7361416';
+insert ignore into actionlog._user_hugr86 SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201408 where userid = 'a7361416';
 
 SELECT user_agent, count(uri)
-FROM actionlog._user_a7361416
+FROM actionlog._user_hugr86
 group by user_agent;
 
 SELECT platform_type, count(uri)
-FROM actionlog._user_a7361416
+FROM actionlog._user_hugr86
 group by platform_type;
 
 # 1	28165
 # 2	10789
 # 3	3289
 
-create table actionlog._user_a7361416_1 engine = myisam
+create table actionlog._user_hugr86_1 engine = myisam
 SELECT userid, uri, time, platform_type, date(time) as d, substr(time,12,2) as h
-FROM actionlog._user_a7361416
+FROM actionlog._user_hugr86
 order by time desc;
 
 SELECT d, count(uri) as c 
-FROM actionlog._user_a7361416_1
+FROM actionlog._user_hugr86_1
 group by d;
 
 SELECT platform_type, h, count(uri) as c
-FROM actionlog._user_a7361416_1
-group by platform_type, h;
+FROM actionlog._user_hugr86_1
+group by platform_type, h
+order by h ;
 
-create table actionlog._user_a7361416_1_payway engine = myisam
+create table actionlog._user_hugr86_1_payway engine = myisam
 SELECT userid, name, createon, price, payway, platform_type, substr(createon,1,7) as m
 FROM plsport_playsport.order_data
-where userid = 'a7361416'
+where userid = 'hugr86'
 and sellconfirm = 1;
 
-create table actionlog._user_a7361416_1_action engine = myisam
+create table actionlog._user_hugr86_1_action engine = myisam
 select b.userid, b.uri, b.time, b.platform_type, b.page, (case when (locate('&',b.act)>0) then substr(b.act,1,locate('&',b.act)-1) else '' end) as act
 from (
     select a.userid, a.uri, a.time, a.platform_type, a.page, (case when (locate('action=', uri)>0) then substr(uri, locate('action=', uri)+7,length(uri)) else '' end) as act
     from (
         SELECT userid, uri, time, platform_type, substr(uri,2,locate('.php',uri)-2) as page
-        FROM actionlog._user_a7361416_1) as a) as b;
+        FROM actionlog._user_hugr86_1) as a) as b;
 
-create table actionlog._user_a7361416_1_action_1 engine = myisam
+create table actionlog._user_hugr86_1_action_1 engine = myisam
 select b.userid, b.uri, b.time, b.platform_type, (case when (b.page='') then 'index' else b.page end) as page, b.act, b.dur
 from (
     select a.userid, a.uri, a.time, a.platform_type, a.page, a.act, (case when (locate('&',a.dur)>0) then substr(a.dur,1,(locate('&',a.dur)-1)) else '' end) as dur
     from (
         SELECT userid, uri, time, platform_type, page, act, (case when (locate('during=',uri))>0 then substr(uri,(locate('during=',uri)+7), length(uri)) else '' end) as dur
-        FROM actionlog._user_a7361416_1_action) as a) as b;
+        FROM actionlog._user_hugr86_1_action) as a) as b;
 
-SELECT page, act, dur, count(uri) as c 
-FROM actionlog._user_a7361416_1_action_1
-group by page, act, dur;
+select *
+from (
+    SELECT page, act, dur, count(uri) as c 
+    FROM actionlog._user_hugr86_1_action_1
+    group by page, act, dur) as a
+order by a.c desc;
+
+
+
+
+
+
 
 
 
@@ -16481,10 +16494,13 @@ group by page, act, dur;
 # 統計放置站外廣告是否影響使用者行為
 # 
 # 6/4 A/B testing報告 
-# 內容
-# 1. A/B testing名單 (30%)
-# 2. 統計A/B testing結果
+#    內容
+#    1. A/B testing名單 (30%)
+#    2. 統計A/B testing結果
 # 統計看文章篇數、文章內頁pv、站內購買業績是否有差異
+# 2015-06-01 17:12
+#    決議A/B testing再做一個月，請於 7/3完成報告
+#    請再多檢驗推數、回覆數是否有影響
 # =================================================================================================
 
 create table actionlog._forum engine = myisam
@@ -16492,13 +16508,21 @@ SELECT userid, uri, time, platform_type
 FROM actionlog.action_201504
 where userid <> '' and time between '2015-04-29 00:00:00' and now()
 and uri like '%/forum%';
-
 insert ignore into actionlog._forum
 SELECT userid, uri, time, platform_type 
 FROM actionlog.action_201505
 where userid <> '' and time between '2015-04-29 00:00:00' and now()
 and uri like '%/forum%';
-
+insert ignore into actionlog._forum
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201506
+where userid <> '' and time between '2015-04-29 00:00:00' and now()
+and uri like '%/forum%';
+insert ignore into actionlog._forum
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201507
+where userid <> '' and time between '2015-04-29 00:00:00' and now()
+and uri like '%/forum%';
 
 create table actionlog._forum_1 engine = myisam
 SELECT userid, uri, time, platform_type, (case when (locate('subjectid',uri)>0) then substr(uri,locate('subjectid',uri)+10,length(uri)) else '' end) as sid 
@@ -16506,23 +16530,48 @@ FROM actionlog._forum;
 
 create table actionlog._forum_2 engine = myisam
 SELECT userid, uri, time, platform_type, (case when (locate('&',sid)>0) then substr(sid,1,locate('&',sid)-1) else '' end) as sid
-FROM actionlog._forum_1;
+FROM actionlog._forum_1
+where time between '2015-06-01 00:00:00' and now();
 
-        ALTER TABLE actionlog._forum_2 CHANGE `sid` `sid` VARCHAR(50) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL;
-        ALTER TABLE actionlog._forum_2 convert to character set utf8 collate utf8_general_ci;
-        ALTER TABLE actionlog._forum_2 ADD INDEX (`userid`,`sid`,`platform_type`); # it takes arount 1276 secs
+        ALTER TABLE actionlog._forum_2 CHANGE `sid` `sid` VARCHAR(50) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL; # 115 secs
+        ALTER TABLE actionlog._forum_2 convert to character set utf8 collate utf8_general_ci; # 119 secs
         
-create table actionlog._forum_3 engine = myisam
-SELECT userid, sid, platform_type 
-FROM actionlog._forum_2
-group by userid, sid, platform_type;
+        create table actionlog._temp1 engine = myisam SELECT * FROM actionlog._forum_2 limit 0, 7000000;
+        create table actionlog._temp2 engine = myisam SELECT * FROM actionlog._forum_2 limit 7000000, 7000000;
+        create table actionlog._temp3 engine = myisam SELECT * FROM actionlog._forum_2 limit 14000000, 7000000;
+        
+#         create table actionlog._temp4 engine = myisam SELECT * FROM actionlog._forum_2 limit 24000000, 8000000;
+#         create table actionlog._temp5 engine = myisam SELECT * FROM actionlog._forum_2 limit 32000000, 8000000;
+       
+        create table actionlog._temp1_group engine = myisam SELECT userid, sid, platform_type FROM actionlog._temp1 group by userid, sid, platform_type;
+        create table actionlog._temp2_group engine = myisam SELECT userid, sid, platform_type FROM actionlog._temp2 group by userid, sid, platform_type;     
+        create table actionlog._temp3_group engine = myisam SELECT userid, sid, platform_type FROM actionlog._temp3 group by userid, sid, platform_type;
+        
+#         create table actionlog._temp4_group engine = myisam SELECT userid, sid, platform_type FROM actionlog._temp4 group by userid, sid, platform_type;   
+#         create table actionlog._temp5_group engine = myisam SELECT userid, sid, platform_type FROM actionlog._temp5 group by userid, sid, platform_type;    
+        
+        create table actionlog._temp0_group engine = myisam select * from actionlog._temp1_group;
+        insert ignore into actionlog._temp0_group select * from actionlog._temp2_group;
+        insert ignore into actionlog._temp0_group select * from actionlog._temp3_group;
+        
+#         insert ignore into actionlog._temp0_group select * from actionlog._temp4_group;
+#         insert ignore into actionlog._temp0_group select * from actionlog._temp5_group;
+        
+        # ALTER TABLE actionlog._forum_2 ADD INDEX (`userid`);
+        # ALTER TABLE actionlog._forum_2 ADD INDEX (`sid`,`platform_type`);
+        # ALTER TABLE actionlog._forum_2 ADD INDEX (`platform_type`);
+        # it takes arount 1276 secs
 
+create table actionlog._forum_3 engine = myisam SELECT userid, sid, platform_type FROM actionlog._temp0_group group by userid, sid, platform_type; 
+
+# 有分裝置類型
 create table actionlog._forum_4 engine = myisam
 SELECT userid, platform_type, count(sid) as read_count 
 FROM actionlog._forum_3
 where sid <> ''
 group by userid, platform_type;
 
+# 沒有分裝置類型
 create table actionlog._forum_4_1 engine = myisam
 SELECT userid, count(sid) as read_count 
 FROM actionlog._forum_3
@@ -16589,7 +16638,7 @@ create table plsport_playsport._pcash_log engine = myisam
 SELECT userid, sum(amount) as spent 
 FROM plsport_playsport.pcash_log
 where payed = 1 and type = 1
-and date between '2015-04-29 00:00:00' and now()
+and date between '2015-06-01 00:00:00' and now()
 group by userid;
 
 create table actionlog._forum_4_with_read_count_all_devices_and_spent engine = myisam
@@ -16597,11 +16646,44 @@ SELECT a.abtest, a.userid, a.read_count, b.spent
 FROM actionlog._forum_4_with_read_count_all_devices a left join plsport_playsport._pcash_log b on a.userid = b.userid;
 
 
-SELECT 'abtest', 'userid', 'read_count', 'spent' union (
+# 請再多檢驗推數、回覆數是否有影響
+
+
+create table plsport_playsport._forumcontent engine = myisam
+select a.userid, count(a.content) as reply_count
+from (
+    SELECT userid, content 
+    FROM plsport_playsport.forumcontent
+    where date(postdate) between '2015-04-29' and '2015-06-30') as a
+group by a.userid;
+
+create table plsport_playsport._forumcontent_reply_count engine = myisam
+SELECT (case when (((b.id%20)+1)<7) then 'a' else 'b' end) as abtest, a.userid, a.reply_count
+FROM plsport_playsport._forumcontent a left join plsport_playsport.member b on a.userid = b.userid;
+
+SELECT 'abtest', 'userid', 'rely_count' union (
 SELECT *
-into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_4_with_read_count_all_devices_and_spent.txt'
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forumcontent_reply_count.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM actionlog._forum_4_with_read_count_all_devices_and_spent);
+FROM plsport_playsport._forumcontent_reply_count);
+
+
+create table plsport_playsport._like engine = myisam
+SELECT userid, count(subject_id) as like_count
+FROM plsport_playsport.forum_like
+where date(create_date) between '2015-04-29' and '2015-06-30'
+group by userid;
+
+create table plsport_playsport._like_count engine = myisam
+SELECT (case when (((b.id%20)+1)<7) then 'a' else 'b' end) as abtest, a.userid, a.like_count
+FROM plsport_playsport._like a left join plsport_playsport.member b on a.userid = b.userid;
+
+SELECT 'abtest', 'userid', 'like_count' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_like_count.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._like_count);
+
 
 
 
@@ -16724,6 +16806,178 @@ FROM plsport_playsport._qu_2_2;
         SELECT g, count(uri) as c 
         FROM actionlog._livescore_lsc_1
         group by g;
+
+
+# 以下是abtesting分析的部分
+
+
+# 先算廣告banner點擊的部分
+        create table actionlog._livescoreAdvertising engine = myisam 
+        SELECT userid, uri, time, platform_type 
+        FROM actionlog.action_201506
+        where time between '2015-06-11 10:30:00' and now()
+        and uri like '%customTraceCode=livescoreAdvertising%';
+        
+        insert ignore into actionlog._livescoreAdvertising 
+        SELECT userid, uri, time, platform_type 
+        FROM actionlog.action_201507
+        where time between '2015-06-11 10:30:00' and now()
+        and uri like '%customTraceCode=livescoreAdvertising%';
+
+        ALTER TABLE actionlog._livescoreAdvertising convert to character set utf8 collate utf8_general_ci;
+
+        create table actionlog._livescoreAdvertising_1 engine = myisam 
+        SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as g, a.userid, a.uri, a.time, a.platform_type, substr(uri,length(uri),1) as abtest
+        FROM actionlog._livescoreadvertising a left join plsport_playsport.member b on a.userid = b.userid
+        where a.userid <> '';
+
+# 再算宣傳單元的部分
+        create table actionlog._livescore_LSC engine = myisam 
+        SELECT userid, uri, time, platform_type 
+        FROM actionlog.action_201506
+        where time between '2015-06-11 10:30:00' and now()
+        and uri like '%rp=LSC%';
+
+        insert ignore into actionlog._livescore_LSC  
+        SELECT userid, uri, time, platform_type 
+        FROM actionlog.action_201507
+        where time between '2015-06-11 10:30:00' and now()
+        and uri like '%rp=LSC%';
+
+        ALTER TABLE actionlog._livescore_LSC convert to character set utf8 collate utf8_general_ci;
+
+        create table actionlog._livescore_LSC_1 engine = myisam
+        SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as g, a.userid, a.uri, a.time, a.platform_type 
+        FROM actionlog._livescore_lsc a left join plsport_playsport.member b on a.userid = b.userid
+        where a.userid <> '';
+
+
+# 每100人次的點擊率大於即時比分benner廣告的點擊率 
+        create table actionlog._livescore_all_traffic engine = myisam 
+        SELECT userid, uri, time, platform_type 
+        FROM actionlog.action_201506
+        where time between '2015-06-11 10:30:00' and now()
+        and uri like '%/livescore.php%' and userid <> '';
+        
+        insert ignore into actionlog._livescore_all_traffic 
+        SELECT userid, uri, time, platform_type 
+        FROM actionlog.action_201507
+        where time between '2015-06-11 10:30:00' and now()
+        and uri like '%/livescore.php%' and userid <> '';
+
+        ALTER TABLE actionlog._livescore_all_traffic convert to character set utf8 collate utf8_general_ci;
+
+        create table actionlog._livescore_all_traffic_1 engine = myisam
+        SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as g, a.userid, a.uri, a.time, a.platform_type 
+        FROM actionlog._livescore_all_traffic a left join plsport_playsport.member b on a.userid = b.userid
+        where a.userid <> '';
+
+
+# (1)實驗組中點banner的人數-2141
+        create table actionlog._livescoreadvertising_2 engine = myisam
+        SELECT userid, count(uri) as c 
+        FROM actionlog._livescoreadvertising_1
+        where g = 'a' and abtest = 'a'
+        group by userid;
+
+        select a.platform_type, count(a.userid) as c
+        from (
+            SELECT userid, platform_type, count(uri) as c 
+            FROM actionlog._livescoreadvertising_1
+            where g = 'a' and abtest = 'a'
+            group by userid, platform_type) as a
+        group by a.platform_type;
+
+# (2)實驗組中點宣傳單元的人數-2459
+        create table actionlog._livescore_lsc_2 engine = myisam
+        SELECT userid, count(uri) as c 
+        FROM actionlog._livescore_lsc_1
+        where g = 'a'
+        group by userid;
+        
+        select a.platform_type, count(a.userid) as c
+        from (
+            SELECT userid, platform_type, count(uri) as c 
+            FROM actionlog._livescore_lsc_1
+            where g = 'a'
+            group by userid, platform_type) as a
+        group by a.platform_type;
+
+# (3)實驗組中進即時比分的人數-6498
+        create table actionlog._livescore_all_traffic_2 engine = myisam
+        SELECT userid, count(uri) as c 
+        FROM actionlog._livescore_all_traffic_1
+        where g = 'a'
+        group by userid;
+
+        select a.platform_type, count(a.userid) as c
+        from (
+            SELECT userid, platform_type, count(uri) as c 
+            FROM actionlog._livescore_all_traffic_1
+            where g = 'a'
+            group by userid, platform_type) as a
+        group by a.platform_type;
+
+
+# 給a/b testing用 即時比PV的abtesting
+create table actionlog._livescore_all_traffic_abtest engine = myisam
+SELECT g as abtest, userid, count(uri) as pv 
+FROM actionlog._livescore_all_traffic_1
+group by g, userid;
+
+create table actionlog._livescore_all_traffic_abtest_devices engine = myisam
+SELECT g as abtest, userid, platform_type, count(uri) as pv 
+FROM actionlog._livescore_all_traffic_1
+group by g, userid, platform_type;
+
+SELECT 'abtest', 'userid', 'pv' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_livescore_all_traffic_abtest.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._livescore_all_traffic_abtest);
+
+SELECT 'abtest', 'userid', 'pv' union (
+SELECT abtest, userid, pv
+into outfile 'C:/Users/1-7_ASUS/Desktop/_livescore_all_traffic_abtest_1.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._livescore_all_traffic_abtest_devices
+where platform_type = 1);
+
+SELECT 'abtest', 'userid', 'pv' union (
+SELECT abtest, userid, pv
+into outfile 'C:/Users/1-7_ASUS/Desktop/_livescore_all_traffic_abtest_2.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._livescore_all_traffic_abtest_devices
+where platform_type = 2);
+
+SELECT 'abtest', 'userid', 'pv' union (
+SELECT abtest, userid, pv
+into outfile 'C:/Users/1-7_ASUS/Desktop/_livescore_all_traffic_abtest_3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._livescore_all_traffic_abtest_devices
+where platform_type = 3);
+
+
+
+# 廣告位置點擊狀況
+create table actionlog._livescore_lsc_1_all_position_click engine = myisam
+SELECT g, userid, substr(uri, locate('&rp=',uri)+8, length(uri)) as rp, time, platform_type 
+FROM actionlog._livescore_lsc_1
+where g = 'a';
+
+SELECT rp, substr(rp,1,1) as m, substr(rp,2,1) as n, count(userid) as c 
+FROM actionlog._livescore_lsc_1_all_position_click
+group by rp;
+
+SELECT rp, substr(rp,1,1) as m, substr(rp,2,1) as n, platform_type, count(userid) as c 
+FROM actionlog._livescore_lsc_1_all_position_click
+group by rp, platform_type;
+
+
+# 購買預測金額
+SELECT * FROM plsport_playsport._predict_buyer_with_cons
+where substr(position,1,1) = 'L'
+order by id desc;
 
 
 
@@ -17338,7 +17592,6 @@ SELECT userid, p, count(p) as pv
 FROM actionlog._forum_1
 group by userid, p;
 
-
 create table actionlog._forum_3 engine = myisam
 select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
 from (
@@ -17403,6 +17656,28 @@ SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_8.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._forum_8);
+
+
+
+
+# =================================================================================================
+# 行銷企劃 - [201505-A-2] 消費者訪談 - 訪談 [進行中] (阿達) 2015-07-02
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4740&projectId=11
+# 任務頁面 | 專案信息
+# To Eddy：
+# 
+# 請於 7/3(五)下午二點半於台中高鐵站協助訪談極重度消費者hugr
+#  
+# 1. 請先研究使用者使用行為
+# 2. 訪談完請上傳錄音檔，並於兩週後交訪談報告，檔名範例 中度消費者_小球
+# =================================================================================================
+
+
+
+
+
+
+
 
 
 
