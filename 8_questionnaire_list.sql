@@ -289,13 +289,13 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2015-05-01' and '2015-05-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2015-06-01' and '2015-06-30') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
 
 
-ALTER TABLE _signin_list ADD INDEX (`userid`); 
-ALTER TABLE _existed_list ADD INDEX (`userid`);
-ALTER TABLE _fill_question_in_4_month ADD INDEX (`userid`);
+        ALTER TABLE _signin_list ADD INDEX (`userid`); 
+        ALTER TABLE _existed_list ADD INDEX (`userid`);
+        ALTER TABLE _fill_question_in_4_month ADD INDEX (`userid`);
 /*--------------------------------------------
   排除1: 上月份的名單, 但排除掉之前有做過問卷的人
 ---------------------------------------------*/
@@ -346,6 +346,7 @@ delete from questionnaire._list_full where userid = 'monkey';
 delete from questionnaire._list_full where userid = 'chinginge';
 delete from questionnaire._list_full where userid = 'pauleanr';
 delete from questionnaire._list_full where userid = 'yenhsun1982';
+delete from questionnaire._list_full where userid = 'n12232001';
 
 create table questionnaire._list_limit_3000 engine = myisam
 SELECT * FROM questionnaire._list_full
@@ -354,7 +355,7 @@ order by rand()    # 隨機抽出3000名受測者
 limit 0, 3000;
 
 # 再把工友放進去
-insert into questionnaire._list_limit_3000 values ('monkey'),('chinginge'),('pauleanr'),('yenhsun1982');
+insert into questionnaire._list_limit_3000 values ('monkey'),('chinginge'),('pauleanr'),('yenhsun1982'),('n12232001');
 
     #重要, 第一次執行要注意工友是否有2筆????
     # 輸出到桌面
