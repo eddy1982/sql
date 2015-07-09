@@ -13595,8 +13595,8 @@ group by t, p;
 # b 版:  下面pushit_bottom_low_b
 # 
 
+#
 # 先匯入event
-
 create table plsport_playsport._events engine = myisam
 SELECT * FROM plsport_playsport.events
 where name like '%pushit_bottom%'
@@ -16979,6 +16979,14 @@ SELECT * FROM plsport_playsport._predict_buyer_with_cons
 where substr(position,1,1) = 'L'
 order by id desc;
 
+
+select a.d, sum(a.buy_price) as price
+from (
+    SELECT date(buy_date) as d, buy_price 
+    FROM plsport_playsport._predict_buyer_with_cons
+    where substr(position,1,1) = 'L'
+    order by id desc) as a
+group by a.d;
 
 
 # =================================================================================================
