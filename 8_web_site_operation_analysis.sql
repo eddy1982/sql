@@ -401,3 +401,47 @@ group by ym, alliancename, sale_price, killtype, killmedal;
          fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
          FROM revenue._pcash_log_with_detailed_info_ok); 
 
+
+# -------------------------------------------------
+# Updated: 2015-07-07 新增消費金額級距
+# -------------------------------------------------
+
+create table plsport_playsport._spent_percentile engine = myisam
+select a.ym, a.userid, sum(a.amount) as spent
+from (
+    SELECT substr(date,1,7) as ym, userid, amount 
+    FROM plsport_playsport.pcash_log
+    where payed = 1 and type = 1
+    and year(date) > 2012) as a
+group by a.ym, a.userid;
+
+
+SELECT ym 
+FROM plsport_playsport._spent_percentile
+group by ym;
+
+
+
+insert ignore into plsport_playsport._spent_percentile_1
+select a.ym, a.spent_percentile, max(a.spent) as spent
+from (
+    select ym, userid, spent, round((cnt-rank+1)/cnt,2) as spent_percentile
+    from (SELECT ym, userid, spent, @curRank := @curRank + 1 AS rank
+          FROM plsport_playsport._spent_percentile, (SELECT @curRank := 0) r
+          where ym = '2015-06'
+          order by spent desc) as dt,
+         (select count(distinct userid) as cnt from plsport_playsport._spent_percentile where ym = '2015-06') as ct) as a
+where ((a.spent_percentile*100)%5) = 0
+group by spent_percentile
+order by spent_percentile desc;
+
+
+TRUNCATE TABLE _spent_percentile_1;
+create table _spent_percentile_2 engine = myisam select * from _spent_percentile_1;
+
+
+
+SELECT ym, spent_percentile, max(spent) 
+FROM plsport_playsport._spent_percentile_2015_06
+group by spent_percentile
+order by spent_percentile desc;
