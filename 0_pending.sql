@@ -3583,8 +3583,114 @@ and redeem is not null;
 
 
 
+# update: 2015-07-10
+# 補充之前3次長期流失客如果長期來看的話, 會不會有什麼差異
+
+use textcampaign;
+
+create table textcampaign._cam1 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status
+FROM textcampaign.retention_20150114_full_list_dont_delete a 
+left join (SELECT concat('0',one) as phone, stas 
+           FROM textcampaign.text_sent_status) as b on a.phone = b.phone
+where b.stas is null;
+
+create table textcampaign._cam2 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status
+FROM textcampaign.retention_20150226_full_list_dont_delete a 
+left join (SELECT concat('0',one) as phone, stas 
+           FROM textcampaign.text_sent_status_0226) as b on a.phone = b.phone
+where b.stas = '成功 ' OR b.stas is null;
+
+create table textcampaign._cam3 engine = myisam
+SELECT a.phone, a.userid, a.text_campaign, a.status, b.stas
+FROM textcampaign.retention_a_20150501_full_list_dont_delete a
+left join (SELECT phone, stas 
+           FROM textcampaign.text_sent_status_0501_a) as b on a.phone = b.phone
+where b.stas = '成功 ' OR b.stas is null;
 
 
+create table textcampaign._redeem_1 engine = myisam
+SELECT userid, sum(amount) as redeem, count(amount) as redeem_count
+FROM plsport_playsport.pcash_log
+where payed = 1 and type in (3,4)
+and date(date) between '2015-01-15' and now()
+group by userid;
+
+create table textcampaign._redeem_2 engine = myisam
+SELECT userid, sum(amount) as redeem, count(amount) as redeem_count
+FROM plsport_playsport.pcash_log
+where payed = 1 and type in (3,4)
+and date(date) between '2015-02-27' and now()
+group by userid;
+
+create table textcampaign._redeem_3 engine = myisam
+SELECT userid, sum(amount) as redeem, count(amount) as redeem_count
+FROM plsport_playsport.pcash_log
+where payed = 1 and type in (3,4)
+and date(date) between '2015-05-02' and now()
+group by userid;
+
+create table textcampaign._buy_1 engine = myisam
+SELECT userid, sum(amount) as spent, count(amount) as spent_count
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date(date) between '2015-01-15' and now()
+group by userid;
+
+create table textcampaign._buy_2 engine = myisam
+SELECT userid, sum(amount) as spent, count(amount) as spent_count
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date(date) between '2015-02-27' and now()
+group by userid;
+
+create table textcampaign._buy_3 engine = myisam
+SELECT userid, sum(amount) as spent, count(amount) as spent_count
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date(date) between '2015-05-02' and now()
+group by userid;
+
+create table textcampaign._cam1_list engine = myisam
+select c.userid, c.status, c.redeem, c.redeem_count, d.spent, d.spent_count
+from (
+    SELECT a.userid, a.status, b.redeem, b.redeem_count
+    FROM textcampaign._cam1 a left join textcampaign._redeem_1 b on a.userid = b.userid) as c
+    left join textcampaign._buy_1 d on c.userid = d.userid;
+
+create table textcampaign._cam2_list engine = myisam
+select c.userid, c.status, c.redeem, c.redeem_count, d.spent, d.spent_count
+from (
+    SELECT a.userid, a.status, b.redeem, b.redeem_count
+    FROM textcampaign._cam2 a left join textcampaign._redeem_2 b on a.userid = b.userid) as c
+    left join textcampaign._buy_2 d on c.userid = d.userid;
+    
+create table textcampaign._cam3_list engine = myisam
+select c.userid, c.status, c.redeem, c.redeem_count, d.spent, d.spent_count
+from (
+    SELECT a.userid, a.status, b.redeem, b.redeem_count
+    FROM textcampaign._cam3 a left join textcampaign._redeem_3 b on a.userid = b.userid) as c
+    left join textcampaign._buy_3 d on c.userid = d.userid;
+
+
+SELECT 'userid', 'status', 'redeem', 'redeem_count','spent','spent_count'union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_cam1_list.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM textcampaign._cam1_list);
+
+SELECT 'userid', 'status', 'redeem', 'redeem_count','spent','spent_count'union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_cam2_list.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM textcampaign._cam2_list);
+
+SELECT 'userid', 'status', 'redeem', 'redeem_count','spent','spent_count'union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_cam3_list.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM textcampaign._cam3_list);
 
 
 
@@ -7423,7 +7529,6 @@ group by lo, p;
 
 
 
-
 # 儲值頁面的記錄
 create table actionlog._temp engine = myisam
 SELECT * FROM actionlog.action_201504
@@ -7445,6 +7550,73 @@ group by from_where;
 # activity_pc	    218
 
 
+# update: 2015-07-10
+# to 柔雅:    
+# 我先押7/14(二)完成此任務, 3Q
+# 因為月初我事情忙, 如果有空檔我會提早完成它.
+# 2015-06-30 14:01
+# Eddy [行銷企劃]
+# eddy@playsport.cc
+#  TO eddy:
+# 7月份到了，要麻煩你進行最後的arpu分析，
+# 麻煩在回覆，何時可以產出報告，感謝!
+
+# 有在優惠期間儲值的人
+create table plsport_playsport._who_receive_offer engine = myisam
+SELECT userid, sum(amount) as redeem
+FROM plsport_playsport.pcash_log
+WHERE payed = 1 AND type in (3,4)
+AND date between '2015-04-01 12:00:00' AND '2015-04-02 11:59:59'
+AND amount > 998
+group by userid;
+
+# 在優惠期間儲值前後儲值的人
+create table plsport_playsport._who_dont_receive_offer engine = myisam
+SELECT userid, sum(amount) as redeem
+FROM plsport_playsport.pcash_log
+WHERE payed = 1 AND type in (3,4)
+AND date between '2015-03-21 12:00:00' AND '2015-04-10 11:59:59'
+AND amount > 998
+group by userid;
+
+create table plsport_playsport._who_dont_receive_offer_1 engine = myisam
+SELECT a.userid, a.redeem
+FROM plsport_playsport._who_dont_receive_offer a left join plsport_playsport._who_receive_offer b on a.userid = b.userid
+where b.userid is null;
+
+# 製作主要名單
+create table plsport_playsport._list_1 engine = myisam
+SELECT userid, (case when (redeem is not null) then 'received_offer' else '' end) as g 
+FROM plsport_playsport._who_receive_offer;
+insert ignore into plsport_playsport._list_1
+SELECT userid, (case when (redeem is not null) then 'not_received_offer' else '' end) as g 
+FROM plsport_playsport._who_dont_receive_offer_1;
+
+
+create table plsport_playsport._spent engine = myisam
+SELECT userid, sum(amount) as redeem, count(amount) as redeem_count
+FROM plsport_playsport.pcash_log
+WHERE payed = 1 AND type in (3,4)
+AND date between '2015-04-12 12:00:00' AND now()
+group by userid;
+
+create table plsport_playsport._list_2 engine = myisam
+SELECT a.userid, a.g, b.redeem, b.redeem_count
+FROM plsport_playsport._list_1 a left join plsport_playsport._spent b on a.userid = b.userid
+where b.redeem is not null;
+
+SELECT 'userid', 'g', 'redeem', 'redeem_count' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_list_2.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list_2);
+
+SELECT g, sum(redeem), count(userid)
+FROM plsport_playsport._list_2
+group by g;
+
+# not_received_o	4126623	501	8236.772455
+# received_offer	2636913	247	10675.76113
 
 
 
@@ -13593,14 +13765,13 @@ group by t, p;
 # 資料表event
 # a 版:  上面pushit_bottom_top_a, 下面pushit_bottom_low_a
 # b 版:  下面pushit_bottom_low_b
-# 
 
-#
+# 下面是用來檢查分組狀態的部分
 # 先匯入event
 create table plsport_playsport._events engine = myisam
 SELECT * FROM plsport_playsport.events
 where name like '%pushit_bottom%'
-and time between '2015-05-05 14:03:00' and now() 
+and time between '2015-07-07 11:26:00' and now() 
 order by id desc;
 
 create table plsport_playsport._events1 engine = myisam
@@ -13612,9 +13783,14 @@ FROM plsport_playsport._events1
 group by abtest, c;
 
 
-
-
-
+# TO EDDY 2015-07-07 11:36
+# 發文推ABtssting已於今日重新上縣
+# 主文內容也一併做修正
+# 
+# - 測試時間：7/7~8/7
+# - 設定測試組別
+# - 觀察指標：發文推數
+# - 報告時間：8/11
 
 
 
@@ -16809,8 +16985,6 @@ FROM plsport_playsport._qu_2_2;
 
 
 # 以下是abtesting分析的部分
-
-
 # 先算廣告banner點擊的部分
         create table actionlog._livescoreAdvertising engine = myisam 
         SELECT userid, uri, time, platform_type 
@@ -16902,6 +17076,32 @@ FROM plsport_playsport._qu_2_2;
             where g = 'a'
             group by userid, platform_type) as a
         group by a.platform_type;
+        
+        
+# 會後補充
+create table actionlog._livescore_lsc_1_count engine = myisam
+select a.d, a.platform_type, a.userid, count(a.uri) as c
+from (
+    SELECT userid, date(time) as d, platform_type, uri
+    FROM actionlog._livescore_lsc_1) as a
+group by a.d, a.platform_type, a.userid;
+
+        SELECT d, platform_type, count(userid) as c
+        FROM actionlog._livescore_lsc_1_count
+        group by d, platform_type;
+
+        SELECT d, platform_type, sum(c) as total_click 
+        FROM actionlog._livescore_lsc_1_count
+        group by d, platform_type;
+
+# 6/11~7/8的所有人數
+select a.platform_type, count(a.userid) as c
+from (
+    SELECT userid, platform_type 
+    FROM actionlog._livescore_lsc_1_count
+    group by userid, platform_type) as a
+group by a.platform_type;
+
 
 # (3)實驗組中進即時比分的人數-6498
         create table actionlog._livescore_all_traffic_2 engine = myisam
@@ -17714,6 +17914,19 @@ FROM actionlog._forum_8);
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 # 2015-01-29 
 # 用google map反查使用者位置, 需使用python
 
@@ -17750,30 +17963,7 @@ GROUP BY ip;
 
 
 
-# 幫社群捉分身 2015-02-15
-# 
-CREATE TABLE actionlog._cheat engine = myisam
-SELECT * FROM actionlog.action_201502
-WHERE userid in ('aaaa1234','k7777');
 
-# 1. 比對user_agent
-SELECT userid, user_agent, count(userid) as c 
-FROM actionlog._cheat
-GROUP BY  userid, user_agent;
-
-# 2. 比對時間
-SELECT a.userid, a.t, count(a.userid) as c
-FROM (
-    SELECT userid, substr(time,1,13) as t 
-    FROM actionlog._cheat) as a
-GROUP BY a.userid, a.t;
-
-# 3. 比對造訪頁面
-SELECT a.userid, a.uri, count(a.userid) as c
-FROM (
-    SELECT userid, substr(uri,1,locate('.php',uri)-1) as uri
-    FROM actionlog._cheat) as a
-GROUP BY a.userid, a.uri;
 
 
 
@@ -17955,4 +18145,109 @@ order by datetime desc;
 
 DROP TABLE IF EXISTS `actionlog`.`app_action_log`;
 RENAME TABLE `actionlog`.`app_action_log1` to `actionlog`.`app_action_log`;
+
+
+
+
+
+
+
+
+# 幫社群捉分身 2015-02-15
+# 
+CREATE TABLE actionlog._cheat engine = myisam
+SELECT * FROM actionlog.action_201502
+WHERE userid in ('aaaa1234','k7777');
+
+# 1. 比對user_agent
+SELECT userid, user_agent, count(userid) as c 
+FROM actionlog._cheat
+GROUP BY  userid, user_agent;
+
+# 2. 比對時間
+SELECT a.userid, a.t, count(a.userid) as c
+FROM (
+    SELECT userid, substr(time,1,13) as t 
+    FROM actionlog._cheat) as a
+GROUP BY a.userid, a.t;
+
+# 3. 比對造訪頁面
+SELECT a.userid, a.uri, count(a.userid) as c
+FROM (
+    SELECT userid, substr(uri,1,locate('.php',uri)-1) as uri
+    FROM actionlog._cheat) as a
+GROUP BY a.userid, a.uri;
+
+# http://redmine.playsport.cc/issues/63#change-170
+# 開始日期:	2015-07-10 黃 雅雅
+# TO eddy:
+# 麻煩協助抓看看這兩個帳號，是否為分身。
+# 
+# 覺得是分身的原因:
+# 同電腦、IP，有一次同IP前後登入狀況，預測相似，彼此都有看個人頁的紀錄，只是惹人愛較多
+# 
+# 惹人愛:q1212
+# 邱文彬:xyz0705
+# 
+# 惹人愛聯絡不到，邱文彬的說法如下:
+# :平常在家用電腦、在外面會借朋友的手機，玩國際盤不去運彩店，說身邊有一位姓吳的朋友，也是這位朋友帶他來我們網站的
+# ，但平常不會互相討論預測，只有偶爾見面時聊聊網站最近誰比較準、賣很多人這樣，對自己的操作滿清楚的，平常會看球賽觀
+# 察投手強弱，作為抓牌的依據。
+
+create table actionlog._user engine = myisam
+SELECT userid, uri, time, cookie_stamp, user_agent, platform_version FROM actionlog.action_201504 where userid in ('q1212','xyz0705');
+insert ignore into actionlog._user
+SELECT userid, uri, time, cookie_stamp, user_agent, platform_version FROM actionlog.action_201505 where userid in ('q1212','xyz0705');
+insert ignore into actionlog._user
+SELECT userid, uri, time, cookie_stamp, user_agent, platform_version FROM actionlog.action_201506 where userid in ('q1212','xyz0705');
+insert ignore into actionlog._user
+SELECT userid, uri, time, cookie_stamp, user_agent, platform_version FROM actionlog.action_201507 where userid in ('q1212','xyz0705');
+
+
+SELECT userid, user_agent, count(uri) 
+FROM actionlog._user
+group by userid, user_agent
+order by time desc;
+
+SELECT userid, user_agent, count(uri) 
+FROM actionlog._user
+where user_agent = 'Mozilla/5.0 (Linux; U; Android 4.1.2; zh-tw; HTC_709d Build/JZO54K) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30'
+group by userid, user_agent
+order by time desc;
+
+select a.userid, a.d, count(a.d)
+from (
+    SELECT userid, date(time) as d 
+    FROM actionlog._user
+    where user_agent = 'Mozilla/5.0 (Linux; U; Android 4.1.2; zh-tw; HTC_709d Build/JZO54K) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30') as a
+group by a.userid, a.d
+order by a.d;
+
+# 依時間排序
+SELECT a.userid, a.t, count(a.userid) as c
+FROM (
+    SELECT userid, substr(time,1,13) as t 
+    FROM actionlog._user) as a
+GROUP BY a.userid, a.t
+order by a.t desc;
+
+
+# 比對造訪頁面
+SELECT a.userid, a.uri, count(a.userid) as c
+FROM (
+    SELECT userid, substr(uri,1,locate('.php',uri)-1) as uri
+    FROM actionlog._user) as a
+GROUP BY a.userid, a.uri;
+
+
+
+
+
+
+
+
+
+
+
+
 
