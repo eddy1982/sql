@@ -16575,8 +16575,6 @@ group by a.isanalysis;
 
 
 
-
-
 # =================================================================================================
 # 小魔女 2015-05-29 (userid: a7361416)
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4740&projectId=11
@@ -16585,6 +16583,18 @@ group by a.isanalysis;
 # 1. 請先研究使用者使用行為
 # 2. 訪談完請上傳錄音檔，並於兩週後交訪談報告，檔名範例 中度消費者_小球
 # hugr86  重度買牌客(台中鳥日高鐵)
+# =================================================================================================
+
+# =================================================================================================
+# 行銷企劃 - [201505-A-2] 消費者訪談 - 訪談 [進行中] (阿達) 2015-07-02
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4740&projectId=11
+# 任務頁面 | 專案信息
+# To Eddy：
+# 
+# 請於 7/3(五)下午二點半於台中高鐵站協助訪談極重度消費者hugr
+#  
+# 1. 請先研究使用者使用行為
+# 2. 訪談完請上傳錄音檔，並於兩週後交訪談報告，檔名範例 中度消費者_小球
 # =================================================================================================
 
 create table actionlog._user_hugr86 engine = myisam SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201501 where userid = 'hugr86';
@@ -16655,12 +16665,6 @@ from (
     FROM actionlog._user_hugr86_1_action_1
     group by page, act, dur) as a
 order by a.c desc;
-
-
-
-
-
-
 
 
 
@@ -17866,29 +17870,65 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._forum_8);
 
 
-
-
 # =================================================================================================
-# 行銷企劃 - [201505-A-2] 消費者訪談 - 訪談 [進行中] (阿達) 2015-07-02
-# http://pm.playsport.cc/index.php/tasksComments?tasksId=4740&projectId=11
-# 任務頁面 | 專案信息
-# To Eddy：
+# 任務: [201410-B-5] 棒球即時比分賽事數據 - 分析使用狀況 [新建] 阿達 2015-06-18 09:36
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4878&projectId=11
+# 說明
+# 統計MLB即時比分投打數據使用狀況
+# 負責人：Eddy
+# 時間：
 # 
-# 請於 7/3(五)下午二點半於台中高鐵站協助訪談極重度消費者hugr
-#  
-# 1. 請先研究使用者使用行為
-# 2. 訪談完請上傳錄音檔，並於兩週後交訪談報告，檔名範例 中度消費者_小球
+# 7/15 第一次報告
+# 8/15 第二次報告
+# 9/15 第三次報告 
+# 內容
+# 1. MLB投打數據點擊量
+# a. 統計使用人數、次數、比例
 # =================================================================================================
 
 
+# (1)先撈出所有即時比分的pv
+CREATE TABLE actionlog._livescore engine = myisam SELECT userid, uri, time FROM actionlog.action_201506 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201507 WHERE uri LIKE '%/livescore%' and userid <> '';
 
+CREATE TABLE actionlog._livescore_1 engine = myisam
+select a.d, a.userid, count(a.uri) as c
+from (
+    SELECT date(time) as d, uri, userid
+    FROM actionlog._livescore
+    where time between '2015-06-16 18:00:00' and now()) as a
+group by a.d, a.userid;
 
+# 有用即時比分的人數(限有登入)
+SELECT d, count(userid) as user_count 
+FROM actionlog._livescore_1
+group by d;
 
+create table plsport_playsport._events engine = myisam 
+SELECT * FROM plsport_playsport.events
+where name like '%livescore_game_stats%'
+and time between '2015-06-16 18:00:00' and now()
+and userid <> ''
+order by id desc;
 
+# 使用人數 
+select b.d, count(b.userid) as user_count
+from (
+    select a.d, a.userid, count(a.name) as c
+    from (
+        SELECT date(time) as d, platform_type, name, userid
+        FROM plsport_playsport._events
+        where name like '%open%') as a
+    group by a.d, a.userid) as b
+group by b.d;
 
-
-
-
+# 使用次數 
+select a.d, count(a.name) as click_count
+from (
+    SELECT date(time) as d, platform_type, name, userid
+    FROM plsport_playsport._events
+    where name like '%open%') as a
+group by a.d;
 
 
 
