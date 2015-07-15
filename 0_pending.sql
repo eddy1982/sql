@@ -16661,7 +16661,7 @@ from (
 
 select *
 from (
-    SELECT page, act, dur, count(uri) as c 
+    SELECT page, act, dur, count(uri) as c
     FROM actionlog._user_hugr86_1_action_1
     group by page, act, dur) as a
 order by a.c desc;
@@ -17409,6 +17409,7 @@ SELECT pushcount_percentile, max(pushcount)
 FROM plsport_playsport._forum_push_percentile
 group by pushcount_percentile;
 
+# 人氣推文, 全站得到推數前5%的文章
 create table plsport_playsport._forum_push engine = myisam
 SELECT d, count(subjectid) as good_push 
 FROM plsport_playsport._forum
@@ -17421,7 +17422,33 @@ into outfile 'C:/proc/r/forum/_forum_push.csv'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._forum_push);
 
+        # update: 2015-07-14
+        # 1. 是人氣推文, 但是分析文
+        create table plsport_playsport._forum_push_isanalysis engine = myisam
+        SELECT d, count(subjectid) as good_push_isa
+        FROM plsport_playsport._forum
+        where pushcount>37 and gametype = '1_分析'
+        group by d;
 
+        # 2. 是人氣推文, 但不是分析文
+        create table plsport_playsport._forum_push_notanalysis engine = myisam
+        SELECT d, count(subjectid) as good_push_nota 
+        FROM plsport_playsport._forum
+        where pushcount>37 and gametype <> '1_分析'
+        group by d;
+
+
+        SELECT 'd', 'good_push_isa' union (
+        SELECT *
+        into outfile 'C:/proc/r/forum/_forum_push_isanalysis.csv'
+        fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+        FROM plsport_playsport._forum_push_isanalysis);
+
+        SELECT 'd', 'good_push_nota' union (
+        SELECT *
+        into outfile 'C:/proc/r/forum/_forum_push_notanalysis.csv'
+        fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+        FROM plsport_playsport._forum_push_notanalysis);
 
 
 
@@ -17502,7 +17529,68 @@ create table actionlog._action_201503_fd engine = myisam SELECT userid, uri, tim
 create table actionlog._action_201504_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201504 where uri like '%/forumdetail.php%' and userid <> '';
 create table actionlog._action_201505_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201505 where uri like '%/forumdetail.php%' and userid <> '';
 create table actionlog._action_201506_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201506 where uri like '%/forumdetail.php%' and userid <> '';
+create table actionlog._action_201507_fd engine = myisam SELECT userid, uri, time FROM actionlog.action_201507 where uri like '%/forumdetail.php%' and userid <> '';
 
+        # 單純計算每個人看了幾篇文章而已
+        create table actionlog._action_201401_fg SELECT userid, count(uri) as pv FROM actionlog._action_201401_fd group by userid;
+        create table actionlog._action_201402_fg SELECT userid, count(uri) as pv FROM actionlog._action_201402_fd group by userid;
+        create table actionlog._action_201403_fg SELECT userid, count(uri) as pv FROM actionlog._action_201403_fd group by userid;
+        create table actionlog._action_201404_fg SELECT userid, count(uri) as pv FROM actionlog._action_201404_fd group by userid;
+        create table actionlog._action_201405_fg SELECT userid, count(uri) as pv FROM actionlog._action_201405_fd group by userid;
+        create table actionlog._action_201406_fg SELECT userid, count(uri) as pv FROM actionlog._action_201406_fd group by userid;
+        create table actionlog._action_201407_fg SELECT userid, count(uri) as pv FROM actionlog._action_201407_fd group by userid;
+        create table actionlog._action_201408_fg SELECT userid, count(uri) as pv FROM actionlog._action_201408_fd group by userid;
+        create table actionlog._action_201409_fg SELECT userid, count(uri) as pv FROM actionlog._action_201409_fd group by userid;
+        create table actionlog._action_201410_fg SELECT userid, count(uri) as pv FROM actionlog._action_201410_fd group by userid;
+        create table actionlog._action_201411_fg SELECT userid, count(uri) as pv FROM actionlog._action_201411_fd group by userid;
+        create table actionlog._action_201412_fg SELECT userid, count(uri) as pv FROM actionlog._action_201412_fd group by userid;
+        create table actionlog._action_201501_fg SELECT userid, count(uri) as pv FROM actionlog._action_201501_fd group by userid;
+        create table actionlog._action_201502_fg SELECT userid, count(uri) as pv FROM actionlog._action_201502_fd group by userid;
+        create table actionlog._action_201503_fg SELECT userid, count(uri) as pv FROM actionlog._action_201503_fd group by userid;
+        create table actionlog._action_201504_fg SELECT userid, count(uri) as pv FROM actionlog._action_201504_fd group by userid;
+        create table actionlog._action_201505_fg SELECT userid, count(uri) as pv FROM actionlog._action_201505_fd group by userid;
+        create table actionlog._action_201506_fg SELECT userid, count(uri) as pv FROM actionlog._action_201506_fd group by userid;
+        create table actionlog._action_201507_fg SELECT userid, count(uri) as pv FROM actionlog._action_201507_fd group by userid;
+        
+        create table actionlog._action_fg engine = myisam select * from actionlog._action_201401_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201402_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201403_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201404_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201405_fg;        
+        insert ignore into actionlog._action_fg select * from actionlog._action_201406_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201407_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201408_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201409_fg; 
+        insert ignore into actionlog._action_fg select * from actionlog._action_201410_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201411_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201412_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201501_fg; 
+        insert ignore into actionlog._action_fg select * from actionlog._action_201502_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201503_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201504_fg;
+        insert ignore into actionlog._action_fg select * from actionlog._action_201505_fg; 
+        insert ignore into actionlog._action_fg select * from actionlog._action_201506_fg; 
+        insert ignore into actionlog._action_fg select * from actionlog._action_201505_fg;
+        
+        create table actionlog._action_fg_1 engine = myisam
+        SELECT userid, sum(pv) as pv 
+        FROM actionlog._action_fg
+        group by userid;
+        
+        create table plsport_playsport._customer engine = myisam
+        SELECT userid, sum(amount) as spent 
+        FROM plsport_playsport.pcash_log
+        where payed = 1 and type = 1
+        and year(date) > 2013
+        group by userid;
+        
+        ALTER TABLE plsport_playsport._customer ADD INDEX (`userid`);
+        ALTER TABLE actionlog._action_fg_1 ADD INDEX (`userid`);
+        
+        create table plsport_playsport._customer_1 engine = myisam
+        SELECT a.userid, a.spent, b.pv 
+        FROM plsport_playsport._customer a left join actionlog._action_fg_1 b on a.userid = b.userid;
+        
 create table actionlog._action_fs_201401 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
 from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._action_201401_fd) as a;
 create table actionlog._action_fs_201402 engine = myisam select a.userid, date(a.time) as d, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
@@ -17870,6 +17958,7 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._forum_8);
 
 
+
 # =================================================================================================
 # 任務: [201410-B-5] 棒球即時比分賽事數據 - 分析使用狀況 [新建] 阿達 2015-06-18 09:36
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4878&projectId=11
@@ -17892,16 +17981,24 @@ CREATE TABLE actionlog._livescore engine = myisam SELECT userid, uri, time FROM 
 INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201507 WHERE uri LIKE '%/livescore%' and userid <> '';
 
 CREATE TABLE actionlog._livescore_1 engine = myisam
+select a.userid, a.uri, a.time, (case when (locate('&',a.p)=0) then a.p else substr(a.p,1,locate('&',a.p)-1) end) as p
+from (
+    SELECT userid, uri, time, (case when (locate('aid=',uri) = 0) then 0 else substr(uri, locate('aid=',uri)+4, length(uri)) end) as p
+    FROM actionlog._livescore) as a;
+
+
+CREATE TABLE actionlog._livescore_2 engine = myisam
 select a.d, a.userid, count(a.uri) as c
 from (
     SELECT date(time) as d, uri, userid
-    FROM actionlog._livescore
-    where time between '2015-06-16 18:00:00' and now()) as a
+    FROM actionlog._livescore_1
+    where time between '2015-06-16 18:00:00' and now()
+    and p in (0,1)) as a
 group by a.d, a.userid;
 
 # 有用即時比分的人數(限有登入)
 SELECT d, count(userid) as user_count 
-FROM actionlog._livescore_1
+FROM actionlog._livescore_2
 group by d;
 
 create table plsport_playsport._events engine = myisam 
