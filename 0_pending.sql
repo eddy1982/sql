@@ -18029,6 +18029,95 @@ group by a.d;
 
 
 
+# =================================================================================================
+# 分析文等級制度-數據撈取 2015-07-15
+# http://redmine.playsport.cc/issues/50
+# 
+# 麻煩協助撈取推數&瀏覽數的資料
+# 時間區間:2014/07~2015/06
+# 條件:這段時間內有發表分析文的使用者
+# 撈取項目:
+# 1:不重複瀏覽數
+# 每月、每人的分析文瀏覽數
+# 2.推數
+# 每月、每人的總推數
+# 以上，麻煩請製作兩個版本:1.全站版 2.分聯盟版(指定聯盟: MLB、NBA、日棒、韓棒、中職、足球)
+# 請再回覆可以提供的時間，感謝!
+# 任務規劃https://docs.google.com/document/d/1pmtl-CSWGlPrSq_16G0ej-z0DWXXnZkLWqLWPItnIsY/edit
+# =================================================================================================
+
+
+create table plsport_playsport._analysis engine = myisam
+SELECT subjectid, allianceid, postuser, posttime, substr(posttime,1,7) as ym, viewtimes, replycount, pushcount 
+FROM plsport_playsport.forum
+where gametype = 1
+and posttime between '2014-07-01 00:00:00' and '2015-06-30 23:59:59'
+and allianceid in (1,2,3,4,9,6);
+
+create table plsport_playsport._analysis_all engine = myisam
+SELECT postuser, ym, sum(viewtimes) as vt, sum(pushcount) as push
+FROM plsport_playsport._analysis
+group by postuser, ym;
+
+create table plsport_playsport._analysis_by_allianceid engine = myisam
+SELECT postuser, ym, allianceid, sum(viewtimes) as vt, sum(pushcount) as push
+FROM plsport_playsport._analysis
+group by postuser, ym, allianceid;
+
+
+# 以下寫成redmine_task50.py
+# 直接執行redmine_task50.py就可以了
+
+SELECT 'allianceid', 'ym', 'vt_percentile', 'vt' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_analysis_by_allianceid_all_vt.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._analysis_by_allianceid_all_vt);
+
+SELECT 'allianceid', 'ym', 'push_percentile', 'push' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_analysis_by_allianceid_all_push.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._analysis_by_allianceid_all_push);
+
+SELECT  'ym', 'vt_percentile', 'vt' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_analysis_all_vt.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._analysis_all_vt);
+
+SELECT  'ym', 'push_percentile', 'push' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_analysis_all_push.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._analysis_all_push);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
