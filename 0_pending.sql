@@ -16025,29 +16025,29 @@ FROM plsport_playsport._list_5);
 # 欄位：帳號、暱稱、網站登入天數、站內總消費額、近一個月站內消費額、近三個月站內消費額、手機電腦使用比例、最近上站日、居住地
 # =================================================================================================
 
-create table actionlog._action_log_201503 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201503 where userid <> '';
-create table actionlog._action_log_201504 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201504 where userid <> '';
-create table actionlog._action_log_201505 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201505 where userid <> '';
-create table actionlog._action_log_201506 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201506 where userid <> '';
+create table actionlog._action_log_201504 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201504 where userid <> ''; # it takes 477 secs
+create table actionlog._action_log_201505 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201505 where userid <> ''; # it takes 494 secs
+create table actionlog._action_log_201506 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201506 where userid <> ''; # it takes 480 secs
+create table actionlog._action_log_201507 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201507 where userid <> ''; # it takes 290 secs
 
-create table actionlog.__action_log_201503 engine = myisam
-SELECT userid, platform_type, count(uri) as pv FROM actionlog._action_log_201503 group by userid, platform_type;
 create table actionlog.__action_log_201504 engine = myisam
 SELECT userid, platform_type, count(uri) as pv FROM actionlog._action_log_201504 group by userid, platform_type;
 create table actionlog.__action_log_201505 engine = myisam
 SELECT userid, platform_type, count(uri) as pv FROM actionlog._action_log_201505 group by userid, platform_type;
 create table actionlog.__action_log_201506 engine = myisam
 SELECT userid, platform_type, count(uri) as pv FROM actionlog._action_log_201506 group by userid, platform_type;
+create table actionlog.__action_log_201507 engine = myisam
+SELECT userid, platform_type, count(uri) as pv FROM actionlog._action_log_201507 group by userid, platform_type;
 
-update actionlog.__action_log_201503 set platform_type=2 where platform_type=3;
 update actionlog.__action_log_201504 set platform_type=2 where platform_type=3;
 update actionlog.__action_log_201505 set platform_type=2 where platform_type=3;
 update actionlog.__action_log_201506 set platform_type=2 where platform_type=3;
+update actionlog.__action_log_201507 set platform_type=2 where platform_type=3;
 
-create table actionlog.___action_log engine = myisam select * from actionlog.__action_log_201503;
-insert ignore into actionlog.___action_log select * from actionlog.__action_log_201504;
+create table actionlog.___action_log engine = myisam select * from actionlog.__action_log_201504;
 insert ignore into actionlog.___action_log select * from actionlog.__action_log_201505;
 insert ignore into actionlog.___action_log select * from actionlog.__action_log_201506;
+insert ignore into actionlog.___action_log select * from actionlog.__action_log_201507;
 
 
 create table actionlog._action_log2_devices engine = myisam
@@ -16058,13 +16058,6 @@ from (
         SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc, (case when (platform_type=2) then pv else 0 end) as mobile
         FROM actionlog.___action_log) as a
     group by a.userid) as b;
-
-create table actionlog._action_log1_201503 engine = myisam
-select a.userid, a.d
-from (
-    SELECT userid, date(time) as d 
-    FROM actionlog._action_log_201503) as a
-group by a.userid, a.d;
 
 create table actionlog._action_log1_201504 engine = myisam
 select a.userid, a.d
@@ -16087,10 +16080,22 @@ from (
     FROM actionlog._action_log_201506) as a
 group by a.userid, a.d;
 
-create table actionlog._action_log1_day_count engine = myisam SELECT * FROM actionlog._action_log1_201503;
-insert ignore into actionlog._action_log1_day_count select * from actionlog._action_log1_201504;
+create table actionlog._action_log1_201507 engine = myisam
+select a.userid, a.d
+from (
+    SELECT userid, date(time) as d 
+    FROM actionlog._action_log_201507) as a
+group by a.userid, a.d;
+
+# it takes 447 secs
+# it takes 559 secs
+# it takes 621 secs
+# it takes 219 secs
+
+create table actionlog._action_log1_day_count engine = myisam SELECT * FROM actionlog._action_log1_201504;
 insert ignore into actionlog._action_log1_day_count select * from actionlog._action_log1_201505;
 insert ignore into actionlog._action_log1_day_count select * from actionlog._action_log1_201506;
+insert ignore into actionlog._action_log1_day_count select * from actionlog._action_log1_201507;
 
 create table actionlog._action_log2_day_count engine = myisam
 SELECT userid, count(d) as day_count
@@ -16665,6 +16670,13 @@ from (
     FROM actionlog._user_hugr86_1_action_1
     group by page, act, dur) as a
 order by a.c desc;
+
+select a.ym, sum(a.amount) as amount
+from (
+    SELECT userid, amount, substr(date,1,7) as ym
+    FROM plsport_playsport.pcash_log
+    where payed = 1 and type = 1 and userid ='hugr86') as a
+group by a.ym;
 
 
 
@@ -18093,24 +18105,244 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._analysis_all_push);
 
 
+# =================================================================================================
+# 研究消費者使用購牌相關功能對業績的影響 (阿達) 2015-07-20
+# http://redmine.playsport.cc/issues/28
+# 負責人：Eddy
+# 購牌相關功能
+# 1. 明燈
+# 2. 合牌小幫手
+# 3. 購牌清單
+# 4. 玩家搜尋
+# 5. 個人戰績頁
+# 6. 購牌專區 ( 莊家殺手/單場殺手)
+# 7. 勝率榜/主推榜
+# 8. 頭三標
+# 9. 首頁
+# 10. 討論區
+# =================================================================================================
 
 
+# 處理rp的部分
+create table actionlog._rp_201505 SELECT userid, uri, time, platform_type FROM actionlog.action_201505 where uri like '%rp=%';
+create table actionlog._rp_201506 SELECT userid, uri, time, platform_type FROM actionlog.action_201506 where uri like '%rp=%';
+create table actionlog._rp_201507 SELECT userid, uri, time, platform_type FROM actionlog.action_201507 where uri like '%rp=%';
+
+create table actionlog._rp_201505_1 engine = myisam
+SELECT userid, uri, time, platform_type, substr(uri, locate('&rp=',uri)+4, length(uri)) as p FROM actionlog._rp_201505 where userid <> '';
+create table actionlog._rp_201506_1 engine = myisam
+SELECT userid, uri, time, platform_type, substr(uri, locate('&rp=',uri)+4, length(uri)) as p FROM actionlog._rp_201506 where userid <> '';
+create table actionlog._rp_201507_1 engine = myisam
+SELECT userid, uri, time, platform_type, substr(uri, locate('&rp=',uri)+4, length(uri)) as p FROM actionlog._rp_201507 where userid <> '';
+
+create table actionlog._rp engine = myisam
+SELECT userid, uri, time, platform_type, (case when (locate('&',p)=0) then p else substr(p,1,locate('&',p)-1) end) as p FROM actionlog._rp_201505_1;
+insert ignore into actionlog._rp
+SELECT userid, uri, time, platform_type, (case when (locate('&',p)=0) then p else substr(p,1,locate('&',p)-1) end) as p FROM actionlog._rp_201506_1;
+insert ignore into actionlog._rp
+SELECT userid, uri, time, platform_type, (case when (locate('&',p)=0) then p else substr(p,1,locate('&',p)-1) end) as p FROM actionlog._rp_201507_1;
+
+        ALTER TABLE actionlog._rp CHANGE `p` `p` VARCHAR(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE actionlog._rp ADD INDEX (`p`);
+
+# 所有的位置
+SELECT p, count(uri) 
+FROM actionlog._rp
+where locate('%',p) = 0
+and locate('+',p)=0
+and locate('#',p)=0
+and locate('.',p)=0
+and locate('=',p)=0
+and locate('?',p)=0
+group by p;
+
+# 完成
+create table actionlog._rp_1 engine = myisam
+SELECT userid, uri, time, platform_type, substr(p,1,3) as rp 
+FROM actionlog._rp
+where locate('%',p) = 0
+and locate('+',p)=0
+and locate('#',p)=0
+and locate('.',p)=0
+and locate('=',p)=0
+and locate('?',p)=0;
 
 
+update actionlog._rp_1 set rp='HT_' where rp='HT1';
+update actionlog._rp_1 set rp='HT_' where rp='HT2';
+update actionlog._rp_1 set rp='HT_' where rp='HT3';
+update actionlog._rp_1 set rp='BZ_' where rp='BZR';
+update actionlog._rp_1 set rp='USE' where rp='US_';
+
+create table actionlog._rp_2 engine = myisam
+SELECT userid, rp, count(uri) as c 
+FROM actionlog._rp_1
+where rp not in ('MSA','MFA','MSI','MFI','LSC') # APP和即時比分的宣傳單元不要算
+group by userid, rp;
+
+create table actionlog._rp_3 engine = myisam
+select a.userid, sum(a.BRC) as BRC, sum(a.BZ) as BZ, sum(a.FRD) as FRD, sum(a.FRL) as FRL, sum(a.FRND) as FRND,
+                 sum(a.HT) as HT, sum(a.IDX) as IDX, sum(a.MPB) as MPB, sum(a.US) as US, sum(a.WPB) as WPB
+from (
+    SELECT userid, (case when (rp='BRC') then c else 0 end) as BRC,
+                   (case when (rp='BZ_') then c else 0 end) as BZ,
+                   (case when (rp='FRD') then c else 0 end) as FRD,
+                   (case when (rp='FRL') then c else 0 end) as FRL,
+                   (case when (rp='FRN') then c else 0 end) as FRND,
+                   (case when (rp='HT_') then c else 0 end) as HT,
+                   (case when (rp='IDX') then c else 0 end) as IDX,
+                   (case when (rp='MPB') then c else 0 end) as MPB,
+                   (case when (rp='USE') then c else 0 end) as US,
+                   (case when (rp='WPB') then c else 0 end) as WPB
+    FROM actionlog._rp_2) as a
+group by a.userid;
+
+SELECT 'userid','BRC','BZ','FRD','FRL','FRND','HT','IDX','MPB','US','WPB' union (
+SELECT *
+into outfile 'C:/proc/dumps/_rp_3.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._rp_3);
 
 
+# 處理page的部分
+create table actionlog._pv_201505 engine = myisam
+SELECT userid, uri, time, platform_type, substr(uri,2,locate('.php',uri)-2) as u FROM actionlog.action_201505 where userid <> '';
+create table actionlog._pv_201506 engine = myisam
+SELECT userid, uri, time, platform_type, substr(uri,2,locate('.php',uri)-2) as u FROM actionlog.action_201506 where userid <> '';
+create table actionlog._pv_201507 engine = myisam
+SELECT userid, uri, time, platform_type, substr(uri,2,locate('.php',uri)-2) as u FROM actionlog.action_201507 where userid <> '';
+
+create table actionlog._pv_201505_1 engine = myisam
+SELECT * FROM actionlog._pv_201505 where u in ('','index','forum','forumdetail','billboard','buy_predict','shopping_list','arrange_predict','visit_member','usersearch');
+create table actionlog._pv_201506_1 engine = myisam
+SELECT * FROM actionlog._pv_201506 where u in ('','index','forum','forumdetail','billboard','buy_predict','shopping_list','arrange_predict','visit_member','usersearch');
+create table actionlog._pv_201507_1 engine = myisam
+SELECT * FROM actionlog._pv_201507 where u in ('','index','forum','forumdetail','billboard','buy_predict','shopping_list','arrange_predict','visit_member','usersearch');
+
+create table actionlog._pv_201505_2 engine = myisam
+SELECT userid, uri, time, platform_type, (case when (u='') then 'index' else u end) as u, 
+       (case when (locate('action=records',uri)>0) then 'record' else '' end) as a1,
+       (case when (locate('action=friend',uri)>0) then 'friend' else '' end) as a2,
+       (case when (locate('action=forum',uri)>0) then 'forum' else '' end) as a3,
+       (case when (locate('ck=1',uri)>0) then 'ck_1' else '' end) as ck_1,
+       (case when (locate('ck=2',uri)>0) then 'ck_2' else '' end) as ck_2,
+       (case when (locate('killertype=medalfire',uri)>0) then 'k_mf' else '' end) as mf,
+       (case when (locate('killertype=singlekiller',uri)>0) then 'k_sk' else '' end) as sk,
+       (case when (locate('action=mainp',uri)>0) then 'mainp' else '' end) as rank,
+       (case when (locate('&rp=HT',uri)>0) then 'head3' else '' end) as head3
+FROM actionlog._pv_201505_1;
+
+create table actionlog._pv_201506_2 engine = myisam
+SELECT userid, uri, time, platform_type, (case when (u='') then 'index' else u end) as u, 
+       (case when (locate('action=records',uri)>0) then 'record' else '' end) as a1,
+       (case when (locate('action=friend',uri)>0) then 'friend' else '' end) as a2,
+       (case when (locate('action=forum',uri)>0) then 'forum' else '' end) as a3,
+       (case when (locate('ck=1',uri)>0) then 'ck_1' else '' end) as ck_1,
+       (case when (locate('ck=2',uri)>0) then 'ck_2' else '' end) as ck_2,
+       (case when (locate('killertype=medalfire',uri)>0) then 'k_mf' else '' end) as mf,
+       (case when (locate('killertype=singlekiller',uri)>0) then 'k_sk' else '' end) as sk,
+       (case when (locate('action=mainp',uri)>0) then 'mainp' else '' end) as rank,
+       (case when (locate('&rp=HT',uri)>0) then 'head3' else '' end) as head3
+FROM actionlog._pv_201506_1;
+
+create table actionlog._pv_201507_2 engine = myisam
+SELECT userid, uri, time, platform_type, (case when (u='') then 'index' else u end) as u, 
+       (case when (locate('action=records',uri)>0) then 'record' else '' end) as a1,
+       (case when (locate('action=friend',uri)>0) then 'friend' else '' end) as a2,
+       (case when (locate('action=forum',uri)>0) then 'forum' else '' end) as a3,
+       (case when (locate('ck=1',uri)>0) then 'ck_1' else '' end) as ck_1,
+       (case when (locate('ck=2',uri)>0) then 'ck_2' else '' end) as ck_2,
+       (case when (locate('killertype=medalfire',uri)>0) then 'k_mf' else '' end) as mf,
+       (case when (locate('killertype=singlekiller',uri)>0) then 'k_sk' else '' end) as sk,
+       (case when (locate('action=mainp',uri)>0) then 'mainp' else '' end) as rank,
+       (case when (locate('&rp=HT',uri)>0) then 'head3' else '' end) as head3
+FROM actionlog._pv_201507_1;
+
+# note: 分別花了
+# actionlog._pv_201505_2: 988 secs
+# actionlog._pv_201506_2: 1171 sesc
+# actionlog._pv_201507_2: 622 sesc
+
+create table actionlog._pv engine = myisam
+SELECT userid, uri, time, platform_type, concat(u,'_',a1,a2,a3,ck_1,ck_2,mf,sk,rank,head3) as u FROM actionlog._pv_201505_2;
+insert ignore into actionlog._pv
+SELECT userid, uri, time, platform_type, concat(u,'_',a1,a2,a3,ck_1,ck_2,mf,sk,rank,head3) as u FROM actionlog._pv_201506_2;
+insert ignore into actionlog._pv
+SELECT userid, uri, time, platform_type, concat(u,'_',a1,a2,a3,ck_1,ck_2,mf,sk,rank,head3) as u FROM actionlog._pv_201507_2;
+
+        ALTER TABLE actionlog._pv CHANGE `u` `u` VARCHAR(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;       
+
+create table actionlog._pv_1 engine = myisam
+SELECT userid, uri, time, platform_type, 
+       (case when (u='buy_predict_')         then 'buy_predict_k_mf'
+             when (u='buy_predict_ck_1')     then 'buy_predict_k_mf'
+             when (u='buy_predict_ck_2k_sk') then 'buy_predict_k_sk'
+             when (u='forumdetail_ck_1')     then 'forumdetail_' else u end) as u
+FROM actionlog._pv
+where time between subdate(now(),90) and now();
 
 
+# ---------------------
+# 在這裡執行slice01.py
+# ---------------------
+
+create table actionlog._temp_all_1 engine = myisam
+SELECT userid,  (case when (u='arrange_predict_')    then c else 0 end) as arrange_predict,
+                (case when (u='billboard_')          then c else 0 end) as billboard,
+                (case when (u='billboard_mainp')     then c else 0 end) as billboard_mainp,
+                (case when (u='buy_predict_k_mf')    then c else 0 end) as buy_predict_k_mf,
+                (case when (u='buy_predict_k_sk')    then c else 0 end) as buy_predict_k_sk,
+                (case when (u='forumdetail_')        then c else 0 end) as forumdetail,
+                (case when (u='forum_')              then c else 0 end) as forum,
+                (case when (u='index_')              then c else 0 end) as idx,
+                (case when (u='shopping_list_')      then c else 0 end) as shopping_list,
+                (case when (u='usersearch_')         then c else 0 end) as usersearch,
+                (case when (u='visit_member_')       then c else 0 end) as visit_member,
+                (case when (u='visit_member_forum')  then c else 0 end) as visit_member_forum,
+                (case when (u='visit_member_friend') then c else 0 end) as visit_member_friend,
+                (case when (u='visit_member_head3')  then c else 0 end) as visit_member_head3,
+                (case when (u='visit_member_record') then c else 0 end) as visit_member_record
+FROM actionlog._temp_all;
+
+create table actionlog._temp_all_2 engine = myisam
+SELECT userid, sum(arrange_predict) as arrange_predict, sum(billboard) as billboard, sum(billboard_mainp) as billboard_mainp , 
+               sum(buy_predict_k_mf) as buy_predict_k_mf , sum(buy_predict_k_sk) as buy_predict_k_sk , sum(forumdetail) as forumdetail , 
+               sum(forum) as forum , sum(idx) as idx , sum(shopping_list) as shopping_list , sum(usersearch) as usersearch , 
+               sum(visit_member) as visit_member , sum(visit_member_forum) as visit_member_forum , sum(visit_member_friend) as visit_member_friend , 
+               sum(visit_member_head3) as visit_member_head3 , sum(visit_member_record) as visit_member_record
+FROM actionlog._temp_all_1
+group by userid;
+
+create table actionlog._temp_all_3 engine = myisam
+SELECT userid, arrange_predict, billboard, billboard_mainp, buy_predict_k_mf, buy_predict_k_sk, 
+       forumdetail, shopping_list, usersearch, visit_member_forum, visit_member_friend, visit_member_head3, visit_member_record, idx
+FROM actionlog._temp_all_2;
 
 
+# 輸出.csv
+SELECT 'userid','arrange_predict','billboard','billboard_mainp','buy_predict_k_mf','buy_predict_k_sk','forumdetail','shopping_list',
+       'usersearch','visit_member_forum','visit_member_friend','visit_member_head3','visit_member_record','idx' union (
+SELECT *
+into outfile 'C:/proc/dumps/_temp_all_3.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._temp_all_3
+where (arrange_predict+billboard+billboard_mainp+buy_predict_k_mf+buy_predict_k_sk+forumdetail+shopping_list+
+       usersearch+visit_member_forum+visit_member_friend+visit_member_head3+visit_member_record+idx)>0);
 
+# 執行slice02.py可以產出所有變數的percentile和.csv檔
 
+create table actionlog._pcash_log engine = myisam
+SELECT userid, sum(amount) as spent 
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date between subdate(now(),90) and now()
+group by userid;
 
-
-
-
-
-
+SELECT 'userid','spent' union (
+SELECT *
+into outfile 'C:/proc/dumps/_spent.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._pcash_log);
 
 
 
