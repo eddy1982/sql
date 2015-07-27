@@ -18058,7 +18058,6 @@ group by a.d;
 # 任務規劃https://docs.google.com/document/d/1pmtl-CSWGlPrSq_16G0ej-z0DWXXnZkLWqLWPItnIsY/edit
 # =================================================================================================
 
-
 create table plsport_playsport._analysis engine = myisam
 SELECT subjectid, allianceid, postuser, posttime, substr(posttime,1,7) as ym, viewtimes, replycount, pushcount 
 FROM plsport_playsport.forum
@@ -18103,6 +18102,54 @@ SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/_analysis_all_push.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._analysis_all_push);
+
+
+# 是由 黃 雅雅 於 3 天 前更新 2015-07-27
+# 
+# 接下來，要發送問卷給寫手，詢問意願，
+# 目標是詢問會寫分析文的寫手的意願，
+# 撈選條件為:近2年內，曾經發表3篇以上分析文的人，
+# 
+# 你覺得如何?有達到想要的人嗎?
+# 
+# TOeddy:
+# 
+# 根據剛剛討論的，撈取條件為:近三年內、發表過三篇分析文的使用者。
+# 再麻煩回覆可以完成的時間，感謝!
+
+create table plsport_playsport._analysis_post_writer engine = myisam
+SELECT subjectid, subject,allianceid, gametype, postuser, posttime  
+FROM plsport_playsport.forum
+where gametype = 1
+and posttime between subdate(now(),1100) and now(); #近3年
+
+create table plsport_playsport._analysis_post_writer_1 engine = myisam
+select b.postuser, c.nickname, b.post_count
+from (
+    select a.postuser, a.post_count
+    from (
+        SELECT postuser, count(subject) as post_count 
+        FROM plsport_playsport._analysis_post_writer
+        group by postuser) as a
+    where a.post_count >= 3
+    order by a.post_count desc) as b left join plsport_playsport.member as c on b.postuser = c.userid;
+
+
+SELECT '發文者', '匿稱', '分析文數' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_analysis_post_writer.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._analysis_post_writer_1);
+
+SELECT postuser
+into outfile 'C:/Users/1-7_ASUS/Desktop/_analysis_post_writer_for_engineer.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._analysis_post_writer_1;
+
+
+
+
+
 
 
 # =================================================================================================
@@ -18346,18 +18393,109 @@ FROM actionlog._pcash_log);
 
 
 
+# =================================================================================================
+# [201507-A-1]開發討論區會員追蹤功能-電訪名單撈取
+# http://redmine.playsport.cc/issues/119
+# 是由 郭 靜怡 於 3 天 前加入. 於 3 天 前更新.
+# 說明 目的：提供電訪名單
+# 內容 條件：
+# 問卷第二題回答需要或非常需要
+# 近一個月討論區pv前50% 
+# 
+# 欄位：
+# 帳號、暱稱、討論區pv及全站佔比、手機/電腦使用比例、問卷第二題答案
+# =================================================================================================
 
+# 此名單和任務http://pm.playsport.cc/index.php/tasksComments?tasksId=4934&projectId=11差不多
 
+# 撈近1個月內的資料
+create table actionlog._forum_201506 engine = myisam
+SELECT userid, uri, time, (case when (platform_type=2) then 'mobile' else 'pc' end) as p
+FROM actionlog.action_201506 where userid <> '' and uri like '%/forum%'
+and time between subdate(now(),31) and now();
 
+create table actionlog._forum_201507 engine = myisam
+SELECT userid, uri, time, (case when (platform_type=2) then 'mobile' else 'pc' end) as p
+FROM actionlog.action_201507 where userid <> '' and uri like '%/forum%'
+and time between subdate(now(),31) and now();
 
+create table actionlog._forum engine = myisam select * from actionlog._forum_201506;
+insert ignore into actionlog._forum select * from actionlog._forum_201507;
 
+create table actionlog._forum_1 engine = myisam
+SELECT * 
+FROM actionlog._forum
+where time between subdate(now(),31) and now();
 
+create table actionlog._forum_2 engine = myisam
+SELECT userid, p, count(p) as pv
+FROM actionlog._forum_1
+group by userid, p;
 
+create table actionlog._forum_3 engine = myisam
+select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+from (
+    SELECT userid, (case when (p='pc') then pv else 0 end) as pc,
+                   (case when (p='mobile') then pv else 0 end) as mobile
+    FROM actionlog._forum_2) as a
+group by a.userid;
 
+create table actionlog._forum_4 engine = myisam
+SELECT userid, (pc+mobile) as pv, round((pc/(pc+mobile)),3) as pc_p, round((mobile/(pc+mobile)),3) as mobile_p
+FROM actionlog._forum_3;
 
+create table actionlog._forum_5 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, pc_p, mobile_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, pc_p, mobile_p
+      FROM actionlog._forum_4, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._forum_4) as ct;
 
+        ALTER TABLE actionlog._forum_5 convert to character set utf8 collate utf8_general_ci;
 
+create table actionlog._forum_6 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.pc_p, a.mobile_p
+FROM actionlog._forum_5 a left join plsport_playsport.member b on a.userid = b.userid;
 
+# http://www.playsport.cc/questionnaire.php?question=201506031444432350&action=statistics
+# 是否需要討論區會員追蹤功能（說明：即時得知您喜愛的玩家有無發文、上線等狀態）
+
+        create table plsport_playsport._qu engine = myisam
+        SELECT userid,  `1433314771` as q
+        FROM plsport_playsport.questionnaire_201506031444432350_answer
+        where `1433314771` in (1,2);
+
+create table actionlog._forum_7 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pc_p, a.mobile_p, b.q
+FROM actionlog._forum_6 a left join plsport_playsport._qu b on a.userid = b.userid
+where b.q is not null
+order by pv desc;
+
+        # 最近一次的登入時間
+        CREATE TABLE plsport_playsport._last_login_time engine = myisam
+        SELECT userid, max(signin_time) as last_login
+        FROM plsport_playsport.member_signin_log_archive
+        GROUP BY userid;
+        
+        ALTER TABLE plsport_playsport._last_login_time convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._forum_7 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._forum_7 ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._last_login_time ADD INDEX (`userid`);
+        
+create table actionlog._forum_8 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pc_p, a.mobile_p, a.q, date(b.last_login) as last_login
+from actionlog._forum_7 a left join plsport_playsport._last_login_time b on a.userid = b.userid
+where a.pv_percentile>0.49;
+
+        ALTER TABLE actionlog._forum_8 CHANGE `q` `q` VARCHAR(20) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL;
+        update actionlog._forum_8 set q = '非常需要' where q = '1';
+        update actionlog._forum_8 set q = '需要'     where q = '2';
+
+SELECT '帳號', '暱稱', '討論區pv', '全站佔比', '電腦使用比例', '手機使用比例', '問卷第二題答案', '最後登入時間' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_8.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forum_8);
 
 
 
