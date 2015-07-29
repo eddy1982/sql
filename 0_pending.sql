@@ -17781,7 +17781,7 @@ create table actionlog._action_fsgsf_201506 engine = myisam SELECT userid, d, al
         ALTER TABLE actionlog._action_fsgsf_201504 convert to character set utf8 collate utf8_general_ci;
         ALTER TABLE actionlog._action_fsgsf_201505 convert to character set utf8 collate utf8_general_ci;
         ALTER TABLE actionlog._action_fsgsf_201506 convert to character set utf8 collate utf8_general_ci;
-        
+
 
 create table actionlog._action_fsgsfs engine = myisam SELECT a.userid, a.alli, a.gametype, sum(a.view_count) as view_count 
 FROM actionlog._action_fsgsf_201401 a inner join plsport_playsport._spent_list b on a.userid = b.userid group by a.userid, a.alli, a.gametype;
@@ -18145,9 +18145,6 @@ SELECT postuser
 into outfile 'C:/Users/1-7_ASUS/Desktop/_analysis_post_writer_for_engineer.csv'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._analysis_post_writer_1;
-
-
-
 
 
 
