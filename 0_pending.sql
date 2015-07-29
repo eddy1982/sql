@@ -18496,6 +18496,156 @@ FROM actionlog._forum_8);
 
 
 
+# =================================================================================================
+# 購牌清單追蹤、購買後個人頁觀看情形 
+# TO Eddy (學文) 2015-07-29
+# http://redmine.playsport.cc/issues/80#
+# 需要追蹤7/14  00:00 ~ 7/27  23:59 兩週期間以下的狀況
+# 
+# 美國職棒
+# 
+# 1.消費者購牌後，在比賽當日賽事打完後14:00~23:59，點選購牌清單的情況
+# ex.如7/1購買7/2號美棒賽事，在7/2的14:00~23:59，這段期間點選購牌清單的狀況
+# 
+# 2.消費者購牌後，在比賽當日賽事打完後14:00~23:59，回到他購買的那位殺手的比賽當日預測頁的情況
+# ex.如7/1購買A殺手7/2美棒的賽事，在7/2   14:00~23:59，回到A殺手7/2美棒的預測頁的情況
+# =================================================================================================
+
+create table plsport_playsport._buyer engine = myisam
+SELECT buyerid, id_bought, buy_date, buy_price, allianceid 
+FROM plsport_playsport._predict_buyer
+where buy_date between subdate(now(),31) and now();
+
+        ALTER TABLE plsport_playsport._buyer ADD INDEX (`id_bought`);
+        ALTER TABLE plsport_playsport.predict_seller ADD INDEX (`id`);
+
+create table plsport_playsport._buy_list_mlb engine = myisam
+SELECT a.buyerid, a.buy_date, a.buy_price, a.allianceid, b.sellerid, b.sale_allianceid, b.sale_gameid, b.sale_date 
+FROM plsport_playsport._buyer a left join plsport_playsport.predict_seller b on a.id_bought = b.id
+where b.sale_allianceid = 1 /*換聯盟*/
+and buy_date between '2015-07-14 00:00:00' and '2015-07-27 23:59:59';
+
+create table plsport_playsport._buy_list_mlb_1 engine = myisam
+SELECT buyerid, buy_date, buy_price, allianceid, sellerid, sale_allianceid, sale_gameid, sale_date,
+       concat(substr(sale_gameid,1,4),'-', substr(sale_gameid,5,2),'-', substr(sale_gameid,7,2)) as game_date
+FROM plsport_playsport._buy_list_mlb;
+
+        # (a) 有區分跟那個殺手買, 之後要去查詢是否買的人會去看賣的人的頁面
+        create table plsport_playsport._buy_list_mlb_2 engine = myisam
+        SELECT buyerid, sellerid, sum(buy_price) as total_buy, game_date 
+        FROM plsport_playsport._buy_list_mlb_1
+        group by buyerid, sellerid, game_date;
+ 
+        # (c) 沒有區分跟那個殺手買
+        create table plsport_playsport._buy_list_mlb_3 engine = myisam        
+        SELECT buyerid, sum(total_buy) as total_buy, game_date 
+        FROM plsport_playsport._buy_list_mlb_2
+        group by buyerid, game_date;
+
+# [比較對象1:有去點購牌清單]
+# 匯入event- 注意:不要去限制時間區間
+create table plsport_playsport._click_purchase_history engine = myisam
+SELECT userid, name, platform_type, time, date(time) as d 
+FROM plsport_playsport.events
+where name like '%purchase_history%'
+and substr(time,12,2) in (21,22,23); # (14,15,16,17,18,19,20,21,22,23)
+
+        # (b)
+        create table plsport_playsport._click_purchase_history_1 engine = myisam
+        SELECT userid, d, count(name) as click_count 
+        FROM plsport_playsport._click_purchase_history
+        where userid <> ''
+        group by userid, d;
+       
+# [比較對象2:比賽完當天有去看殺手個人頁]    
+create table plsport_playsport._click_killer_page_history engine = myisam
+SELECT userid, uri, time 
+FROM actionlog.action_201507
+where userid <> ''
+and time between '2015-07-14 00:00:00' and now()
+and uri like '%visit_member%'
+and substr(time,12,2) in (21,22,23); # (14,15,16,17,18,19,20,21,22,23)      
+        
+create table plsport_playsport._click_killer_page_history_1 engine = myisam   
+SELECT * FROM plsport_playsport._click_killer_page_history
+where uri not like '%ga=predict%'
+and uri not like   '%action=records%'
+and uri not like   '%action=forum%'
+and uri not like   '%action=honor%'
+and uri not like   '%action=friend%';  
+
+create table plsport_playsport._click_killer_page_history_2 engine = myisam    
+SELECT userid, uri, time, substr(uri, locate('visit=',uri), length(uri)) as v, substr(uri, locate('allianceid=',uri), length(uri)) as a
+FROM plsport_playsport._click_killer_page_history_1;  
+
+create table plsport_playsport._click_killer_page_history_3 engine = myisam
+select *
+from (
+    SELECT userid, uri, time, (case when (locate('&',v)>0) then substr(v,7,locate('&',v)-7) else substr(v,7,length(v)) end) as v,
+                              (case when (locate('&',a)>0) then substr(a,12,locate('&',a)-12) else substr(a,12,length(a)) end) as a
+    FROM plsport_playsport._click_killer_page_history_2) as a
+where a.a in (2) /*換聯盟, 如果不是MLB要取消掉空白, 如果是MLB:(1, '')*/
+and a.userid <> a.v;
+       
+create table plsport_playsport._click_killer_page_history_4 engine = myisam
+select a.userid, a.v as visit, a.d, count(uri) as pv
+from (
+    SELECT userid, uri, time, v, a, date(time) as d
+    FROM plsport_playsport._click_killer_page_history_3) as a
+group by a.userid, a.v, a.d;
+
+
+
+# (c) left join (b)
+create table plsport_playsport._a_list_1 engine = myisam
+SELECT a.buyerid, a.total_buy, a.game_date, b.click_count
+FROM plsport_playsport._buy_list_mlb_3 a left join plsport_playsport._click_purchase_history_1 b 
+on a.buyerid = b.userid and a.game_date = b.d
+order by a.buyerid;
+
+ALTER TABLE plsport_playsport._buy_list_mlb_2 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._click_killer_page_history_4 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._click_killer_page_history_4 CHANGE `visit` `visit` VARCHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE plsport_playsport._buy_list_mlb_2 ADD INDEX (`buyerid`,`sellerid`,`game_date`);
+ALTER TABLE plsport_playsport._click_killer_page_history_4 ADD INDEX (`userid`,`visit`,`d`);
+
+create table plsport_playsport._b_list_1 engine = myisam
+SELECT a.buyerid, a.sellerid, a.total_buy, a.game_date, b.pv
+FROM plsport_playsport._buy_list_mlb_2 a left join plsport_playsport._click_killer_page_history_4 b 
+on a.buyerid = b.userid and a.sellerid = b.visit and a.game_date = b.d;
+
+
+
+# 多少人買
+SELECT game_date, count(buyerid) as buyer 
+FROM plsport_playsport._a_list_1
+group by game_date;
+
+# 隔天有沒有去點購牌清單
+SELECT game_date, count(buyerid) as buyer 
+FROM plsport_playsport._a_list_1
+where click_count is not null
+group by game_date;
+
+
+# 多少人買
+select a.game_date, count(a.buyerid) as buyer_count
+from (
+    SELECT buyerid, game_date, sum(pv) as pv 
+    FROM plsport_playsport._b_list_1
+    group by buyerid, game_date) as a
+group by a.game_date;
+
+# 隔天有沒有回殺手個人頁看人數
+select a.game_date, count(a.buyerid) as buyer_count
+from (
+    SELECT buyerid, game_date, sum(pv) as pv 
+    FROM plsport_playsport._b_list_1
+    where pv is not null
+    group by buyerid, game_date) as a
+group by a.game_date;
+
+
 
 
 
