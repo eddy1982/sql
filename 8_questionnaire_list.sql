@@ -347,6 +347,8 @@ delete from questionnaire._list_full where userid = 'chinginge';
 delete from questionnaire._list_full where userid = 'pauleanr';
 delete from questionnaire._list_full where userid = 'yenhsun1982';
 delete from questionnaire._list_full where userid = 'n12232001';
+delete from questionnaire._list_full where userid = 'sakyla';
+delete from questionnaire._list_full where userid = 'wenchi';
 
 create table questionnaire._list_limit_3000 engine = myisam
 SELECT * FROM questionnaire._list_full
@@ -355,7 +357,7 @@ order by rand()    # 隨機抽出3000名受測者
 limit 0, 3000;
 
 # 再把工友放進去
-insert into questionnaire._list_limit_3000 values ('monkey'),('chinginge'),('pauleanr'),('yenhsun1982'),('n12232001');
+insert into questionnaire._list_limit_3000 values ('monkey'),('chinginge'),('pauleanr'),('yenhsun1982'),('n12232001'),('sakyla'),('wenchi');
 
     #重要, 第一次執行要注意工友是否有2筆????
     # 輸出到桌面
