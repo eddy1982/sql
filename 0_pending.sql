@@ -18594,8 +18594,6 @@ from (
     FROM plsport_playsport._click_killer_page_history_3) as a
 group by a.userid, a.v, a.d;
 
-
-
 # (c) left join (b)
 create table plsport_playsport._a_list_1 engine = myisam
 SELECT a.buyerid, a.total_buy, a.game_date, b.click_count
@@ -18644,6 +18642,179 @@ from (
     where pv is not null
     group by buyerid, game_date) as a
 group by a.game_date;
+
+
+
+# =================================================================================================
+# 任務: [201504-A-3] 手機瀏覽時加大聯盟選單 - MVP測試名單 [新建] (阿達) 2015-07-31
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4948&projectId=11
+# 說明
+# 提供此任務MVP測試名單
+# 
+# 1. 預測賽事、預測比例、個人預測頁
+# 條件：
+#         1. 近一個月預測賽事、預測比例二個頁面分別佔全站前 50%
+#         2. 手機使用佔比超過 60%
+#          
+#         欄位：
+#         a. 帳號
+#         b. 暱稱
+#         c. 近一個月預測賽事、預測比例個別pv及全站佔比
+#         d. 手機、電腦使用比例
+#  
+# 2. 找高手、即時比分、勝率/主推榜、個人預測頁
+# 條件:
+#         1. 近一個月找高手(莊家殺手/單場殺手)、即時比分二個頁面分別佔全站前 50%
+#         2. 近一個月勝率榜或主推榜佔全站前 50%
+#         3. 手機使用佔比超過60%
+#          
+#         欄位：
+#         a. 帳號
+#         b. 暱稱
+#         c. 近一個月找高手(莊家殺手/單場殺手)、即時比分、勝率榜、主推榜個別pv及全站佔比
+#         d. 手機、電腦使用比例
+# =================================================================================================
+
+create table actionlog._action engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201507
+where userid <> ''
+and time between subdate(now(),32) and now();
+
+insert ignore into actionlog._action
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201508
+where userid <> ''
+and time between subdate(now(),32) and now();
+
+# 小樣本資料用
+# create table actionlog._action engine = myisam
+# SELECT userid, uri, time, platform_type 
+# FROM actionlog.action_201507
+# where userid <> ''
+# and time between subdate(now(),7) and now();
+
+create table actionlog._action_1 engine = myisam
+SELECT userid, uri, time, platform_type, substr(uri,2,locate('.php',uri)+2) as p
+FROM actionlog._action;
+
+create table actionlog._action_2 engine = myisam
+SELECT * FROM actionlog._action_1
+where p in ('predictgame.php','livescore.php','buy_predict.php','billboard.php');
+
+create table actionlog._action_3 engine = myisam
+select a.userid, a.uri, a.time, a.platform_type, a.p, concat(a.p,'_',a.s1,a.s2,a.s3) as s
+from (
+    SELECT userid, uri, time, platform_type, p, (case when (locate('action=scale',uri)>0) then 'scale' else '' end) as s1,
+                                                (case when (locate('killertype=singlekiller',uri)>0) then 'single' else '' end) as s2,
+                                                (case when (locate('action=mainp',uri)>0) then 'mainp' else '' end) as s3
+    FROM actionlog._action_2) as a;
+
+
+# billboard.php_	      27316
+# billboard.php_mainp	  40169
+# buy_predict.php_	      33738
+# buy_predict.php_single  12227
+# livescore.php_	      608615
+# predictgame.php_	      180033
+# predictgame.php_scale	  163331
+
+create table actionlog._action_4 engine = myisam
+SELECT userid, s, count(uri) as c
+FROM actionlog._action_3
+group by userid, s;
+
+create table actionlog._action_5 engine = myisam
+SELECT userid, (case when (s='predictgame.php_') then c else 0 end) as predict,
+               (case when (s='predictgame.php_scale') then c else 0 end) as scale,
+               (case when (s='buy_predict.php_') then c else 0 end) as buy_,
+               (case when (s='buy_predict.php_single') then c else 0 end) as buy_sig,
+               (case when (s='livescore.php_') then c else 0 end) as live,
+               (case when (s='billboard.php_') then c else 0 end) as bill,
+               (case when (s='billboard.php_mainp') then c else 0 end) as bill_mainp
+FROM actionlog._action_4;
+
+create table actionlog._action_6 engine = myisam
+select a.userid, a.predict as pred, a.scale, (a.buy_+a.buy_sig) as buy, a.live, a.bill, a.bill_mainp as billm
+from (
+    SELECT userid, sum(predict) as predict, sum(scale) as scale, sum(buy_) as buy_, sum(buy_sig) as buy_sig, sum(live) as live, sum(bill) as bill, sum(bill_mainp) as bill_mainp 
+    FROM actionlog._action_5
+    group by userid) as a;
+
+# 執行slice03.py
+
+SELECT 'userid' union (
+SELECT userid
+into outfile 'C:/proc/dumps/main.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._action_6);
+
+
+        # 這段是計算用電腦和手機的比例
+        create table actionlog._forum_2 engine = myisam
+        SELECT userid, platform_type, count(platform_type) as pv
+        FROM actionlog._action_2
+        group by userid, platform_type;
+
+        create table actionlog._forum_3 engine = myisam
+        select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile, sum(a.tablet) as tablet
+        from (
+            SELECT userid, (case when (platform_type='1') then pv else 0 end) as pc,
+                           (case when (platform_type='2') then pv else 0 end) as mobile,
+                           (case when (platform_type='3') then pv else 0 end) as tablet
+            FROM actionlog._forum_2) as a
+        group by a.userid;
+
+        create table actionlog._forum_4 engine = myisam
+        SELECT userid, round(((pc+tablet)/(pc+mobile+tablet)),3) as pc_p, round((mobile/(pc+mobile+tablet)),3) as mobile_p
+        FROM actionlog._forum_3;
+
+        SELECT 'userid','pc_p','mobile_p' union (
+        SELECT *
+        into outfile 'C:/proc/dumps/devices.csv'
+        fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+        FROM actionlog._forum_4);
+
+
+# 所有的檔案全都放在C:\proc\dumps
+
+# 以下是R script, 直接開rstudio跑就可以了
+# rm(list=ls())  
+# main<-read.table("C:/proc/dumps/main.csv",   header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
+# a01<-read.table("C:/proc/dumps/p_pred.csv",  header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
+# a02<-read.table("C:/proc/dumps/p_scale.csv", header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
+# a03<-read.table("C:/proc/dumps/p_buy.csv",   header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
+# a04<-read.table("C:/proc/dumps/p_live.csv",  header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
+# a05<-read.table("C:/proc/dumps/p_bill.csv",  header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
+# a06<-read.table("C:/proc/dumps/p_billm.csv", header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
+# a07<-read.table("C:/proc/dumps/devices.csv", header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
+# 
+# m<-main[c(1)]
+# m<-merge(x=m, y=a01, by='userid', all.x=TRUE)
+# m<-merge(x=m, y=a02, by='userid', all.x=TRUE)
+# m<-merge(x=m, y=a03, by='userid', all.x=TRUE)
+# m<-merge(x=m, y=a04, by='userid', all.x=TRUE)
+# m<-merge(x=m, y=a05, by='userid', all.x=TRUE)
+# m<-merge(x=m, y=a06, by='userid', all.x=TRUE)
+# m<-merge(x=m, y=a07, by='userid', all.x=TRUE)
+# m[is.na(m)]<-0
+# 
+# m$list1[m$pred_p>=0.5 & m$scale_p>=0.5 & m$mobile_p>=0.6]<-'1'
+# m$list2[m$buy_p>=0.5 & m$live_p>=0.5 & (m$bill_p>=0.5 | m$billm_p>=0.5)]<-'1'
+# 
+# m$list1<-as.factor(m$list1)
+# m$list2<-as.factor(m$list2)
+# 
+# m1<-subset(m, (!is.na(m$list1) | !is.na(m$list2)))
+# 
+# write.table(m1, file = "C:/proc/dumps/done.csv", append = FALSE, quote = TRUE, sep = ",",
+#             eol = "\n", na = "NA", row.names = FALSE,
+#             col.names = TRUE, fileEncoding = "UTF-8")
+# 
+# rm(list=ls())
+
+# 檔案完成後會放置 C:/proc/dumps/done.csv
+
 
 
 
