@@ -18700,16 +18700,18 @@ FROM actionlog._action;
 
 create table actionlog._action_2 engine = myisam
 SELECT * FROM actionlog._action_1
-where p in ('predictgame.php','livescore.php','buy_predict.php','billboard.php');
+where p in ('predictgame.php','livescore.php','buy_predict.php','billboard.php','visit_member.php');
 
 create table actionlog._action_3 engine = myisam
-select a.userid, a.uri, a.time, a.platform_type, a.p, concat(a.p,'_',a.s1,a.s2,a.s3) as s
+select a.userid, a.uri, a.time, a.platform_type, a.p, concat(a.p,'_',a.s1,a.s2,a.s3,a.s4,a.s5,a.s6) as s
 from (
     SELECT userid, uri, time, platform_type, p, (case when (locate('action=scale',uri)>0) then 'scale' else '' end) as s1,
                                                 (case when (locate('killertype=singlekiller',uri)>0) then 'single' else '' end) as s2,
-                                                (case when (locate('action=mainp',uri)>0) then 'mainp' else '' end) as s3
+                                                (case when (locate('action=mainp',uri)>0) then 'mainp' else '' end) as s3,
+                                                (case when (locate('action=records',uri)>0) then 'records' else '' end) as s4,
+                                                (case when (locate('action=forum',uri)>0) then 'forum' else '' end) as s5,
+                                                (case when (locate('action=honor',uri)>0) then 'honor' else '' end) as s6
     FROM actionlog._action_2) as a;
-
 
 # billboard.php_	      27316
 # billboard.php_mainp	  40169
@@ -18722,6 +18724,7 @@ from (
 create table actionlog._action_4 engine = myisam
 SELECT userid, s, count(uri) as c
 FROM actionlog._action_3
+where s not in ('visit_member.php_records','visit_member.php_forum','visit_member.php_honor')
 group by userid, s;
 
 create table actionlog._action_5 engine = myisam
@@ -18731,13 +18734,15 @@ SELECT userid, (case when (s='predictgame.php_') then c else 0 end) as predict,
                (case when (s='buy_predict.php_single') then c else 0 end) as buy_sig,
                (case when (s='livescore.php_') then c else 0 end) as live,
                (case when (s='billboard.php_') then c else 0 end) as bill,
-               (case when (s='billboard.php_mainp') then c else 0 end) as bill_mainp
+               (case when (s='billboard.php_mainp') then c else 0 end) as bill_mainp,
+               (case when (s='visit_member.php_') then c else 0 end) as vm
 FROM actionlog._action_4;
 
 create table actionlog._action_6 engine = myisam
-select a.userid, a.predict as pred, a.scale, (a.buy_+a.buy_sig) as buy, a.live, a.bill, a.bill_mainp as billm
+select a.userid, a.predict as pred, a.scale, (a.buy_+a.buy_sig) as buy, a.live, a.bill, a.bill_mainp as billm, a.vm
 from (
-    SELECT userid, sum(predict) as predict, sum(scale) as scale, sum(buy_) as buy_, sum(buy_sig) as buy_sig, sum(live) as live, sum(bill) as bill, sum(bill_mainp) as bill_mainp 
+    SELECT userid, sum(predict) as predict, sum(scale) as scale, sum(buy_) as buy_, sum(buy_sig) as buy_sig, 
+                   sum(live) as live, sum(bill) as bill, sum(bill_mainp) as bill_mainp, sum(vm) as vm
     FROM actionlog._action_5
     group by userid) as a;
 
@@ -18779,6 +18784,7 @@ FROM actionlog._action_6);
 # 所有的檔案全都放在C:\proc\dumps
 
 # 以下是R script, 直接開rstudio跑就可以了
+
 # rm(list=ls())  
 # main<-read.table("C:/proc/dumps/main.csv",   header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
 # a01<-read.table("C:/proc/dumps/p_pred.csv",  header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
@@ -18787,7 +18793,8 @@ FROM actionlog._action_6);
 # a04<-read.table("C:/proc/dumps/p_live.csv",  header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
 # a05<-read.table("C:/proc/dumps/p_bill.csv",  header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
 # a06<-read.table("C:/proc/dumps/p_billm.csv", header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
-# a07<-read.table("C:/proc/dumps/devices.csv", header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
+# a07<-read.table("C:/proc/dumps/p_vm.csv",    header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
+# a08<-read.table("C:/proc/dumps/devices.csv", header=T, sep=",", quote="\"", fileEncoding="UTF-8", colClasses=c("userid"="factor"))
 # 
 # m<-main[c(1)]
 # m<-merge(x=m, y=a01, by='userid', all.x=TRUE)
@@ -18797,15 +18804,19 @@ FROM actionlog._action_6);
 # m<-merge(x=m, y=a05, by='userid', all.x=TRUE)
 # m<-merge(x=m, y=a06, by='userid', all.x=TRUE)
 # m<-merge(x=m, y=a07, by='userid', all.x=TRUE)
+# m<-merge(x=m, y=a08, by='userid', all.x=TRUE)
 # m[is.na(m)]<-0
 # 
 # m$list1[m$pred_p>=0.5 & m$scale_p>=0.5 & m$mobile_p>=0.6]<-'1'
-# m$list2[m$buy_p>=0.5 & m$live_p>=0.5 & (m$bill_p>=0.5 | m$billm_p>=0.5)]<-'1'
+# m$list2[m$buy_p>=0.5 & m$live_p>=0.5 & (m$bill_p>=0.5 | m$billm_p>=0.5) & m$mobile_p>=0.6]<-'1'
 # 
 # m$list1<-as.factor(m$list1)
 # m$list2<-as.factor(m$list2)
 # 
 # m1<-subset(m, (!is.na(m$list1) | !is.na(m$list2)))
+# 
+# names(m1)<-c('userid','預測賽事','預測賽事p','預測比例','預測比例p','找高手','找高手p','即時比分','即時比分p','勝率榜',
+#              '勝率榜p','主推榜','主推榜p','個人預測頁','個人預測頁p','電腦比例','手機比例','名單1','名單2')
 # 
 # write.table(m1, file = "C:/proc/dumps/done.csv", append = FALSE, quote = TRUE, sep = ",",
 #             eol = "\n", na = "NA", row.names = FALSE,
@@ -18817,6 +18828,58 @@ FROM actionlog._action_6);
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CREATE TABLE `plsport_playsport`.`allwords` 
+( `all_words` VARCHAR(30) NOT NULL , 
+  `freq`      VARCHAR(10) NOT NULL 
+) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
+
+
+LOAD DATA INFILE 'C:/proc/dumps/all_words.csv' 
+INTO TABLE `plsport_playsport`.`allwords`  
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
 
 
 
