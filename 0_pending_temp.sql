@@ -306,3 +306,69 @@ FROM (
     SELECT userid, substr(uri,1,locate('.php',uri)-1) as uri
     FROM actionlog._user) as a
 GROUP BY a.userid, a.uri;
+
+
+
+
+CREATE TABLE `plsport_playsport`.`allwords` 
+( `all_words` VARCHAR(30) NOT NULL , 
+  `freq`      VARCHAR(10) NOT NULL 
+) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
+
+
+LOAD DATA INFILE 'C:/proc/dumps/all_words.csv' 
+INTO TABLE `plsport_playsport`.`allwords`  
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
+
+
+
+
+create table plsport_playsport._people_not_in_member_browses engine = myisam
+SELECT a.userid, a.nickname, b.browses
+FROM plsport_playsport.member a left join plsport_playsport.member_browses b on a.userid = b.userid
+where b.browses is null;
+
+
+        ALTER TABLE plsport_playsport._people_not_in_member_browses ADD INDEX (`userid`);
+
+create table actionlog._temp1 engine = myisam SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201507 limit 0 , 10000000;
+create table actionlog._temp2 engine = myisam SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201507 limit 10000000 , 10000000;
+create table actionlog._temp3 engine = myisam SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201507 limit 20000000 , 10000000;
+create table actionlog._temp4 engine = myisam SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201507 limit 30000000 , 10000000;
+create table actionlog._temp5 engine = myisam SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201507 limit 40000000 , 10000000;
+create table actionlog._temp6 engine = myisam SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201507 limit 50000000 , 10000000;
+create table actionlog._temp7 engine = myisam SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201507 limit 60000000 , 10000000;
+create table actionlog._temp8 engine = myisam SELECT userid, uri, time, user_agent, platform_type FROM actionlog.action_201507 limit 70000000 , 10000000;
+
+ALTER TABLE actionlog._temp1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp2 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp3 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp4 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp5 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp6 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp7 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp8 convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._people_not_in_member_browses_temp1 engine = myisam
+SELECT a.userid, a.uri, a.time, a.user_agent, a.platform_type 
+FROM actionlog._temp1 a inner join plsport_playsport._people_not_in_member_browses b on a.userid = b.userid;
+
+create table plsport_playsport._people_not_in_member_browses_temp2 engine = myisam
+SELECT a.userid, a.uri, a.time, a.user_agent, a.platform_type 
+FROM actionlog._temp2 a inner join plsport_playsport._people_not_in_member_browses b on a.userid = b.userid;
+
+create table plsport_playsport._people_not_in_member_browses_temp3 engine = myisam
+SELECT a.userid, a.uri, a.time, a.user_agent, a.platform_type 
+FROM actionlog._temp3 a inner join plsport_playsport._people_not_in_member_browses b on a.userid = b.userid;
+
+
+create table plsport_playsport._people_not_in_member_browses_for_check1 engine = myisam
+SELECT a.userid, a.nickname, a.browses, b.browses as browses2, a.createon
+FROM plsport_playsport.member a left join plsport_playsport.member_browses b on a.userid = b.userid
+where b.browses is null;
+
+
+

@@ -15163,17 +15163,17 @@ FROM plsport_playsport._pcash_log_with_detailed_info
 where killtype is not null and sale_allianceid = 1
 group by ym, killtype;
 
-
 SELECT substr(ym,1,4) as y, substr(ym,6,2) as m, killtype, count(sale_price) as buy_count 
 FROM plsport_playsport._pcash_log_with_detailed_info
 where killtype is not null and sale_allianceid = 2
 group by ym, killtype;
 
-
 SELECT substr(ym,1,4) as y, substr(ym,6,2) as m, killtype, count(sale_price) as buy_count 
 FROM plsport_playsport._pcash_log_with_detailed_info
 where killtype is not null and sale_allianceid = 3
 group by ym, killtype;
+
+
 
 
 
@@ -15186,7 +15186,6 @@ from (
         where year(sale_date) > 2013
         and sale_allianceid = 3) as a # 改allianceid即可 (1,2,3)
     group by a.ym, a.sale_price) as b;
-
 
 SELECT ym, sale_price, count(sale_price) as buy_count 
 FROM plsport_playsport._pcash_log_with_detailed_info
@@ -18522,8 +18521,8 @@ where buy_date between subdate(now(),31) and now();
 create table plsport_playsport._buy_list_mlb engine = myisam
 SELECT a.buyerid, a.buy_date, a.buy_price, a.allianceid, b.sellerid, b.sale_allianceid, b.sale_gameid, b.sale_date 
 FROM plsport_playsport._buyer a left join plsport_playsport.predict_seller b on a.id_bought = b.id
-where b.sale_allianceid = 1 /*換聯盟*/
-and buy_date between '2015-07-14 00:00:00' and '2015-07-27 23:59:59';
+where b.sale_allianceid = 2 /*換聯盟*/
+and buy_date between '2015-07-14 00:00:00' and '2015-07-31 23:59:59';
 
 create table plsport_playsport._buy_list_mlb_1 engine = myisam
 SELECT buyerid, buy_date, buy_price, allianceid, sellerid, sale_allianceid, sale_gameid, sale_date,
@@ -18572,7 +18571,7 @@ where uri not like '%ga=predict%'
 and uri not like   '%action=records%'
 and uri not like   '%action=forum%'
 and uri not like   '%action=honor%'
-and uri not like   '%action=friend%';  
+and uri not like   '%action=friend%';
 
 create table plsport_playsport._click_killer_page_history_2 engine = myisam    
 SELECT userid, uri, time, substr(uri, locate('visit=',uri), length(uri)) as v, substr(uri, locate('allianceid=',uri), length(uri)) as a
@@ -18828,58 +18827,6 @@ FROM actionlog._action_6);
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-CREATE TABLE `plsport_playsport`.`allwords` 
-( `all_words` VARCHAR(30) NOT NULL , 
-  `freq`      VARCHAR(10) NOT NULL 
-) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
-
-
-LOAD DATA INFILE 'C:/proc/dumps/all_words.csv' 
-INTO TABLE `plsport_playsport`.`allwords`  
-FIELDS TERMINATED BY ',' 
-ENCLOSED BY '"'
-LINES TERMINATED BY '\n'
-IGNORE 1 ROWS;
 
 
 
