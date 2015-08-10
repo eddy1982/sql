@@ -20,7 +20,7 @@ FROM (
 CREATE TABLE plsport_playsport._forum_top25_ranking engine = myisam
 SELECT a.m, a.postuser, a.nickname, a.c
 FROM (
-    SELECT m, postuser, nickname, count(subjectid) as c 
+    SELECT m, postuser, nickname, count(subjectid)action_201406 as c 
     FROM plsport_playsport._forum
     GROUP BY m, postuser) as a
 WHERE m = '2012-01' ORDER BY a.c DESC limit 1,25;
@@ -13775,13 +13775,16 @@ and time between '2015-07-07 11:26:00' and now()
 order by id desc;
 
 create table plsport_playsport._events1 engine = myisam
-SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest , a.userid, a.name, substr(name,length(name)-4,length(name)) as c, a.time 
+SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest , a.userid, a.name, substr(name,length(name)-4,length(name)) as c, a.time, a.platform_type
 FROM plsport_playsport._events a left join plsport_playsport.member b on a.userid = b.userid;
 
-SELECT abtest, c, count(userid) as dd 
+update plsport_playsport._events1 set platform_type = 1 where platform_type = 3;
+
+
+
+SELECT abtest, c, count(userid) as d
 FROM plsport_playsport._events1
 group by abtest, c;
-
 
 # TO EDDY 2015-07-07 11:36
 # 發文推ABtssting已於今日重新上縣
@@ -13792,12 +13795,88 @@ group by abtest, c;
 # - 觀察指標：發文推數
 # - 報告時間：8/11
 
+create table plsport_playsport._events2 engine = myisam
+select a.abtest, a.userid, a.name, a.c, a.time, a.platform_type
+from (
+    SELECT abtest, userid, name, c, time, platform_type, concat(abtest,c) as q
+    FROM plsport_playsport._events1) as a
+where a.q not in ('blow_a', 'btop_a');
+
+create table plsport_playsport._events3 engine = myisam
+SELECT abtest, userid, count(userid) as c
+FROM plsport_playsport._events2
+group by abtest, userid;
+
+SELECT 'abtest', 'userid', 'c' union (
+SELECT *
+into outfile 'C:/proc/r/abtest/_events3.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._events3);
+
+create table plsport_playsport._events3_by_devices engine = myisam
+SELECT abtest, userid, platform_type, count(userid) as c
+FROM plsport_playsport._events2
+group by abtest, userid, platform_type;
+
+SELECT 'abtest', 'userid', 'platform_type', 'c' union (
+SELECT *
+into outfile 'C:/proc/r/abtest/_events3_by_devices.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._events3_by_devices);
+
+create table plsport_playsport._log engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201507
+where time between '2015-07-07 11:26:00' and now()
+and userid <> '' and uri like '%forumdetail.php%';
+insert ignore into plsport_playsport._log
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201508
+where time between '2015-07-07 11:26:00' and now()
+and userid <> '' and uri like '%forumdetail.php%';
+
+
+update plsport_playsport._log set platform_type = 1 where platform_type = 3;
+
+create table plsport_playsport._log_1 engine = myisam
+SELECT userid,  count(uri) as pv
+FROM plsport_playsport._log
+group by userid;
+
+create table plsport_playsport._log_1_by_devices engine = myisam
+SELECT userid, platform_type, count(uri) as pv
+FROM plsport_playsport._log
+group by userid, platform_type;
+
+        ALTER TABLE plsport_playsport._log_1 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._log_1_by_devices convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._log_2 engine = myisam
+SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.pv 
+FROM plsport_playsport._log_1 a left join plsport_playsport.member b on a.userid = b.userid; 
+
+create table plsport_playsport._log_2_by_devices engine = myisam
+SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.platform_type, a.pv 
+FROM plsport_playsport._log_1_by_devices a left join plsport_playsport.member b on a.userid = b.userid; 
 
 
 
+SELECT abtest, count(userid) as c 
+FROM plsport_playsport._log_2
+group by abtest;
 
+# a	8141 > 2503 31% *
+# b	8142 > 2323 29%
 
+SELECT abtest, platform_type, count(userid) as c 
+FROM plsport_playsport._log_2_by_devices
+group by abtest, platform_type;
 
+# a	1	5741 > 1755 31% *
+# b	1	5596 > 1584 28%
+
+# a	2	5344 > 1339 25% * 
+# b	2	5321 > 1258 24% 
 
 
 
@@ -18612,7 +18691,6 @@ FROM plsport_playsport._buy_list_mlb_2 a left join plsport_playsport._click_kill
 on a.buyerid = b.userid and a.sellerid = b.visit and a.game_date = b.d;
 
 
-
 # 多少人買
 SELECT game_date, count(buyerid) as buyer 
 FROM plsport_playsport._a_list_1
@@ -18704,12 +18782,12 @@ where p in ('predictgame.php','livescore.php','buy_predict.php','billboard.php',
 create table actionlog._action_3 engine = myisam
 select a.userid, a.uri, a.time, a.platform_type, a.p, concat(a.p,'_',a.s1,a.s2,a.s3,a.s4,a.s5,a.s6) as s
 from (
-    SELECT userid, uri, time, platform_type, p, (case when (locate('action=scale',uri)>0) then 'scale' else '' end) as s1,
+    SELECT userid, uri, time, platform_type, p, (case when (locate('action=scale',uri)>0) then 'scale' else '' end)             as s1,
                                                 (case when (locate('killertype=singlekiller',uri)>0) then 'single' else '' end) as s2,
-                                                (case when (locate('action=mainp',uri)>0) then 'mainp' else '' end) as s3,
-                                                (case when (locate('action=records',uri)>0) then 'records' else '' end) as s4,
-                                                (case when (locate('action=forum',uri)>0) then 'forum' else '' end) as s5,
-                                                (case when (locate('action=honor',uri)>0) then 'honor' else '' end) as s6
+                                                (case when (locate('action=mainp',uri)>0) then 'mainp' else '' end)             as s3,
+                                                (case when (locate('action=records',uri)>0) then 'records' else '' end)         as s4,
+                                                (case when (locate('action=forum',uri)>0) then 'forum' else '' end)             as s5,
+                                                (case when (locate('action=honor',uri)>0) then 'honor' else '' end)             as s6
     FROM actionlog._action_2) as a;
 
 # billboard.php_	      27316
@@ -18820,7 +18898,6 @@ FROM actionlog._action_6);
 # write.table(m1, file = "C:/proc/dumps/done.csv", append = FALSE, quote = TRUE, sep = ",",
 #             eol = "\n", na = "NA", row.names = FALSE,
 #             col.names = TRUE, fileEncoding = "UTF-8")
-# 
 # rm(list=ls())
 
 # 檔案完成後會放置 C:/proc/dumps/done.csv
