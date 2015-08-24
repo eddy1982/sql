@@ -16107,6 +16107,7 @@ create table actionlog._action_log_201504 engine = myisam SELECT userid, uri, ti
 create table actionlog._action_log_201505 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201505 where userid <> ''; # it takes 494 secs
 create table actionlog._action_log_201506 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201506 where userid <> ''; # it takes 480 secs
 create table actionlog._action_log_201507 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201507 where userid <> ''; # it takes 290 secs
+create table actionlog._action_log_201508 engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201508 where userid <> ''; # it takes 290 secs
 
 create table actionlog.__action_log_201504 engine = myisam
 SELECT userid, platform_type, count(uri) as pv FROM actionlog._action_log_201504 group by userid, platform_type;
@@ -16116,16 +16117,19 @@ create table actionlog.__action_log_201506 engine = myisam
 SELECT userid, platform_type, count(uri) as pv FROM actionlog._action_log_201506 group by userid, platform_type;
 create table actionlog.__action_log_201507 engine = myisam
 SELECT userid, platform_type, count(uri) as pv FROM actionlog._action_log_201507 group by userid, platform_type;
+create table actionlog.__action_log_201508 engine = myisam
+SELECT userid, platform_type, count(uri) as pv FROM actionlog._action_log_201508 group by userid, platform_type;
 
 update actionlog.__action_log_201504 set platform_type=2 where platform_type=3;
 update actionlog.__action_log_201505 set platform_type=2 where platform_type=3;
 update actionlog.__action_log_201506 set platform_type=2 where platform_type=3;
 update actionlog.__action_log_201507 set platform_type=2 where platform_type=3;
+update actionlog.__action_log_201508 set platform_type=2 where platform_type=3;
 
-create table actionlog.___action_log engine = myisam select * from actionlog.__action_log_201504;
-insert ignore into actionlog.___action_log select * from actionlog.__action_log_201505;
+create table actionlog.___action_log engine = myisam select * from actionlog.__action_log_201505;
 insert ignore into actionlog.___action_log select * from actionlog.__action_log_201506;
 insert ignore into actionlog.___action_log select * from actionlog.__action_log_201507;
+insert ignore into actionlog.___action_log select * from actionlog.__action_log_201508;
 
 
 create table actionlog._action_log2_devices engine = myisam
@@ -16165,15 +16169,22 @@ from (
     FROM actionlog._action_log_201507) as a
 group by a.userid, a.d;
 
-# it takes 447 secs
-# it takes 559 secs
-# it takes 621 secs
-# it takes 219 secs
+create table actionlog._action_log1_201508 engine = myisam
+select a.userid, a.d
+from (
+    SELECT userid, date(time) as d 
+    FROM actionlog._action_log_201508) as a
+group by a.userid, a.d;
+# it takes 460 secs
+# it takes 491 secs
+# it takes 514 secs
+# it takes 430 secs
+# it takes 175 secs
 
-create table actionlog._action_log1_day_count engine = myisam SELECT * FROM actionlog._action_log1_201504;
-insert ignore into actionlog._action_log1_day_count select * from actionlog._action_log1_201505;
+create table actionlog._action_log1_day_count engine = myisam SELECT * FROM actionlog._action_log1_201505;
 insert ignore into actionlog._action_log1_day_count select * from actionlog._action_log1_201506;
 insert ignore into actionlog._action_log1_day_count select * from actionlog._action_log1_201507;
+insert ignore into actionlog._action_log1_day_count select * from actionlog._action_log1_201508;
 
 create table actionlog._action_log2_day_count engine = myisam
 SELECT userid, count(d) as day_count
@@ -16275,12 +16286,12 @@ SELECT *
 FROM plsport_playsport._list_7
 where percentile > 0.49;
 
-
 SELECT 'userid', '暱稱', '網站登入天數','站內總消費額','近三個月站內消費額','級距','近一個月站內消費額','電腦使用比例','手機使用比例','最近上站日','居住地' union (
 SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/_list_8.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._list_8);
+
 
 
 # to Eddy ：Tue, May 12, 2015 at 6:01 PM
@@ -18069,6 +18080,8 @@ FROM actionlog._forum_8);
 # (1)先撈出所有即時比分的pv
 CREATE TABLE actionlog._livescore engine = myisam SELECT userid, uri, time FROM actionlog.action_201506 WHERE uri LIKE '%/livescore%' and userid <> '';
 INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201507 WHERE uri LIKE '%/livescore%' and userid <> '';
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201508 WHERE uri LIKE '%/livescore%' and userid <> '';
+
 
 CREATE TABLE actionlog._livescore_1 engine = myisam
 select a.userid, a.uri, a.time, (case when (locate('&',a.p)=0) then a.p else substr(a.p,1,locate('&',a.p)-1) end) as p
@@ -18903,6 +18916,153 @@ FROM actionlog._action_6);
 # 檔案完成後會放置 C:/proc/dumps/done.csv
 
 
+
+
+
+# =================================================================================================
+# 研究討論區流量下滑問題 2015-08-13 (阿達)
+# 分析流量、回文數下滑原因
+# http://redmine.playsport.cc/issues/193
+# 
+# 內容
+# 1. 討論區流量下滑
+# 於六月中開始，討論區流量持續下滑，至8/10已下滑約 30%
+# 
+# 2. 討論區回文數下滑
+# 於七月底開始，討論區回文持續下滑，至8/10以下滑約 30%
+# =================================================================================================
+
+create table actionlog._forumdetail_201306 engine = myisam SELECT userid, uri, time FROM actionlog.action_201306 where uri like '%forumdetail.php%';
+create table actionlog._forumdetail_201307 engine = myisam SELECT userid, uri, time FROM actionlog.action_201307 where uri like '%forumdetail.php%';
+create table actionlog._forumdetail_201308 engine = myisam SELECT userid, uri, time FROM actionlog.action_201308 where uri like '%forumdetail.php%';
+create table actionlog._forumdetail_201406 engine = myisam SELECT userid, uri, time FROM actionlog.action_201406 where uri like '%forumdetail.php%';
+create table actionlog._forumdetail_201407 engine = myisam SELECT userid, uri, time FROM actionlog.action_201407 where uri like '%forumdetail.php%';
+create table actionlog._forumdetail_201408 engine = myisam SELECT userid, uri, time FROM actionlog.action_201408 where uri like '%forumdetail.php%';
+create table actionlog._forumdetail_201506 engine = myisam SELECT userid, uri, time FROM actionlog.action_201506 where uri like '%forumdetail.php%';
+create table actionlog._forumdetail_201507 engine = myisam SELECT userid, uri, time FROM actionlog.action_201507 where uri like '%forumdetail.php%';
+create table actionlog._forumdetail_201508 engine = myisam SELECT userid, uri, time FROM actionlog.action_201508 where uri like '%forumdetail.php%';
+
+create table actionlog.__forumdetail_201406 engine = myisam
+select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._forumdetail_201406) as a;
+create table actionlog.__forumdetail_201407 engine = myisam
+select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._forumdetail_201407) as a;
+create table actionlog.__forumdetail_201408 engine = myisam
+select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._forumdetail_201408) as a;
+create table actionlog.__forumdetail_201506 engine = myisam
+select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._forumdetail_201506) as a;
+create table actionlog.__forumdetail_201507 engine = myisam
+select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._forumdetail_201507) as a;
+create table actionlog.__forumdetail_201508 engine = myisam
+select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._forumdetail_201508) as a;
+
+ALTER TABLE actionlog.__forumdetail_201406 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog.__forumdetail_201407 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog.__forumdetail_201408 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog.__forumdetail_201506 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog.__forumdetail_201507 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog.__forumdetail_201508 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+ALTER TABLE plsport_playsport.forum ADD INDEX (`subjectid`);
+
+create table actionlog.__forumdetail engine = myisam select * from actionlog.__forumdetail_201406;
+insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201407;
+insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201408;
+insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201506;
+insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201507;
+insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201508;
+
+# 執行slide04.py
+# 主要是將actionlog.__forumdetail 加上allianceid的資訊, 使用left join
+
+rename table actionlog._temp to actionlog.__forumdetail_1;
+
+create table actionlog.__forumdetail_2 engine = myisam
+SELECT date(time) as d, s, allianceid FROM actionlog.__forumdetail_1;
+
+# 執行slide05.py
+# 主要是將actionlog.__forumdetail_2依日期和聯盟group起來
+# [Finished in 2053.9s]
+
+create table actionlog.__forumdetail_3 engine = myisam
+SELECT d, allianceid, sum(pv) as pv 
+FROM actionlog._temp
+group by d, allianceid;
+
+create table actionlog.__forumdetail_4 engine = myisam
+SELECT a.d, a.allianceid, b.alliancename, a.pv 
+FROM actionlog.__forumdetail_3 a left join  plsport_playsport.alliance b on a.allianceid = b.allianceid;
+
+create table actionlog.__forumdetail_5 engine = myisam
+SELECT d, substr(d,1,4) as y, substr(d,6,10) as da,  allianceid, alliancename, pv 
+FROM actionlog.__forumdetail_4
+where alliancename is not null;
+
+create table actionlog.__forumdetail_6 engine = myisam
+SELECT * FROM actionlog.__forumdetail_5
+where da between '06-15' and '08-12';
+
+
+create table plsport_playsport._forum engine = myisam
+select a.allianceid, a.postuser, a.posttime, a.y, a.da, a.replycount
+from (
+    SELECT allianceid, postuser, posttime, substr(posttime,1,4) as y, substr(posttime,6,5) as da, replycount
+    FROM plsport_playsport.forum) as a
+where a.y in (2014,2015)
+and a.da between '06-15' and '08-12';
+
+create table plsport_playsport._forum_post engine = myisam
+SELECT y, da, allianceid, count(postuser) as post_count 
+FROM plsport_playsport._forum
+group by y, da, allianceid;
+
+create table plsport_playsport._forum_reply engine = myisam
+SELECT y, da, allianceid, sum(replycount) as replycount 
+FROM plsport_playsport._forum
+group by y, da, allianceid;
+
+create table plsport_playsport._forum_post1 engine = myisam
+SELECT a.y, a.da, a.allianceid, b.alliancename, a.post_count 
+FROM plsport_playsport._forum_post a left join plsport_playsport.alliance b on a.allianceid = b.allianceid;
+
+create table plsport_playsport._forum_reply1 engine = myisam
+SELECT a.y, a.da, a.allianceid, b.alliancename, a.replycount 
+FROM plsport_playsport._forum_reply a left join plsport_playsport.alliance b on a.allianceid = b.allianceid;
+
+SELECT 'd', 'y', 'da', 'allianceid', 'alliancename', 'pv' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/__forumdetail_6.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog.__forumdetail_6
+where allianceid in (1,2,3,4,6,9));
+
+SELECT 'y', 'da', 'allianceid', 'alliancename', 'post_count' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_post.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_post1
+where allianceid in (1,2,3,4,6,9));
+
+SELECT 'y', 'da', 'allianceid', 'alliancename','reply_count' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_reply.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_reply1
+where allianceid in (1,2,3,4,6,9));
+
+
+SELECT 'd', 'pv' union (
+SELECT d, sum(pv) as pv
+into outfile 'C:/Users/1-7_ASUS/Desktop/pv_by_day.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog.__forumdetail_6
+where allianceid in (1,2,3,4,6,9)
+group by d);
 
 
 
