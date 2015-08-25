@@ -12670,7 +12670,7 @@ FROM plsport_playsport._order_data_check_2_for_r);
 CREATE TABLE plsport_playsport._forumcontent engine = myisam
 SELECT * 
 FROM plsport_playsport.forumcontent
-WHERE postdate between '2015-04-10 00:00:00' AND now();
+WHERE postdate between '2015-06-23 00:00:00' AND '2015-08-23 23:59:59';
 # WHERE postdate between '2015-02-03 00:00:00' AND now();
 # WHERE postdate between '2014-10-28 00:00:00' AND now();
 
@@ -12705,13 +12705,19 @@ SELECT subjectid, userid, content, postdate,
        (case when (locate('/includes/images/smiley/playsport23.png',content)>0) then 1 else 0 end) as p23,
        (case when (locate('/includes/images/smiley/playsport24.png',content)>0) then 1 else 0 end) as p24,
        (case when (locate('/includes/images/smiley/playsport25.png',content)>0) then 1 else 0 end) as p25,
-       (case when (locate('/includes/images/smiley/playsport26.png',content)>0) then 1 else 0 end) as p26
+       (case when (locate('/includes/images/smiley/playsport26.png',content)>0) then 1 else 0 end) as p26,
+       (case when (locate('/includes/images/smiley/playsport27.png',content)>0) then 1 else 0 end) as p27,
+       (case when (locate('/includes/images/smiley/playsport28.png',content)>0) then 1 else 0 end) as p28,
+       (case when (locate('/includes/images/smiley/playsport29.png',content)>0) then 1 else 0 end) as p29,
+       (case when (locate('/includes/images/smiley/playsport30.png',content)>0) then 1 else 0 end) as p30,       
+       (case when (locate('/includes/images/smiley/playsport31.png',content)>0) then 1 else 0 end) as p31       
 FROM plsport_playsport._forumcontent_1;
 
 CREATE TABLE plsport_playsport._forumcontent_2_all_icon_stat engine = myisam
 SELECT sum(p01), sum(p02), sum(p03), sum(p04), sum(p05), sum(p06), sum(p07), sum(p08), sum(p09), sum(p10), 
        sum(p11), sum(p12), sum(p13), sum(p14), sum(p15), sum(p16), sum(p17), sum(p18), sum(p19), sum(p20), 
-       sum(p21), sum(p22), sum(p23), sum(p24), sum(p25), sum(p26)
+       sum(p21), sum(p22), sum(p23), sum(p24), sum(p25), sum(p26), sum(p27), sum(p28), sum(p29), sum(p30),
+       sum(p31)
 FROM plsport_playsport._forumcontent_2;
 
 CREATE TABLE plsport_playsport._forumcontent_1_1 engine = myisam
@@ -16229,7 +16235,7 @@ ALTER TABLE plsport_playsport._spent_all convert to character set utf8 collate u
 ALTER TABLE plsport_playsport._spent_one_month convert to character set utf8 collate utf8_general_ci;
 ALTER TABLE plsport_playsport._spent_three_month convert to character set utf8 collate utf8_general_ci;
 ALTER TABLE plsport_playsport._last_login_time convert to character set utf8 collate utf8_general_ci;
-ALTER TABLE plsport_playsport._user_city convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._user_city2 convert to character set utf8 collate utf8_general_ci;
 
 ALTER TABLE actionlog._action_log2_devices ADD INDEX (`userid`);
 ALTER TABLE actionlog._action_log2_day_count ADD INDEX (`userid`);
@@ -16237,7 +16243,7 @@ ALTER TABLE plsport_playsport._spent_all ADD INDEX (`userid`);
 ALTER TABLE plsport_playsport._spent_one_month ADD INDEX (`userid`);
 ALTER TABLE plsport_playsport._spent_three_month ADD INDEX (`userid`);
 ALTER TABLE plsport_playsport._last_login_time ADD INDEX (`userid`);
-ALTER TABLE plsport_playsport._user_city ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport._user_city2 ADD INDEX (`userid`);
 
 
 create table plsport_playsport._list_1 engine = myisam
@@ -16268,7 +16274,7 @@ FROM plsport_playsport._list_3 a left join plsport_playsport._last_login_time b 
 
 create table plsport_playsport._list_5 engine = myisam
 SELECT a.userid, a.nickname, a.day_count, a.total_spent, a.three_month_spent, a.one_month_spent, a.p_pc, a.p_mobile, date(a.last_login) as last_login, b.city
-FROM plsport_playsport._list_4 a left join plsport_playsport._user_city b on a.userid = b.userid;
+FROM plsport_playsport._list_4 a left join plsport_playsport._user_city2 b on a.userid = b.userid;
 
 create table plsport_playsport._list_6 engine = myisam
 SELECT * FROM plsport_playsport._list_5
@@ -16288,7 +16294,7 @@ where percentile > 0.49;
 
 SELECT 'userid', '暱稱', '網站登入天數','站內總消費額','近三個月站內消費額','級距','近一個月站內消費額','電腦使用比例','手機使用比例','最近上站日','居住地' union (
 SELECT *
-into outfile 'C:/Users/1-7_ASUS/Desktop/_list_8.txt'
+into outfile 'C:/Users/1-7_ASUS/Desktop/_list_8_20150824.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._list_8);
 
@@ -19055,7 +19061,6 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._forum_reply1
 where allianceid in (1,2,3,4,6,9));
 
-
 SELECT 'd', 'pv' union (
 SELECT d, sum(pv) as pv
 into outfile 'C:/Users/1-7_ASUS/Desktop/pv_by_day.txt'
@@ -19063,6 +19068,154 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog.__forumdetail_6
 where allianceid in (1,2,3,4,6,9)
 group by d);
+
+
+
+# =================================================================================================
+# 任務: [201504-B-3] 購牌專區 - 手機瀏覽時，加大暱稱與版標 - MVP測試名單 [進行中]
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4962&projectId=11
+# 提此任務MVP測試名單
+# 時間：8/24
+# 
+# 1. MVP測試名單
+# 條件：
+# a. 近一個月手機觀看購牌專區pv達前50%
+# 
+# 欄位：
+# a. 帳號
+# b. 暱稱
+# c. 近一個月手機觀看購牌專區pv及佔比
+# d. 近一個月手機於購牌專區購買金額及佔比
+# e. 手機、電腦使用比例
+# =================================================================================================
+
+create table actionlog._action_task engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201507
+where userid  <> '' and uri like '%buy_predict.php%'
+and time between subdate(now(),31) and now();
+
+insert ignore into actionlog._action_task
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201508
+where userid  <> '' and uri like '%buy_predict.php%'
+and time between subdate(now(),31) and now();
+
+create table actionlog._visit_buy_predict engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._action_task
+where platform_type = 2
+group by userid;
+
+# (1)
+create table actionlog._visit_buy_predict1 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._visit_buy_predict, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._visit_buy_predict) as ct;
+
+
+CREATE TABLE plsport_playsport._predict_buyer engine = myisam
+SELECT a.id, a.buyerid, a.id_bought, a.buy_date , a.buy_price, b.position, b.cons, b.allianceid
+FROM plsport_playsport.predict_buyer a LEFT JOIN plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer
+WHERE a.buy_price <> 0
+AND a.buy_date between subdate(now(),31) AND now();
+
+ALTER TABLE plsport_playsport._predict_buyer ADD INDEX (`id_bought`);  
+
+#再join predict_seller
+CREATE TABLE plsport_playsport._predict_buyer_with_cons engine = myisam
+SELECT c.id, c.buyerid, c.id_bought, d.sellerid ,c.buy_date , c.buy_price, c.position, c.cons, c.allianceid
+FROM plsport_playsport._predict_buyer c LEFT JOIN plsport_playsport.predict_seller d on c.id_bought = d.id
+ORDER BY buy_date DESC;
+
+CREATE TABLE plsport_playsport._who_buy_at_buypredict engine = myisam
+SELECT buyerid as userid, sum(buy_price) as spent 
+FROM plsport_playsport._predict_buyer_with_cons
+where substr(position,1,2) = 'BZ'
+group by buyerid;
+
+# (2)
+create table plsport_playsport._who_buy_at_buypredict1 engine = myisam
+select userid, spent, round((cnt-rank+1)/cnt,2) as spent_percentile
+from (SELECT userid, spent, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._who_buy_at_buypredict, (SELECT @curRank := 0) r
+      order by spent desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._who_buy_at_buypredict) as ct;
+
+update actionlog._action_task set platform_type=1 where platform_type=3;
+
+create table actionlog._action_task1 engine = myisam
+SELECT userid, platform_type, count(uri) as pv 
+FROM actionlog._action_task
+group by userid, platform_type;
+
+# (3)
+create table actionlog._action_task_devices engine = myisam
+select b.userid, round((b.pc/(b.pc+b.mobile)),3) as p_pc, round((b.mobile/(b.pc+b.mobile)),3) as p_mobile
+from (
+    select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+    from (
+        SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc, (case when (platform_type=2) then pv else 0 end) as mobile
+        FROM actionlog._action_task1) as a
+    group by a.userid) as b;
+
+
+        ALTER TABLE actionlog._visit_buy_predict1 ADD INDEX (`userid`); 
+        ALTER TABLE plsport_playsport._who_buy_at_buypredict1 ADD INDEX (`userid`); 
+        ALTER TABLE actionlog._action_task_devices ADD INDEX (`userid`); 
+        ALTER TABLE actionlog._visit_buy_predict1 CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE plsport_playsport._who_buy_at_buypredict1 CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE actionlog._action_task_devices CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+# To Eddy：
+# 抱歉，請再幫我加上兩個欄位
+
+        # g. 最近使用購牌專區日期
+        create table plsport_playsport._who_visit_buypredict_lasttime engine = myisam
+        SELECT userid, date(max(time)) as last_time_visit_buy
+        FROM actionlog._action_task
+        where platform_type = 2
+        group by userid;
+
+        # f. 最近登入日期
+        CREATE TABLE plsport_playsport._last_time_login engine = myisam
+        SELECT userid, date(max(signin_time)) as signin_time 
+        FROM plsport_playsport.member_signin_log_archive
+        GROUP BY userid;
+
+        ALTER TABLE plsport_playsport._who_visit_buypredict_lasttime ADD INDEX (`userid`); 
+        ALTER TABLE plsport_playsport._last_time_login ADD INDEX (`userid`); 
+        ALTER TABLE plsport_playsport._who_visit_buypredict_lasttime CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE plsport_playsport._last_time_login CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+create table plsport_playsport._mvp_list_1 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile 
+FROM actionlog._visit_buy_predict1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._mvp_list_2 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, b.spent, b.spent_percentile
+FROM plsport_playsport._mvp_list_1 a left join plsport_playsport._who_buy_at_buypredict1 b on a.userid = b.userid;
+
+create table plsport_playsport._mvp_list_3 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.spent, a.spent_percentile, b.p_pc, b.p_mobile
+FROM plsport_playsport._mvp_list_2 a left join actionlog._action_task_devices b on a.userid = b.userid
+where a.pv_percentile > 0.49;
+
+create table plsport_playsport._mvp_list_4 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.spent, a.spent_percentile, a.p_pc, a.p_mobile, b.last_time_visit_buy
+FROM plsport_playsport._mvp_list_3 a left join plsport_playsport._who_visit_buypredict_lasttime b on a.userid = b.userid;
+
+create table plsport_playsport._mvp_list_5 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.spent, a.spent_percentile, a.p_pc, a.p_mobile, a.last_time_visit_buy, b.signin_time
+FROM plsport_playsport._mvp_list_4 a left join plsport_playsport._last_time_login b on a.userid = b.userid;
+
+SELECT 'userid', '暱稱', '購牌專區pv', '級距', '購牌專區購買金額', '級距', '電腦使用比例', '手機使用比例', '最近使用購牌專區', '最近登入'  union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_mvp_list_5.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._mvp_list_5);
 
 
 
