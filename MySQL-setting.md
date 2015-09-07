@@ -1,8 +1,6 @@
 My mysql setting
 ================
 
-
-
 mysqld
 ------
 ```?
