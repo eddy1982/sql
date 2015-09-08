@@ -13,6 +13,7 @@ default-storage-engine           = MyISAM
 default_tmp_storage_engine       = MyISAM
 datadir                          = H:/data
 
+skip-character-set-client-handshake
 character-set-server=utf8
 collation-server=utf8_general_ci
 
