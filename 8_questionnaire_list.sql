@@ -289,9 +289,8 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2015-07-01' and '2015-07-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2015-08-01' and '2015-08-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
-
 
         ALTER TABLE _signin_list ADD INDEX (`userid`); 
         ALTER TABLE _existed_list ADD INDEX (`userid`);

@@ -21,17 +21,12 @@ select userid, count(uri) as log_count, month(time) as log_month from _action_20
 -- 2014/1/2新增, 排除異常名單, 機器人
 -- 先執行 8_user_find_the robot_register
 
-        ALTER TABLE  actionlog.__action_201507_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE  actionlog.__action_201508_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
         ALTER TABLE  plsport_playsport._problem_members CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
-
-select count(a.userid) from actionlog.__action_201501_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201502_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201503_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201504_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-select count(a.userid) from actionlog.__action_201505_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+        
 select count(a.userid) from actionlog.__action_201506_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201507_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-
+select count(a.userid) from actionlog.__action_201508_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 
 -- ======================================================================================
 --  準備其它資料表

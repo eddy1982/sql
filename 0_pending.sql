@@ -20,7 +20,7 @@ FROM (
 CREATE TABLE plsport_playsport._forum_top25_ranking engine = myisam
 SELECT a.m, a.postuser, a.nickname, a.c
 FROM (
-    SELECT m, postuser, nickname, count(subjectid)action_201406 as c 
+    SELECT m, postuser, nickname, count(subjectid) as c 
     FROM plsport_playsport._forum
     GROUP BY m, postuser) as a
 WHERE m = '2012-01' ORDER BY a.c DESC limit 1,25;
@@ -14526,7 +14526,6 @@ SELECT * FROM actionlog._forumdetail_8
 where (lv2 + lv3 + lv4) > 0
 order by postuser, m;
 
-
 create table actionlog._forumdetail_10_1 engine = myisam
 SELECT postuser, substr(min(m),5,2) as lv2_m 
 FROM actionlog._forumdetail_9
@@ -14612,17 +14611,6 @@ into outfile 'C:/Users/1-7_ASUS/Desktop/_forumdetail_15.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._forumdetail_17);
 
-
-
-
-
-
-
-
-
-
-
-
 create table actionlog._forumdetail_10_a engine = myisam
 SELECT a.m, a.postuser, a.lv2, a.lv3, a.lv4, b.lv2_m
 FROM actionlog._forumdetail_9 a left join actionlog._forumdetail_10_1 b on a.postuser = b.postuser;
@@ -14634,20 +14622,6 @@ FROM actionlog._forumdetail_10_a a left join actionlog._forumdetail_10_2 b on a.
 create table actionlog._forumdetail_10_c engine = myisam
 SELECT a.m, a.postuser, a.lv2, a.lv3, a.lv4, a.lv2_m, a.lv3_m, b.lv4_m
 FROM actionlog._forumdetail_10_b a left join actionlog._forumdetail_10_3 b on a.postuser = b.postuser;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 create table actionlog._forumdetail_4 engine = myisam SELECT * FROM actionlog._forumdetail_4_201401;
 insert ignore into actionlog._forumdetail_4 SELECT * FROM actionlog._forumdetail_4_201402; 
@@ -14661,8 +14635,6 @@ insert ignore into actionlog._forumdetail_4 SELECT * FROM actionlog._forumdetail
 insert ignore into actionlog._forumdetail_4 SELECT * FROM actionlog._forumdetail_4_201410; 
 insert ignore into actionlog._forumdetail_4 SELECT * FROM actionlog._forumdetail_4_201411; 
 insert ignore into actionlog._forumdetail_4 SELECT * FROM actionlog._forumdetail_4_201412; 
-
-
 
 create table actionlog._forumdetail_5 engine = myisam
 SELECT subjectid, sum(views) as views
@@ -15130,7 +15102,6 @@ into outfile 'C:/Users/1-7_ASUS/Desktop/__sell_count_everyday.csv'
 fields terminated by ',' enclosed by '' lines terminated by '\r\n'
 FROM plsport_playsport.__sell_count_everyday);
 
-
 select substr(b.ym,1,4) as y, substr(b.ym,6,2) as m, b.killtype, count(b.sellerid) as killer_count
 from (
     select a.sellerid, a.ym, a.killtype
@@ -15139,7 +15110,6 @@ from (
         FROM plsport_playsport._predict_seller_with_medal_1) as a
     group by a.sellerid, a.ym, a.killtype) as b
 group by b.ym, b.killtype;
-
 
 
 create table plsport_playsport._pcash_log engine = myisam
@@ -15190,11 +15160,8 @@ FROM plsport_playsport._predict_seller_with_medal
 where year(sale_date)> 2012
 group by m, sale_price;
 
-
-
 # 開會討論後補充
 # 各聯盟當選殺手人數, 只看NBA, 日棒, MLB
-
 
 create table plsport_playsport.__sell_count_everyday_mlb engine = myisam
 SELECT d, killtype, count(sellerid) as sell_count
@@ -15237,9 +15204,7 @@ fields terminated by ',' enclosed by '' lines terminated by '\r\n'
 FROM plsport_playsport.__sell_count_everyday_nba);
 
 
-
 # 重新執行plsport_playsport._pcash_log_with_detailed_info
-
 
 
 # 每月購買數
@@ -15258,10 +15223,7 @@ FROM plsport_playsport._pcash_log_with_detailed_info
 where killtype is not null and sale_allianceid = 3
 group by ym, killtype;
 
-
-
-
-
+# 以價格來區分, 製作購買上架比
 select b.ym, b.sale_price, b.sell_count
 from (
     select a.ym, a.sale_price, count(a.sellerid) as sell_count
@@ -15269,20 +15231,13 @@ from (
         SELECT substr(d,1,7) as ym, sale_price, sellerid
         FROM plsport_playsport._predict_seller_with_medal_1
         where year(sale_date) > 2013
-        and sale_allianceid = 3) as a # 改allianceid即可 (1,2,3)
+        and sale_allianceid = 2) as a # 改allianceid即可 (1,2,3)
     group by a.ym, a.sale_price) as b;
 
 SELECT ym, sale_price, count(sale_price) as buy_count 
 FROM plsport_playsport._pcash_log_with_detailed_info
-where  sale_allianceid = 3 and c_year > 2013
+where  sale_allianceid = 2 and c_year > 2013
 group by ym, sale_price;
-
-
-
-
-
-
-
 
 
 
@@ -16769,13 +16724,12 @@ from (
     where payed = 1 and type = 1 and userid ='FB1404275823') as a
 group by a.ym;
 
-select *
+select a.p, sum(a.buy_price) as price, a.ym
 from (
-    SELECT position, sum(buy_price) as spent
+    SELECT substr(position,1,3) as p, buy_price, substr(buy_date,1,7) as ym
     FROM plsport_playsport._predict_buyer_with_cons
-    where buyerid = 'FB1404275823'
-    group by position) as a
-order by a.spent desc;
+    where buyerid = 'FB1404275823') as a
+group by a.p, a.ym;
 
 
 # =================================================================================================
