@@ -4597,10 +4597,10 @@ SELECT a.userid, a.uri, a.visit, a.action, a.type, a.during, a.vol, a.gameday, a
 FROM actionlog.action_visit_member_edited a inner join plsport_playsport._who_spent_in_six_months b on a.userid = b.userid
 WHERE a.userid <> a.visit;
 
-CREATE TABLE actionlog.action_visit_member_without_see_himself_tab_records_1 engine = myisam
-SELECT * 
-FROM actionlog.action_visit_member_without_see_himself_1
-WHERE action = 'records';
+CREATE TABLE actionlog.action_visit_member_without_see_himself_tab_records_1  ENGINE=MYISAM SELECT * FROM
+    actionlog.action_visit_member_without_see_himself_1
+WHERE
+    action = 'records';
 
 # 個人頁的點擊數直接count action_visit_member_edited
 # 戰績頁的點擊數直接count action_visit_member_edited_tab_records
@@ -18044,14 +18044,13 @@ FROM actionlog._forum_8);
 CREATE TABLE actionlog._livescore engine = myisam SELECT userid, uri, time FROM actionlog.action_201506 WHERE uri LIKE '%/livescore%' and userid <> '';
 INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201507 WHERE uri LIKE '%/livescore%' and userid <> '';
 INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201508 WHERE uri LIKE '%/livescore%' and userid <> '';
-
+INSERT IGNORE INTO actionlog._livescore SELECT userid, uri, time FROM actionlog.action_201509 WHERE uri LIKE '%/livescore%' and userid <> '';
 
 CREATE TABLE actionlog._livescore_1 engine = myisam
 select a.userid, a.uri, a.time, (case when (locate('&',a.p)=0) then a.p else substr(a.p,1,locate('&',a.p)-1) end) as p
 from (
     SELECT userid, uri, time, (case when (locate('aid=',uri) = 0) then 0 else substr(uri, locate('aid=',uri)+4, length(uri)) end) as p
     FROM actionlog._livescore) as a;
-
 
 CREATE TABLE actionlog._livescore_2 engine = myisam
 select a.d, a.userid, count(a.uri) as c
@@ -19232,6 +19231,83 @@ create table actionlog._livescore5 engine = myisam
 SELECT u3, u2, u1, count(uri) as c 
 FROM actionlog._livescore4
 group by u3, u2, u1;
+
+
+
+
+# =================================================================================================
+# 任務: [201412-F-20] 即時比分顯示隔日賽事數據 - 分析問卷結果 [進行中]
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4966&projectId=11
+#  
+# 分析"即時比分賽事數據"問卷結果
+# 負責人：Eddy
+#  
+# 時間：9/21(五)
+# 問券id為201509081556429556
+# =================================================================================================
+
+# 先匯入questionnaire_201509081556429556_answer
+
+create table plsport_playsport._temp_question engine = myisam
+select * 
+from plsport_playsport.questionnaire_201509081556429556_answer;
+
+
+ALTER TABLE plsport_playsport.questionnaire_201509081556429556_answer CHANGE `1441698919` ans varchar(1000);
+
+create table plsport_playsport._question engine = myisam
+select userid, replace(ans, ' ', '') as ans
+from plsport_playsport.questionnaire_201509081556429556_answer;
+
+update plsport_playsport._question set ans = replace(ans, '.',''); 
+update plsport_playsport._question set ans = replace(ans, ',',''); 
+update plsport_playsport._question set ans = replace(ans, ';','');
+update plsport_playsport._question set ans = replace(ans, '/','');
+update plsport_playsport._question set ans = replace(ans, '\\','_');
+update plsport_playsport._question set ans = replace(ans, '"','');
+update plsport_playsport._question set ans = replace(ans, '&','');
+update plsport_playsport._question set ans = replace(ans, '#','');
+update plsport_playsport._question set ans = replace(ans, ' ','');
+update plsport_playsport._question set ans = replace(ans, '\n','');
+update plsport_playsport._question set ans = replace(ans, '\b','');
+update plsport_playsport._question set ans = replace(ans, '\t','');
+update plsport_playsport._question set ans = replace(ans, '\r','');
+update plsport_playsport._question set ans = replace(ans, '謝謝','');
+update plsport_playsport._question set ans = replace(ans, '~','');
+
+
+create table plsport_playsport._question_1 engine = myisam
+SELECT userid, ans
+FROM plsport_playsport._question
+where ans <> ''
+and ans not in ('沒有','無','很棒','no','沒','ok','不用');
+
+# 填寫: 1703
+# 排除沒意見者: 727
+
+create table plsport_playsport._question_2 engine = myisam
+SELECT userid, ans
+FROM plsport_playsport._question_1
+where ans not like '%夠了%'
+and ans not like '%很好%'
+and ans not like '%沒意見%'
+and ans not like '%無意見%'
+and ans not like '%很棒了%'
+and ans not like '%不需要%'
+and ans not like '%很完美%'
+and ans not like '%已足夠%'
+and ans not like '%不用了%'
+and ans not like '%NA%'
+;
+
+ALTER TABLE plsport_playsport._question_2 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._question_2 CHANGE `ans` `ans` TEXT CHARACTER SET big5 COLLATE big5_chinese_ci NULL DEFAULT NULL;
+
+SELECT 'userid', 'ans' union (
+SELECT *
+into outfile 'C:/proc/dumps/_question.csv'
+fields terminated by ', ' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._question_2);
 
 
 
