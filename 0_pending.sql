@@ -16747,25 +16747,36 @@ group by a.p, a.ym;
 #    請再多檢驗推數、回覆數是否有影響
 # =================================================================================================
 
+# create table actionlog._forum engine = myisam
+# SELECT userid, uri, time, platform_type 
+# FROM actionlog.action_201504
+# where userid <> '' and time between '2015-04-29 00:00:00' and now()
+# and uri like '%/forum%';
+# insert ignore into actionlog._forum
+# SELECT userid, uri, time, platform_type 
+# FROM actionlog.action_201505
+# where userid <> '' and time between '2015-04-29 00:00:00' and now()
+# and uri like '%/forum%';
+# insert ignore into actionlog._forum
+# SELECT userid, uri, time, platform_type 
+# FROM actionlog.action_201506
+# where userid <> '' and time between '2015-04-29 00:00:00' and now()
+# and uri like '%/forum%';
+# insert ignore into actionlog._forum
+# SELECT userid, uri, time, platform_type 
+# FROM actionlog.action_201507
+# where userid <> '' and time between '2015-04-29 00:00:00' and now()
+# and uri like '%/forum%';
+
 create table actionlog._forum engine = myisam
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201504
-where userid <> '' and time between '2015-04-29 00:00:00' and now()
+FROM actionlog.action_201508
+where userid <> '' and time between '2015-08-10 00:00:00' and now()
 and uri like '%/forum%';
 insert ignore into actionlog._forum
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201505
-where userid <> '' and time between '2015-04-29 00:00:00' and now()
-and uri like '%/forum%';
-insert ignore into actionlog._forum
-SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201506
-where userid <> '' and time between '2015-04-29 00:00:00' and now()
-and uri like '%/forum%';
-insert ignore into actionlog._forum
-SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201507
-where userid <> '' and time between '2015-04-29 00:00:00' and now()
+FROM actionlog.action_201509
+where userid <> '' and time between '2015-08-10 00:00:00' and now()
 and uri like '%/forum%';
 
 create table actionlog._forum_1 engine = myisam
@@ -16775,24 +16786,18 @@ FROM actionlog._forum;
 create table actionlog._forum_2 engine = myisam
 SELECT userid, uri, time, platform_type, (case when (locate('&',sid)>0) then substr(sid,1,locate('&',sid)-1) else '' end) as sid
 FROM actionlog._forum_1
-where time between '2015-06-01 00:00:00' and now();
+where time between '2015-08-24 00:00:00' and now();
 
         ALTER TABLE actionlog._forum_2 CHANGE `sid` `sid` VARCHAR(50) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL; # 115 secs
-        ALTER TABLE actionlog._forum_2 convert to character set utf8 collate utf8_general_ci; # 119 secs
+        ALTER TABLE actionlog._forum_2 convert to character set utf8 collate utf8_general_ci;                              # 119 secs
         
         create table actionlog._temp1 engine = myisam SELECT * FROM actionlog._forum_2 limit 0, 7000000;
         create table actionlog._temp2 engine = myisam SELECT * FROM actionlog._forum_2 limit 7000000, 7000000;
         create table actionlog._temp3 engine = myisam SELECT * FROM actionlog._forum_2 limit 14000000, 7000000;
-        
-#         create table actionlog._temp4 engine = myisam SELECT * FROM actionlog._forum_2 limit 24000000, 8000000;
-#         create table actionlog._temp5 engine = myisam SELECT * FROM actionlog._forum_2 limit 32000000, 8000000;
-       
+    
         create table actionlog._temp1_group engine = myisam SELECT userid, sid, platform_type FROM actionlog._temp1 group by userid, sid, platform_type;
         create table actionlog._temp2_group engine = myisam SELECT userid, sid, platform_type FROM actionlog._temp2 group by userid, sid, platform_type;     
         create table actionlog._temp3_group engine = myisam SELECT userid, sid, platform_type FROM actionlog._temp3 group by userid, sid, platform_type;
-        
-#         create table actionlog._temp4_group engine = myisam SELECT userid, sid, platform_type FROM actionlog._temp4 group by userid, sid, platform_type;   
-#         create table actionlog._temp5_group engine = myisam SELECT userid, sid, platform_type FROM actionlog._temp5 group by userid, sid, platform_type;    
         
         create table actionlog._temp0_group engine = myisam select * from actionlog._temp1_group;
         insert ignore into actionlog._temp0_group select * from actionlog._temp2_group;
@@ -16882,23 +16887,29 @@ create table plsport_playsport._pcash_log engine = myisam
 SELECT userid, sum(amount) as spent 
 FROM plsport_playsport.pcash_log
 where payed = 1 and type = 1
-and date between '2015-06-01 00:00:00' and now()
+and date between '2015-08-24 00:00:00' and now()
 group by userid;
 
 create table actionlog._forum_4_with_read_count_all_devices_and_spent engine = myisam
 SELECT a.abtest, a.userid, a.read_count, b.spent
 FROM actionlog._forum_4_with_read_count_all_devices a left join plsport_playsport._pcash_log b on a.userid = b.userid;
 
+SELECT 'abtest', 'userid', 'read_count', 'spent' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_4_with_read_count_all_devices_and_spent.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forum_4_with_read_count_all_devices_and_spent);
+
 
 # 請再多檢驗推數、回覆數是否有影響
-
+# 先匯入forumcontent和forum_like
 
 create table plsport_playsport._forumcontent engine = myisam
 select a.userid, count(a.content) as reply_count
 from (
     SELECT userid, content 
     FROM plsport_playsport.forumcontent
-    where date(postdate) between '2015-04-29' and '2015-06-30') as a
+    where date(postdate) between '2015-08-24' and now()) as a
 group by a.userid;
 
 create table plsport_playsport._forumcontent_reply_count engine = myisam
@@ -16915,7 +16926,7 @@ FROM plsport_playsport._forumcontent_reply_count);
 create table plsport_playsport._like engine = myisam
 SELECT userid, count(subject_id) as like_count
 FROM plsport_playsport.forum_like
-where date(create_date) between '2015-04-29' and '2015-06-30'
+where date(create_date) between '2015-08-24' and now()
 group by userid;
 
 create table plsport_playsport._like_count engine = myisam
@@ -19279,8 +19290,7 @@ update plsport_playsport._question set ans = replace(ans, '~','');
 create table plsport_playsport._question_1 engine = myisam
 SELECT userid, ans
 FROM plsport_playsport._question
-where ans <> ''
-and ans not in ('沒有','無','很棒','no','沒','ok','不用');
+where ans <> '';
 
 # 填寫: 1703
 # 排除沒意見者: 727
@@ -19288,7 +19298,8 @@ and ans not in ('沒有','無','很棒','no','沒','ok','不用');
 create table plsport_playsport._question_2 engine = myisam
 SELECT userid, ans
 FROM plsport_playsport._question_1
-where ans not like '%夠了%'
+where ans not in ('沒有','無','很棒','no','沒','ok','不用')
+and ans not like '%夠了%'
 and ans not like '%很好%'
 and ans not like '%沒意見%'
 and ans not like '%無意見%'
@@ -19297,8 +19308,12 @@ and ans not like '%不需要%'
 and ans not like '%很完美%'
 and ans not like '%已足夠%'
 and ans not like '%不用了%'
-and ans not like '%NA%'
-;
+and ans not like '%NA%';
+
+# _question: 1703
+# _question: 837 (866送出空白問券)
+# _question: 658 (179人覺得目前這樣就夠了)
+#                (658人才是真的有反應的人)
 
 ALTER TABLE plsport_playsport._question_2 convert to character set utf8 collate utf8_general_ci;
 ALTER TABLE plsport_playsport._question_2 CHANGE `ans` `ans` TEXT CHARACTER SET big5 COLLATE big5_chinese_ci NULL DEFAULT NULL;
@@ -19309,6 +19324,121 @@ into outfile 'C:/proc/dumps/_question.csv'
 fields terminated by ', ' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._question_2);
 
+
+# =================================================================================================
+# 任務: [201506-A-6] 討論區文章搜尋 - MVP測試名單 [新建] (阿達) 2015-09-21
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4967&projectId=11
+# 提供此任務MVP測試名單
+#  
+# 負責人：Eddy
+# 時間：9/23
+# 內容
+# 
+# 1. MVP測試名單
+# 條件：
+# a. 近一個月觀看討論區(文章列表、文章內頁)pv達前50%
+# b. 於問卷第一題回答需要或非常需要
+#  
+# 欄位：
+# a. 帳號
+# b. 暱稱
+# c. 近一個月觀看討論區pv及佔比
+# d. 手機、電腦使用比例
+# e. 最近登入日期
+# f. 最近使用討論區日期
+# =================================================================================================
+
+create table actionlog._forum engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201508
+where uri like '%/forum%' and userid <> ''
+and time between subdate(now(),31) AND now();
+
+insert ignore into actionlog._forum
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201509
+where uri like '%/forum%' and userid <> ''
+and time between subdate(now(),31) AND now();
+
+
+create table actionlog._forum_pv_1 engine = myisam
+SELECT userid, platform_type, count(uri) as pv 
+FROM actionlog._forum
+group by userid, platform_type;
+
+update actionlog._forum_pv_1 set platform_type=1 where platform_type=3;
+
+create table actionlog._forum_pv_2 engine = myisam
+select b.userid, (b.pc+b.mobile) as pv, round((b.pc/(b.pc+b.mobile)),3) as p_pc, round((b.mobile/(b.pc+b.mobile)),3) as p_mobile
+from (
+    select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+    from (
+        SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc,
+                       (case when (platform_type=2) then pv else 0 end) as mobile
+        FROM actionlog._forum_pv_1) as a
+    group by a.userid) as b;
+
+create table actionlog._forum_pv_3 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, p_pc, p_mobile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, p_pc, p_mobile
+      FROM actionlog._forum_pv_2, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._forum_pv_2) as ct;
+
+# 最近一次使用討論區
+create table actionlog._forum_recent_use engine = myisam
+SELECT userid, date(max(time)) as recent_use
+FROM actionlog._forum
+group by userid;
+
+# 最近登入時間
+CREATE TABLE plsport_playsport._last_time_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+ALTER TABLE actionlog._forum_pv_3 ADD INDEX (`userid`);
+ALTER TABLE actionlog._forum_recent_use ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport._last_time_login ADD INDEX (`userid`);
+ALTER TABLE actionlog._forum_pv_3 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._forum_recent_use convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._last_time_login convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._forum_pv_4 engine = myisam
+select e.userid, f.nickname, e.pv, e.pv_percentile, e.p_pc, e.p_mobile, e.recent_use, e.signin_date
+from (
+    select c.userid, c.pv, c.pv_percentile, c.p_pc, c.p_mobile, c.recent_use, date(d.signin_time) as signin_date
+    from (
+        SELECT a.userid, a.pv, a.pv_percentile, a.p_pc, a.p_mobile, b.recent_use
+        FROM actionlog._forum_pv_3 a left join actionlog._forum_recent_use b on a.userid = b.userid) as c 
+        left join plsport_playsport._last_time_login as d on c.userid = d.userid) as e
+    left join plsport_playsport.member as f on e.userid = f.userid;
+
+# 先匯入問券
+create table plsport_playsport._qu engine = myisam
+SELECT userid,  `1433313772` as q
+FROM plsport_playsport.questionnaire_201506031444432350_answer;
+
+ALTER TABLE plsport_playsport._qu CHANGE `q` `q` VARCHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+update plsport_playsport._qu set q='非常需要'   where q=1;
+update plsport_playsport._qu set q='需要'       where q=2;
+update plsport_playsport._qu set q='無意見'     where q=3;
+update plsport_playsport._qu set q='不需要'     where q=4;
+update plsport_playsport._qu set q='非常不需要' where q=5;
+
+create table actionlog._forum_pv_5 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.p_pc, a.p_mobile, a.recent_use, a.signin_date, b.q
+FROM actionlog._forum_pv_4 as a left join plsport_playsport._qu as b on a.userid = b.userid
+where b.q in ('非常需要','需要')
+and a.pv_percentile > 0.49;
+
+
+SELECT 'userid', '暱稱', 'pv', '級距', '電腦使用比例', '手機使用比例', '最近使用討論區日期' , '最近登入日期' , '問券回覆' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_pv_5.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forum_pv_5);
 
 
 
