@@ -15087,7 +15087,6 @@ FROM plsport_playsport._main_table_1);
 
 
 # 以下的部分開始分析 2015-06-03
-
 # 每天的販售數量
 
 create table plsport_playsport.__sell_count_everyday engine = myisam
@@ -15147,12 +15146,10 @@ FROM plsport_playsport._pcash_log_with_detailed_info
 where killtype is not null
 group by ym, killtype;
 
-
 # 各價格帶每月的收益佔比%
 SELECT ym, amount, sum(amount) as t 
 FROM plsport_playsport._pcash_log_with_detailed_info
 group by ym, amount;
-
 
 # 每月各價值上架數
 SELECT m, sale_price, count(sellerid) as c 
@@ -18905,15 +18902,14 @@ FROM actionlog._action_6);
 # 於七月底開始，討論區回文持續下滑，至8/10以下滑約 30%
 # =================================================================================================
 
-# create table actionlog._forumdetail_201306 engine = myisam SELECT userid, uri, time FROM actionlog.action_201306 where uri like '%forumdetail.php%';
-# create table actionlog._forumdetail_201307 engine = myisam SELECT userid, uri, time FROM actionlog.action_201307 where uri like '%forumdetail.php%';
-# create table actionlog._forumdetail_201308 engine = myisam SELECT userid, uri, time FROM actionlog.action_201308 where uri like '%forumdetail.php%';
 create table actionlog._forumdetail_201406 engine = myisam SELECT userid, uri, time FROM actionlog.action_201406 where uri like '%forumdetail.php%';
 create table actionlog._forumdetail_201407 engine = myisam SELECT userid, uri, time FROM actionlog.action_201407 where uri like '%forumdetail.php%';
 create table actionlog._forumdetail_201408 engine = myisam SELECT userid, uri, time FROM actionlog.action_201408 where uri like '%forumdetail.php%';
+create table actionlog._forumdetail_201409 engine = myisam SELECT userid, uri, time FROM actionlog.action_201409 where uri like '%forumdetail.php%';
 create table actionlog._forumdetail_201506 engine = myisam SELECT userid, uri, time FROM actionlog.action_201506 where uri like '%forumdetail.php%';
 create table actionlog._forumdetail_201507 engine = myisam SELECT userid, uri, time FROM actionlog.action_201507 where uri like '%forumdetail.php%';
 create table actionlog._forumdetail_201508 engine = myisam SELECT userid, uri, time FROM actionlog.action_201508 where uri like '%forumdetail.php%';
+create table actionlog._forumdetail_201509 engine = myisam SELECT userid, uri, time FROM actionlog.action_201509 where uri like '%forumdetail.php%';
 
 create table actionlog.__forumdetail_201406 engine = myisam
 select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
@@ -18924,6 +18920,9 @@ from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(ur
 create table actionlog.__forumdetail_201408 engine = myisam
 select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
 from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._forumdetail_201408) as a;
+create table actionlog.__forumdetail_201409 engine = myisam
+select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._forumdetail_201409) as a;
 create table actionlog.__forumdetail_201506 engine = myisam
 select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
 from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._forumdetail_201506) as a;
@@ -18933,22 +18932,29 @@ from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(ur
 create table actionlog.__forumdetail_201508 engine = myisam
 select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
 from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._forumdetail_201508) as a;
+create table actionlog.__forumdetail_201509 engine = myisam
+select a.userid, a.time, (case when (locate('&',a.s)>0) then substr(a.s,1,locate('&',a.s)-1) else a.s end) as s
+from (SELECT userid, uri, time, substr(uri,locate('subjectid=',uri)+10,length(uri)) as s FROM actionlog._forumdetail_201509) as a;
 
 ALTER TABLE actionlog.__forumdetail_201406 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 ALTER TABLE actionlog.__forumdetail_201407 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 ALTER TABLE actionlog.__forumdetail_201408 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog.__forumdetail_201409 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 ALTER TABLE actionlog.__forumdetail_201506 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 ALTER TABLE actionlog.__forumdetail_201507 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 ALTER TABLE actionlog.__forumdetail_201508 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog.__forumdetail_201509 CHANGE `s` `s` VARCHAR(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 
 ALTER TABLE plsport_playsport.forum ADD INDEX (`subjectid`);
 
 create table actionlog.__forumdetail engine = myisam select * from actionlog.__forumdetail_201406;
 insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201407;
 insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201408;
+insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201409;
 insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201506;
 insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201507;
 insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201508;
+insert ignore into actionlog.__forumdetail select * from actionlog.__forumdetail_201509;
 
 # 執行slide04.py
 # 主要是將actionlog.__forumdetail 加上allianceid的資訊, 使用left join
@@ -18979,7 +18985,7 @@ where alliancename is not null;
 
 create table actionlog.__forumdetail_6 engine = myisam
 SELECT * FROM actionlog.__forumdetail_5
-where da between '06-15' and '08-31';
+where da between '06-15' and '09-30';
 
 
 create table plsport_playsport._forum engine = myisam
@@ -18988,7 +18994,7 @@ from (
     SELECT allianceid, postuser, posttime, substr(posttime,1,4) as y, substr(posttime,6,5) as da, replycount
     FROM plsport_playsport.forum) as a
 where a.y in (2014,2015)
-and a.da between '06-15' and '08-31';
+and a.da between '06-15' and '09-30';
 
 create table plsport_playsport._forum_post engine = myisam
 SELECT y, da, allianceid, count(postuser) as post_count 
@@ -19208,15 +19214,15 @@ FROM plsport_playsport._mvp_list_5);
 
 create table actionlog._livescore engine = myisam 
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201507
-where time between '2015-07-23 17:26:00' and now()
+FROM actionlog.action_201509
+where time between '2015-09-01 00:00:00' and '2015-09-30 23:59:59'
 and uri like '%rp=LSC%';
 
-insert ignore into actionlog._livescore
-SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201508
-where time between '2015-07-23 17:26:00' and now()
-and uri like '%rp=LSC%';
+# insert ignore into actionlog._livescore
+# SELECT userid, uri, time, platform_type 
+# FROM actionlog.action_201508
+# where time between '2015-07-23 17:26:00' and now()
+# and uri like '%rp=LSC%';
 
 create table actionlog._livescore1 engine = myisam 
 SELECT userid, uri, time, platform_type as p, (case when (locate('K1F1',uri)>0) then substr(uri, locate('K1F1',uri)-9, 13) end) as u1,
@@ -19439,6 +19445,307 @@ SELECT *
 into outfile 'C:/Users/1-7_ASUS/Desktop/_forum_pv_5.csv'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._forum_pv_5);
+
+
+
+# =================================================================================================
+# 產品專案 #247: [201508-B]增加購買後推薦專區主推連過數量 (靜怡) 2015-09-29
+# [201508-B-2]增加購買後推薦專區主推連過數量-ABtesting
+# http://redmine.playsport.cc/issues/250
+# 說明
+# 了解將主推連過增加6個後，是否對營業額有助益
+# 
+# 內容 ABtesting設定
+# 設定組別
+# 新增的主推連過代號
+# 
+# ABtesting報告
+# 購買後推薦專區主推連過點擊次數
+# 購買後推薦專區主推連過購買預測轉換率
+# 整體營業額
+# 實驗時間：8/27~9/26
+# 報告時間：9/29
+# =================================================================================================
+
+# to 靜怡:
+# 
+# 1. 實驗組別 (userid%20)+1 in (11,12,13,14,15,16,17,18,19,20) 流量50%
+# 2. 購買追蹤代碼設定:
+# 目前使用的代碼為BRC1_C
+# 新實驗組代碼設定為BRC1_H
+
+
+create table actionlog._click_BRC engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201508
+where userid <> '' and uri like '%rp=BRC%'
+and time between '2015-08-27 15:54:00' and '2015-09-29 23:59:59';
+
+insert ignore into actionlog._click_BRC
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201509
+where userid <> '' and uri like '%rp=BRC%'
+and time between '2015-08-27 15:54:00' and '2015-09-29 23:59:59';
+
+create table actionlog._click_BRC_1 engine = myisam
+SELECT userid, time, platform_type, substr(uri,locate('&rp=',uri)+4,length(uri)) as rp
+FROM actionlog._click_brc;
+
+update actionlog._click_BRC_1 set platform_type=1 where platform_type=3;
+
+
+        # to 靜怡:
+        # 
+        # 我押下週五10/9前提供, 可以的話我會提早完成yes
+        # 重度: 實驗開始前的前20%消費者
+        # 中度: 實驗開始前的前40%~20%消費者
+        # 不看後60%消費者
+
+        create table actionlog._name_list engine = myisam
+        SELECT userid 
+        FROM actionlog._click_brc_1
+        group by userid;
+
+        create table actionlog._name_list_with_spent engine = myisam
+        SELECT userid, sum(amount) as spent 
+        FROM plsport_playsport.pcash_log
+        where payed = 1 and type = 1
+        and date between '2015-01-01 00:00:00' and '2015-08-27 00:00:00'
+        group by userid;
+
+        create table actionlog._name_list_with_spent_1 engine = myisam
+        select userid, spent, round((cnt-rank+1)/cnt,2) as spent_percentile
+        from (SELECT userid, spent, @curRank := @curRank + 1 AS rank
+              FROM actionlog._name_list_with_spent, (SELECT @curRank := 0) r
+              order by spent desc) as dt,
+             (select count(distinct userid) as cnt from actionlog._name_list_with_spent) as ct;
+
+        create table actionlog._name_list_with_spent_2 engine = myisam
+        SELECT userid, spent, spent_percentile, (case when (spent_percentile>0.79) then 'A'
+                                                      when (spent_percentile>0.59) then 'B' else 'C' end) as lv
+        FROM actionlog._name_list_with_spent_1;
+
+
+        ALTER TABLE actionlog._name_list_with_spent_2 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._click_brc_1 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._name_list_with_spent_2 ADD INDEX (`userid`);
+        ALTER TABLE actionlog._click_brc_1 ADD INDEX (`userid`);
+        
+
+
+#(1)有分裝置
+SELECT a.rp, a.platform_type, b.lv, count(a.userid) as c
+FROM actionlog._click_brc_1 a inner join actionlog._name_list_with_spent_2 b on a.userid = b.userid
+where a.rp <> 'BRC1_H&line_share=1'
+group by a.rp, a.platform_type, b.lv;
+# #(2)沒分裝置
+# SELECT rp, count(userid) as c
+# FROM actionlog._click_brc_1
+# where rp <> 'BRC1_H&line_share=1'
+# group by rp;
+
+update actionlog._click_BRC set platform_type=1 where platform_type=3;
+
+
+ALTER TABLE actionlog._click_brc convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._click_brc ADD INDEX (`userid`);
+
+
+create table actionlog._click_BRC_2 engine = myisam
+select a.userid, a.platform_type, a.rp, substr(a.rp,4,1) as p, substr(a.rp,6,1) as g, b.lv
+from (
+    SELECT userid, time, platform_type, substr(uri,locate('&rp=',uri)+4,length(uri)) as rp
+    FROM actionlog._click_brc) as a inner join actionlog._name_list_with_spent_2 as b on a.userid = b.userid;
+
+SELECT * FROM actionlog._click_brc_2;
+
+
+#輸出給R使用-點擊次數
+#     #(1)沒分裝置
+#     select 'group', 'userid', 'click' union (
+#     SELECT g, userid, count(rp) as click
+#     into outfile 'C:/Users/1-7_ASUS/Desktop/_click_all_devices.csv'
+#     fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+#     FROM actionlog._click_brc_2
+#     group by g, userid);
+
+    #(2)有分裝置(區分重/中/輕度使用者)
+    select 'group', 'devices', 'userid', 'lv', 'click' union (
+    SELECT g, platform_type, userid, lv, count(rp) as click
+    into outfile 'C:/Users/1-7_ASUS/Desktop/_click_by_devices.csv'
+    fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+    FROM actionlog._click_brc_2
+    group by g, platform_type, userid, lv); 
+
+
+
+
+    ALTER TABLE plsport_playsport.predict_buyer ADD INDEX (`id`);
+    ALTER TABLE plsport_playsport.predict_buyer_cons_split ADD INDEX (`id_predict_buyer`);
+
+
+    #記得先匯入最新的(1)predict_buyer (2)predict_buyer_cons_split, 最近好像資料庫都會lag一天以上
+    #先(1)predict_buyer left join (2)predict_buyer_cons_split
+    CREATE TABLE plsport_playsport._predict_buyer engine = myisam
+    SELECT a.id, a.buyerid, a.id_bought, a.buy_date ,a.buy_price, b.position, b.cons, b.allianceid, a.platform_type
+    FROM plsport_playsport.predict_buyer a LEFT JOIN plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer
+    WHERE a.buy_price <> 0
+    AND a.buy_date between '2015-08-27 15:54:00' AND '2015-09-29 23:59:59'; 
+
+    update plsport_playsport._predict_buyer set platform_type=1 where platform_type=3;
+
+    CREATE TABLE plsport_playsport._predict_buyer_1 engine = myisam
+    SELECT buyerid as userid, buy_date as time, buy_price as spent, position, platform_type, substr(position,6,1) as g
+    FROM plsport_playsport._predict_buyer
+    where position like '%BRC%'
+    and buy_date between '2015-08-27 15:54:00' AND '2015-09-29 23:59:59'
+    order by buy_date desc;
+
+    CREATE TABLE plsport_playsport._predict_buyer_2 engine = myisam
+    SELECT a.userid, a.time, a.spent, a.position, a.platform_type, a.g, b.lv
+    FROM plsport_playsport._predict_buyer_1 as a inner join actionlog._name_list_with_spent_2 as b on a.userid = b.userid;
+
+
+
+#輸出給R使用
+#     #(1)沒分裝置
+#     select 'group', 'userid', 'spent' union (
+#     SELECT g, userid, sum(spent) as spent 
+#     into outfile 'C:/Users/1-7_ASUS/Desktop/_spent_all_devices.csv'
+#     fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+#     FROM plsport_playsport._predict_buyer_1
+#     group by g, userid);
+
+    #(2)有分裝置
+    select 'group', 'devices', 'userid', 'lv','spent' union (
+    SELECT g, platform_type, userid, lv, sum(spent) as spent 
+    into outfile 'C:/Users/1-7_ASUS/Desktop/_spent_by_devices.csv'
+    fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+    FROM plsport_playsport._predict_buyer_2
+    group by g, platform_type, userid, lv);
+
+
+# SELECT g, sum(spent) 
+# FROM plsport_playsport._predict_buyer_1
+# group by g;
+
+SELECT g, platform_type, lv, sum(spent) 
+FROM plsport_playsport._predict_buyer_2
+group by g, platform_type, lv;
+
+
+
+# =================================================================================================
+# 活動專區使用分析
+# http://redmine.playsport.cc/issues/369
+# TO eddy:
+# 會議中有提到，請您幫忙分析"活動專區"的使用情況，
+# 
+# 對象:
+# 1.未登入使用者
+# 2.加入會員三個月內
+# 查看以上對象，是否會使用活動專區，了解活動專區的使用情形。
+# 此任務不急，你在安排時間完成即可。
+# 
+# =================================================================================================
+
+# 頁面
+# http://www.playsport.cc/activity.php
+
+create table actionlog._activity engine = myisam SELECT userid, uri, time, platform_type FROM actionlog.action_201505 where uri like '%activity.php%';
+insert ignore into actionlog._activity SELECT userid, uri, time, platform_type FROM actionlog.action_201506 where uri like '%activity.php%';
+insert ignore into actionlog._activity SELECT userid, uri, time, platform_type FROM actionlog.action_201507 where uri like '%activity.php%';
+insert ignore into actionlog._activity SELECT userid, uri, time, platform_type FROM actionlog.action_201508 where uri like '%activity.php%';
+insert ignore into actionlog._activity SELECT userid, uri, time, platform_type FROM actionlog.action_201509 where uri like '%activity.php%';
+insert ignore into actionlog._activity SELECT userid, uri, time, platform_type FROM actionlog.action_201510 where uri like '%activity.php%';
+
+create table actionlog._activity_1 engine = myisam
+SELECT userid, uri, time, substr(time,1,7) as ym, platform_type as p
+FROM actionlog._activity
+order by time desc;
+
+create table actionlog._activity_2 engine = myisam
+SELECT uri, ym, p, count(uri) as c 
+FROM actionlog._activity_1
+where uri in ('/activity.php','/activity.php?action=appFacebook201503','/activity.php?isEnd=1')
+group by uri, ym , p;
+
+create table actionlog._activity_1_login engine = myisam
+SELECT * 
+FROM actionlog._activity_1
+where userid <> '';
+
+
+ALTER TABLE actionlog._activity_1_login convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._activity_1_login_1 engine = myisam
+select c.userid, c.uri, datediff(c.time,c.joindate) as d
+from (
+    SELECT a.userid, a.uri, a.time, b.createon as joindate 
+    FROM actionlog._activity_1_login a left join plsport_playsport.member b on a.userid = b.userid
+    where a.time between '2009-01-01 00:00:00' and '2015-10-04 23:59:59'
+    and uri in ('/activity.php')) as c;
+
+
+SELECT * FROM actionlog._activity_1_login_1;
+
+
+SELECT 'userid', 'uri', 'd' union (
+SELECT *
+into outfile 'C:/Users/1-7_ASUS/Desktop/_activity_1_login_1.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._activity_1_login_1);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+create table plsport_playsport._gobucket engine = myisam
+SELECT id, reporter_id, reporter_nickname, userid, nickname, subjectid, subject, articleid, content, contenttype, type, process, rule_number, moderator, reason, allianceid
+FROM plsport_playsport.gobucket
+where process = 1
+order by id desc;
+
+
+
+ALTER TABLE plsport_playsport._gobucket CHANGE `contenttype` `contenttype` VARCHAR(10) NOT NULL COMMENT '0:回文,1:主文';
+ALTER TABLE plsport_playsport._gobucket CHANGE `type` `type` VARCHAR(10) NOT NULL COMMENT '';
+update plsport_playsport._gobucket set contenttype='回文' where contenttype='1';
+update plsport_playsport._gobucket set contenttype='主文' where contenttype='0';
+update plsport_playsport._gobucket set type='永久禁文' where type='0';
+update plsport_playsport._gobucket set type='禁文1週' where type='1';
+update plsport_playsport._gobucket set type='禁文2週' where type='2';
+update plsport_playsport._gobucket set type='禁文2天' where type='3';
+update plsport_playsport._gobucket set type='永久禁文' where type='99';
+update plsport_playsport._gobucket set rule_number='0' where rule_number is null;
+
+
 
 
 

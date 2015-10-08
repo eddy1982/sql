@@ -39,79 +39,96 @@ group by r;
         
 
 
-CREATE TABLE mobilestats.ga_201506
+
+
+
+
+
+
+
+CREATE TABLE mobilestats.ga_201508
 ( `device`   VARCHAR(100) NOT NULL , 
   `screen`   VARCHAR(30) NOT NULL , 
   `sessions` int(11) NOT NULL 
 ) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
 
-CREATE TABLE mobilestats.ga_201507
+CREATE TABLE mobilestats.ga_201509
 ( `device`   VARCHAR(100) NOT NULL , 
   `screen`   VARCHAR(30) NOT NULL , 
   `sessions` int(11) NOT NULL 
 ) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
 
 
-LOAD DATA INFILE 'C:/Users/1-7_ASUS/Desktop/june.csv' 
-INTO TABLE `mobilestats`.`ga_201506`  
+LOAD DATA INFILE 'C:/Users/1-7_ASUS/Desktop/aug.csv' 
+INTO TABLE `mobilestats`.`ga_201508`  
 FIELDS TERMINATED BY ',' 
 ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS;
 
-LOAD DATA INFILE 'C:/Users/1-7_ASUS/Desktop/july.csv' 
-INTO TABLE `mobilestats`.`ga_201507`  
+LOAD DATA INFILE 'C:/Users/1-7_ASUS/Desktop/sep.csv' 
+INTO TABLE `mobilestats`.`ga_201509`  
 FIELDS TERMINATED BY ',' 
 ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS;
 
 
-create table mobilestats._ga_201506_1 engine = myisam
+create table mobilestats._ga_201508_1 engine = myisam
 select  a.month, a.device, a.brand, a.screen, a.w, a.l, round((a.l/a.w),2) as r, a.sessions
 from (
-    SELECT (case when (device is not null) then '2015_06' else '' end) as month, device, 
+    SELECT (case when (device is not null) then '2015_08' else '' end) as month, device, 
             substr(device,1,locate(' ', device)-1) as brand, screen, 
             substr(screen,1,locate('x', screen)-1) as w, 
             substr(screen,locate('x', screen)+1,length(screen)) as l,sessions 
-    FROM mobilestats.ga_201506) as a;
+    FROM mobilestats.ga_201508) as a;
 
-create table mobilestats._ga_201507_1 engine = myisam
+create table mobilestats._ga_201509_1 engine = myisam
 select  a.month, a.device, a.brand, a.screen, a.w, a.l, round((a.l/a.w),2) as r, a.sessions
 from (
-    SELECT (case when (device is not null) then '2015_07' else '' end) as month, device, 
+    SELECT (case when (device is not null) then '2015_09' else '' end) as month, device, 
             substr(device,1,locate(' ', device)-1) as brand, screen, 
             substr(screen,1,locate('x', screen)-1) as w, 
             substr(screen,locate('x', screen)+1,length(screen)) as l,sessions 
-    FROM mobilestats.ga_201507) as a;
+    FROM mobilestats.ga_201509) as a;
     
     
     
-create table mobilestats._ga_201506_2 engine = myisam
+create table mobilestats._ga_201508_2 engine = myisam
 select e.month, e.device, e.brand, e.own, e.screen, e.w, e.l, e.r, e.inc_screen, f.own as inc_ratio, e.sessions
 from (
     select c.month, c.device, c.own, c.brand, c.screen, c.w, c.l, c.r, d.own as inc_screen ,c.sessions
     from (
         SELECT a.month, a.device, b.own, a.brand, a.screen, a.w, a.l, a.r, a.sessions 
-        FROM mobilestats._ga_201506_1 a left join mobilestats.our_devices b on a.device = b.device) as c 
+        FROM mobilestats._ga_201508_1 a left join mobilestats.our_devices b on a.device = b.device) as c 
     left join mobilestats.our_devices_screen as d on c.screen  = d.screen) as e
 left join mobilestats.our_devices_ratio f on e.r = f.r
 order by e.sessions desc;  
 
-create table mobilestats._ga_201507_2 engine = myisam
+create table mobilestats._ga_201509_2 engine = myisam
 select e.month, e.device, e.brand, e.own, e.screen, e.w, e.l, e.r, e.inc_screen, f.own as inc_ratio, e.sessions
 from (
     select c.month, c.device, c.own, c.brand, c.screen, c.w, c.l, c.r, d.own as inc_screen ,c.sessions
     from (
         SELECT a.month, a.device, b.own, a.brand, a.screen, a.w, a.l, a.r, a.sessions 
-        FROM mobilestats._ga_201507_1 a left join mobilestats.our_devices b on a.device = b.device) as c 
+        FROM mobilestats._ga_201509_1 a left join mobilestats.our_devices b on a.device = b.device) as c 
     left join mobilestats.our_devices_screen as d on c.screen  = d.screen) as e
 left join mobilestats.our_devices_ratio f on e.r = f.r
 order by e.sessions desc; 
 
 
- 
+create table mobilestats._ga_201508_3 engine = myisam
+SELECT * 
+FROM mobilestats._ga_201508_2
+group by device, screen, sessions
+order by sessions desc;
 
+ 
+create table mobilestats._ga_201509_3 engine = myisam
+SELECT * 
+FROM mobilestats._ga_201509_2
+group by device, screen, sessions
+order by sessions desc;
 
 
 

@@ -289,7 +289,7 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2015-08-01' and '2015-08-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2015-09-01' and '2015-09-30') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
 
         ALTER TABLE _signin_list ADD INDEX (`userid`); 
@@ -316,6 +316,7 @@ where b.userid is null;
   要先把"註冊機器人"名單生出來,
   使用8_user_find_the robot_register
 ---------------------------------------------*/
+use questionnaire;
 create table questionnaire._problem_members engine = myisam select * from plsport_playsport._problem_members;
 ALTER TABLE  questionnaire._list1 ADD INDEX (`userid`);
 ALTER TABLE  questionnaire._list1 CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
@@ -356,7 +357,7 @@ order by rand()    # 隨機抽出3000名受測者
 limit 0, 3000;
 
 # 再把工友放進去
-insert into questionnaire._list_limit_3000 values ('monkey'),('chinginge'),('pauleanr'),('yenhsun1982'),('n12232001'),('sakyla'),('wenchi');
+insert into questionnaire._list_limit_3000 values ('chinginge'),('pauleanr'),('yenhsun1982'),('n12232001'),('sakyla'),('wenchi');
 
     #重要, 第一次執行要注意工友是否有2筆????
     # 輸出到桌面
