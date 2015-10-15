@@ -19699,7 +19699,7 @@ FROM actionlog._activity_1_login_1);
 
 
 
-
+為什麼中文字打起來那麼的奇怪咧....查緝察
 
 
 
@@ -19746,8 +19746,9 @@ update plsport_playsport._gobucket set type='永久禁文' where type='99';
 update plsport_playsport._gobucket set rule_number='0' where rule_number is null;
 
 
-
-
+create table plsport_playsport._forum_1 engine = myisam
+SELECT subjectid, includeprediction, forumtype, allianceid, gametype, subject, viewtimes, postuser, posttime, substr(posttime,12,2) as hours, replycount, pushcount
+FROM plsport_playsport._forum;
 
 
 
