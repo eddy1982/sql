@@ -19737,25 +19737,106 @@ FROM actionlog._activity_1_login_1);
 
 
 
+# =================================================================================================
+# 任務: [201502-A-3] 優化討論區文章列表聯盟選單 - MVP測試名單 [新建] (阿達) 2015-10-16
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4976&projectId=11
+# 
+# 提供此任務MVP測試名單
+# 負責人：Eddy
+# 時間：10/19
+# 內容
+#  
+# 1. MVP測試名單
+# 條件
+# a. 近一個月觀看討論區(文章列表、文章內頁)pv達前50%
+# b. 手機使用比率達70%以上
+#  
+# 欄位：
+# a. 帳號
+# b. 暱稱
+# c. 近一個月觀看討論區pv及佔比
+# d. 手機、電腦使用比例
+# e. 最近登入日期
+# f. 最近使用討論區日期
+# =================================================================================================
 
 
+create table actionlog._forum engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201509
+where uri like '%/forum%' and userid <> ''
+and time between subdate(now(),31) AND now();
 
+insert ignore into actionlog._forum
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201510
+where uri like '%/forum%' and userid <> ''
+and time between subdate(now(),31) AND now();
 
+create table actionlog._forum_pv_1 engine = myisam
+SELECT userid, platform_type, count(uri) as pv 
+FROM actionlog._forum
+group by userid, platform_type;
 
+update actionlog._forum_pv_1 set platform_type=1 where platform_type=3;
 
+create table actionlog._forum_pv_2 engine = myisam
+select b.userid, (b.pc+b.mobile) as pv, round((b.pc/(b.pc+b.mobile)),3) as p_pc, round((b.mobile/(b.pc+b.mobile)),3) as p_mobile
+from (
+    select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+    from (
+        SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc,
+                       (case when (platform_type=2) then pv else 0 end) as mobile
+        FROM actionlog._forum_pv_1) as a
+    group by a.userid) as b;
 
+create table actionlog._forum_pv_3 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, p_pc, p_mobile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, p_pc, p_mobile
+      FROM actionlog._forum_pv_2, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._forum_pv_2) as ct;
+     
+# 最近一次使用討論區
+create table actionlog._forum_recent_use engine = myisam
+SELECT userid, date(max(time)) as recent_use
+FROM actionlog._forum
+group by userid;
 
+# 最近登入時間
+CREATE TABLE plsport_playsport._last_time_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
 
+ALTER TABLE actionlog._forum_pv_3 ADD INDEX (`userid`);
+ALTER TABLE actionlog._forum_recent_use ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport._last_time_login ADD INDEX (`userid`);
+ALTER TABLE actionlog._forum_pv_3 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._forum_recent_use convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._last_time_login convert to character set utf8 collate utf8_general_ci;
 
+create table actionlog._forum_pv_4 engine = myisam
+select e.userid, f.nickname, e.pv, e.pv_percentile, e.p_pc, e.p_mobile, e.recent_use, e.signin_date
+from (
+    select c.userid, c.pv, c.pv_percentile, c.p_pc, c.p_mobile, c.recent_use, date(d.signin_time) as signin_date
+    from (
+        SELECT a.userid, a.pv, a.pv_percentile, a.p_pc, a.p_mobile, b.recent_use
+        FROM actionlog._forum_pv_3 a left join actionlog._forum_recent_use b on a.userid = b.userid) as c 
+        left join plsport_playsport._last_time_login as d on c.userid = d.userid) as e
+    left join plsport_playsport.member as f on e.userid = f.userid;
 
+# a. 近一個月觀看討論區(文章列表、文章內頁)pv達前50%
+# b. 手機使用比率達70%以上
+create table actionlog._forum_pv_5 engine = myisam
+SELECT * FROM actionlog._forum_pv_4
+where pv_percentile > 0.49 and p_mobile > 0.69;
 
-
-
-
-
-
-
-
+SELECT 'userid', 'nickname', 'pv', 'pv級距', '電腦使用佔比', '手機使用佔比', '最近一次使用討論區', '最後一次登入' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_forum_pv_5.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forum_pv_5);
 
 
 
@@ -19792,8 +19873,6 @@ FROM plsport_playsport.gobucket
 where process = 1
 order by id desc;
 
-
-
 ALTER TABLE plsport_playsport._gobucket CHANGE `contenttype` `contenttype` VARCHAR(10) NOT NULL COMMENT '0:回文,1:主文';
 ALTER TABLE plsport_playsport._gobucket CHANGE `type` `type` VARCHAR(10) NOT NULL COMMENT '';
 update plsport_playsport._gobucket set contenttype='回文' where contenttype='1';
@@ -19804,7 +19883,6 @@ update plsport_playsport._gobucket set type='禁文2週' where type='2';
 update plsport_playsport._gobucket set type='禁文2天' where type='3';
 update plsport_playsport._gobucket set type='永久禁文' where type='99';
 update plsport_playsport._gobucket set rule_number='0' where rule_number is null;
-
 
 create table plsport_playsport._forum_1 engine = myisam
 SELECT subjectid, includeprediction, forumtype, allianceid, gametype, subject, viewtimes, postuser, posttime, substr(posttime,12,2) as hours, replycount, pushcount
