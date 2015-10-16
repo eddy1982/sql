@@ -19636,7 +19636,7 @@ group by g, platform_type, lv;
 
 
 # =================================================================================================
-# 活動專區使用分析
+# 活動專區使用分析 (柔雅) 2015-10-16
 # http://redmine.playsport.cc/issues/369
 # TO eddy:
 # 會議中有提到，請您幫忙分析"活動專區"的使用情況，
@@ -19664,6 +19664,47 @@ SELECT userid, uri, time, substr(time,1,7) as ym, platform_type as p
 FROM actionlog._activity
 order by time desc;
 
+        # 補充的內容
+		create table actionlog._activity_1_1 engine = myisam
+		SELECT uri, ym, p, (case when (userid <> '') then 'login' else 'no_login' end) as stat
+		FROM actionlog._activity_1
+        where uri in ('/activity.php','/activity.php?action=appFacebook201503','/activity.php?isEnd=1');
+		# 結果1.未登入使用者的使用率
+		SELECT ym, p, stat, count(uri) as pv 
+		FROM actionlog._activity_1_1
+		group by ym, p, stat;
+
+
+		create table plsport_playsport._member1 engine = myisam
+		SELECT userid, createon 
+		FROM plsport_playsport.member;
+
+		ALTER TABLE actionlog._activity_1 convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE plsport_playsport._member1 convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE actionlog._activity_1 ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._member1 ADD INDEX (`userid`);
+
+        # 計算出使用活動專區和註冊時間的時間差
+		create table actionlog._activity_1_2 engine = myisam
+		SELECT a.userid, a.uri, a.time, a.ym, a.p, b.createon
+		FROM actionlog._activity_1 a left join plsport_playsport._member1 b on a.userid = b.userid
+		where a.userid <> ''
+		and uri in ('/activity.php','/activity.php?action=appFacebook201503','/activity.php?isEnd=1');
+
+		create table actionlog._activity_1_3 engine = myisam
+		SELECT userid, uri, round(datediff(time, createon)/30,0) as d, ym, p, time, createon
+		FROM actionlog._activity_1_2;
+
+		create table actionlog._activity_1_4 engine = myisam
+		SELECT userid, uri, ym, p, (case when (d<4) then 'new_user' else 'existed_user' end) as idf 
+		FROM actionlog._activity_1_3;
+
+		# 結果2.已登入的新使用者中，有使用活動專區的占比是?
+		SELECT ym, p, idf, count(userid) as pv 
+		FROM actionlog._activity_1_4
+		group by ym, p, idf;
+
+
 create table actionlog._activity_2 engine = myisam
 SELECT uri, ym, p, count(uri) as c 
 FROM actionlog._activity_1
@@ -19686,9 +19727,7 @@ from (
     where a.time between '2009-01-01 00:00:00' and '2015-10-04 23:59:59'
     and uri in ('/activity.php')) as c;
 
-
 SELECT * FROM actionlog._activity_1_login_1;
-
 
 SELECT 'userid', 'uri', 'd' union (
 SELECT *
@@ -19699,7 +19738,28 @@ FROM actionlog._activity_1_login_1);
 
 
 
-為什麼中文字打起來那麼的奇怪咧....查緝察
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
