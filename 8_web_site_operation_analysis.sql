@@ -206,24 +206,21 @@ use prediction;
 create table prediction.prediction_201505 engine = myisam
 SELECT * FROM plsport_playsport.prediction
 where date(createon) between '2015-05-01' and '2015-05-31';
-
 create table prediction.prediction_201506 engine = myisam
 SELECT * FROM plsport_playsport.prediction
 where date(createon) between '2015-06-01' and '2015-06-30';
+create table prediction.prediction_201510 engine = myisam
+SELECT * FROM plsport_playsport.prediction
+where date(createon) between '2015-10-01' and '2015-10-31';
 
 
-create table p_201501 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201501;
-create table p_201502 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201502;
-create table p_201503 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201503;
-create table p_201504 engine = myisam
-select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201504;
 create table p_201505 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201505;
 create table p_201506 engine = myisam
 select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201506;
+create table p_201510 engine = myisam
+select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay from prediction_201510;
+
 
         /*====使用者分群專用的====*/
         create table prediction.p_recently engine = myisam select * from prediction.p_201409; /*近4個月預測資料, 看使用者分群要篩至多久前的記錄*/

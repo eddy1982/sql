@@ -19840,6 +19840,219 @@ FROM actionlog._forum_pv_5);
 
 
 
+# =================================================================================================
+# 任務: [201412-B-6]優化手機預測賽事頁面-MVP測試名單撈取 [新建] (靜怡) 2015-10-19
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4977&projectId=11
+# 
+# 提供MVP測試名單
+#  
+# 需求
+#  
+# - 撈取時間:近三個月
+# - 需求欄位:暱稱、ID、預測點擊天數、手機使用比率(前50%)、最後登入時間
+# - 排除有下列期數殺手資格使用者
+# 莊殺142、143、144、153、154
+# 單殺55、56、60
+# =================================================================================================
+
+		# 先要匯入prediction
+		# 並產生p_201510
+		create table prediction.prediction_201510 engine = myisam
+		SELECT * FROM plsport_playsport.prediction
+		where date(createon) between '2015-10-01' and '2015-10-31';
+
+		create table prediction.p_201510 engine = myisam
+		select userid, gameid, allianceid, gametype, createon, substr(createon,1,7) as createMonth, substr(createon,1,10) as createDay 
+        from prediction.prediction_201510;
+
+
+create table plsport_playsport._predict engine = myisam
+SELECT userid, createday, count(gameid) as c FROM prediction.p_201507 group by userid, createday;
+insert ignore into plsport_playsport._predict
+SELECT userid, createday, count(gameid) as c FROM prediction.p_201508 group by userid, createday;
+insert ignore into plsport_playsport._predict
+SELECT userid, createday, count(gameid) as c FROM prediction.p_201509 group by userid, createday;
+insert ignore into plsport_playsport._predict
+SELECT userid, createday, count(gameid) as c FROM prediction.p_201510 group by userid, createday;
+
+# (1)近3個月預測天數
+create table plsport_playsport._predict_1 engine = myisam
+SELECT userid, count(createday) as predict_count 
+FROM plsport_playsport._predict
+where createday between subdate(now(),92) AND now()
+group by userid;
+
+create table plsport_playsport._predict_2 engine = myisam
+select userid, predict_count, round((cnt-rank+1)/cnt,2) as predict_count_percentile
+from (SELECT userid, predict_count, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._predict_1, (SELECT @curRank := 0) r
+      order by predict_count desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._predict_1) as ct;
+
+# (2)最近登入時間
+CREATE TABLE plsport_playsport._last_time_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+# (3)個人頁pv (手機/電腦使用比例)
+create table actionlog._visit_member engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201507
+where uri like '%/visit_member.php%' and userid <> ''
+and time between subdate(now(),92) AND now();
+insert ignore into actionlog._visit_member
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201508
+where uri like '%/visit_member.php%' and userid <> ''
+and time between subdate(now(),92) AND now();
+insert ignore into actionlog._visit_member
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201509
+where uri like '%/visit_member.php%' and userid <> ''
+and time between subdate(now(),92) AND now();
+insert ignore into actionlog._visit_member
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201510
+where uri like '%/visit_member.php%' and userid <> ''
+and time between subdate(now(),92) AND now();
+
+create table actionlog._visit_member_pv_1 engine = myisam
+SELECT userid, platform_type, count(uri) as pv 
+FROM actionlog._visit_member
+group by userid, platform_type;
+
+update actionlog._visit_member_pv_1 set platform_type=1 where platform_type=3;
+
+create table actionlog._visit_member_pv_2 engine = myisam
+select b.userid, (b.pc+b.mobile) as pv, round((b.pc/(b.pc+b.mobile)),3) as p_pc, round((b.mobile/(b.pc+b.mobile)),3) as p_mobile
+from (
+	select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+	from (
+		SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc,
+					   (case when (platform_type=2) then pv else 0 end) as mobile
+		FROM actionlog._visit_member_pv_1) as a
+	group by a.userid) as b;
+
+ALTER TABLE plsport_playsport._predict_2 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._visit_member_pv_2 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._predict_2 ADD INDEX (`userid`);
+ALTER TABLE actionlog._visit_member_pv_2 ADD INDEX (`userid`);
+
+create table plsport_playsport._predict_3 engine = myisam
+SELECT a.userid, a.predict_count, a.predict_count_percentile, b.p_pc, b.p_mobile 
+FROM plsport_playsport._predict_2 a left join actionlog._visit_member_pv_2 b on a.userid = b.userid
+where a.predict_count_percentile > 0.49 
+and b.p_mobile > 0.49;
+
+create table plsport_playsport._predict_4 engine = myisam
+SELECT a.userid, b.nickname, a.predict_count, a.predict_count_percentile, a.p_pc, a.p_mobile 
+FROM plsport_playsport._predict_3 a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._predict_5 engine = myisam
+SELECT a.userid, a.nickname, a.predict_count, a.predict_count_percentile, a.p_pc, a.p_mobile, date(b.signin_time) as last_signin
+FROM plsport_playsport._predict_4 a left join plsport_playsport._last_time_login b on a.userid = b.userid;
+
+
+# - 排除有下列期數殺手資格使用者
+# 莊殺142、143、144、153、154
+# 單殺55、56、60
+# 所有聯盟, 不分國際運彩盤
+
+# 匯入(1)medal_fire (2)single_killer
+# 今天下午再匯入
+
+create table plsport_playsport._medal_fire engine = myisam
+SELECT id, vol, sell_allow, userid, nickname, allianceid, alliancename, winpercentage winearn, rank, mode 
+FROM plsport_playsport.medal_fire
+where vol in (142,143,144,153,154)
+order by vol desc;
+
+create table plsport_playsport._single_killer engine = myisam
+SELECT vol, sell_allow, userid, nickname, allianceid, alliancename, winpercentage, winearn, rank, mode 
+FROM plsport_playsport.single_killer
+where vol in (55,56,60)
+order by vol desc;
+
+
+
+# =================================================================================================
+# 世界12強棒球賽-殺手名單 (學文) 2015-10-19
+# http://redmine.playsport.cc/issues/461
+# Eddy:
+# 
+# 要麻煩您協助撈取世界12強棒球賽的殺手名單
+# 條件如下
+# 
+# 國際盤
+# 1.60名
+# 2.當過美棒or日棒or韓棒殺手
+# 3.近六期評選勝率曾達70%以上
+# 4.依照殺手次數排序
+# 
+# 運彩盤
+# 1.60名
+# 2.當過美棒or日棒or韓棒or中職殺手
+# 3.近六期評選勝率曾達70%以上
+# 4.依照殺手次數排序
+# 
+# 需求時間：10/23
+# =================================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# =================================================================================================
+# 任務: [201412-H-10] 籃球比賽過程 - 分析問卷結果 [新建] (阿達) 2015-10-19
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4973&projectId=11
+# 分析韓國、日本職籃即時比分功能問卷結果
+# 內容
+# 1. 分析問卷結果
+# a. 第一、二題
+#    分析近一個月有使用跟沒使用韓籃即時比分的問卷結果
+# b. 第三、五題
+#    分析使用者答案分布
+# c. 第四題
+#    分析近一個月有使用跟沒使用日籃即時比分的問卷結果
+ # =================================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -19887,8 +20100,4 @@ update plsport_playsport._gobucket set rule_number='0' where rule_number is null
 create table plsport_playsport._forum_1 engine = myisam
 SELECT subjectid, includeprediction, forumtype, allianceid, gametype, subject, viewtimes, postuser, posttime, substr(posttime,12,2) as hours, replycount, pushcount
 FROM plsport_playsport._forum;
-
-
-
-
 
