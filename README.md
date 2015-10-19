@@ -3,7 +3,7 @@ into outfile :thumbsup:
 ```sh
 SELECT 'a', 'b', 'c' union (
 SELECT *
-into outfile 'C:/Users/1-7_ASUS/Desktop/xxxxx.txt'
+into outfile 'C:/Users/eddy/Desktop/xxxxx.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport.xxxxx);
 ```
