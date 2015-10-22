@@ -20130,12 +20130,113 @@ FROM plsport_playsport._medal_fire_baseball_twn_2);
 #      分析近一個月有使用跟沒使用日籃即時比分的問卷結果
 # =================================================================================================
 
+# 問券網址
+# http://www.playsport.cc/questionnaire.php?question=201510061537118762&action=statistics
+# http://www.playsport.cc/administration/questionnaire.php?action=previewQuestionnaire&id=201510061537118762
+
+create table actionlog._livescore_basketball engine = myisam
+SELECT userid, uri, time
+FROM actionlog.action_201509
+where userid <> ''
+and uri like '%livescore.php%' and (uri like '%aid=92%' or uri like '%aid=97%')
+and time between subdate(now(),32) AND now();
+insert ignore into actionlog._livescore_basketball
+SELECT userid, uri, time
+FROM actionlog.action_201510
+where userid <> ''
+and uri like '%livescore.php%' and (uri like '%aid=92%' or uri like '%aid=97%')
+and time between subdate(now(),32) AND now();
+
+create table actionlog._livescore_basketball_1 engine = myisam
+SELECT userid, uri, time, (case when (uri like '%aid=92%') then 1 else 0 end) as kor,
+                          (case when (uri like '%aid=97%') then 1 else 0 end) as jap 
+FROM actionlog._livescore_basketball;
+
+# 使用韓籃名單
+create table actionlog._livescore_basketball_1_kor engine = myisam
+SELECT userid, count(uri) as kor_count 
+FROM actionlog._livescore_basketball_1
+where kor = 1
+group by userid;
+# 使用日籃名單
+create table actionlog._livescore_basketball_1_jap engine = myisam
+SELECT userid, count(uri) as jap_count
+FROM actionlog._livescore_basketball_1
+where jap = 1
+group by userid;
+
+		ALTER TABLE actionlog._livescore_basketball_1_kor convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE actionlog._livescore_basketball_1_jap convert to character set utf8 collate utf8_general_ci;
+
+# 匯入問券
+use plsport_playsport;
+ALTER TABLE `questionnaire_201510061537118762_answer` CHANGE `1444116822` `q1` VARCHAR(10) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE `questionnaire_201510061537118762_answer` CHANGE `1444116874` `q2` VARCHAR(10) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE `questionnaire_201510061537118762_answer` CHANGE `1444116994` `q3` VARCHAR(10) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE `questionnaire_201510061537118762_answer` CHANGE `1444116922` `question1` VARCHAR(1300) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE `questionnaire_201510061537118762_answer` CHANGE `1444117026` `question2` VARCHAR(1300) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+# value 1 = 非常需要
+# value 2 = 需要
+# value 3 = 沒意見
+# value 4 = 不需要
+# value 5 = 非常不需要
 
 
+create table plsport_playsport._questionnaire_1 engine = myisam
+SELECT a.userid, a.q1, a.q2, a.question1, a.q3, a.question2, b.kor_count
+FROM plsport_playsport.questionnaire_201510061537118762_answer a left join actionlog._livescore_basketball_1_kor b on a.userid = b.userid;
+
+create table plsport_playsport._questionnaire_2 engine = myisam
+SELECT a.userid, a.q1, a.q2, a.question1, a.q3, a.question2, a.kor_count, b.jap_count
+FROM plsport_playsport._questionnaire_1 a left join actionlog._livescore_basketball_1_jap b on a.userid = b.userid;
 
 
+SELECT q1, count(userid) as c 
+FROM plsport_playsport._questionnaire_2
+where kor_count > 10
+group by q1;
+
+SELECT q2, count(userid) as c 
+FROM plsport_playsport._questionnaire_2
+where kor_count > 10
+group by q2;
+
+SELECT q3, count(userid) as c 
+FROM plsport_playsport._questionnaire_2
+where jap_count > 10
+group by q3;
+
+create table plsport_playsport._questionnaire_3 engine = myisam
+SELECT * FROM plsport_playsport._questionnaire_2
+where question1 <> '' or question2 <> '';
 
 
+update plsport_playsport._questionnaire_3 SET question1 = replace(question1, '.',''); 
+update plsport_playsport._questionnaire_3 SET question1 = replace(question1, ';',''); 
+update plsport_playsport._questionnaire_3 SET question1 = replace(question1, '\t',''); 
+update plsport_playsport._questionnaire_3 SET question1 = replace(question1, '\b',''); 
+update plsport_playsport._questionnaire_3 SET question1 = replace(question1, '\n',''); 
+update plsport_playsport._questionnaire_3 SET question1 = replace(question1, '\r',''); 
+update plsport_playsport._questionnaire_3 SET question1 = replace(question1, '&',''); 
+update plsport_playsport._questionnaire_3 SET question1 = replace(question1, '#',''); 
+update plsport_playsport._questionnaire_3 SET question1 = replace(question1, ' ',''); 
+
+update plsport_playsport._questionnaire_3 SET question2 = replace(question2, '.',''); 
+update plsport_playsport._questionnaire_3 SET question2 = replace(question2, ';',''); 
+update plsport_playsport._questionnaire_3 SET question2 = replace(question2, '\t',''); 
+update plsport_playsport._questionnaire_3 SET question2 = replace(question2, '\b',''); 
+update plsport_playsport._questionnaire_3 SET question2 = replace(question2, '\n',''); 
+update plsport_playsport._questionnaire_3 SET question2 = replace(question2, '\r',''); 
+update plsport_playsport._questionnaire_3 SET question2 = replace(question2, '&',''); 
+update plsport_playsport._questionnaire_3 SET question2 = replace(question2, '#',''); 
+update plsport_playsport._questionnaire_3 SET question2 = replace(question2, ' ',''); 
+
+
+SELECT 'userid', '問題1', '問題2','問題3','問題4','問題5','韓籃pv', '日籃pv' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_questionnaire_3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._questionnaire_3);
 
 
 
