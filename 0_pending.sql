@@ -20475,7 +20475,169 @@ group by p, lv;
 # 明燈使用者及非明燈使用者購買路徑、行為差異
 # =================================================================================================
 
+# 撈出2015年度明燈的使用者
+create table actionlog._action_friend_log engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201501 where uri like '%visit_member.php?action=friend%' and userid <> '';
+insert ignore into actionlog._action_friend_log
+SELECT userid, uri, time, platform_type FROM actionlog.action_201502 where uri like '%visit_member.php?action=friend%' and userid <> '';
+insert ignore into actionlog._action_friend_log
+SELECT userid, uri, time, platform_type FROM actionlog.action_201503 where uri like '%visit_member.php?action=friend%' and userid <> '';
+insert ignore into actionlog._action_friend_log
+SELECT userid, uri, time, platform_type FROM actionlog.action_201504 where uri like '%visit_member.php?action=friend%' and userid <> '';
+insert ignore into actionlog._action_friend_log
+SELECT userid, uri, time, platform_type FROM actionlog.action_201505 where uri like '%visit_member.php?action=friend%' and userid <> '';
+insert ignore into actionlog._action_friend_log
+SELECT userid, uri, time, platform_type FROM actionlog.action_201506 where uri like '%visit_member.php?action=friend%' and userid <> '';
+insert ignore into actionlog._action_friend_log
+SELECT userid, uri, time, platform_type FROM actionlog.action_201507 where uri like '%visit_member.php?action=friend%' and userid <> '';
+insert ignore into actionlog._action_friend_log
+SELECT userid, uri, time, platform_type FROM actionlog.action_201508 where uri like '%visit_member.php?action=friend%' and userid <> '';
+insert ignore into actionlog._action_friend_log
+SELECT userid, uri, time, platform_type FROM actionlog.action_201509 where uri like '%visit_member.php?action=friend%' and userid <> '';
 
+create table actionlog._action_friend_log_1 engine = myisam
+SELECT userid, uri, time, substr(time,1,7) as ym, platform_type as device 
+FROM actionlog._action_friend_log;
+
+create table actionlog._action_friend_log_1_by_month engine = myisam
+SELECT userid, ym, count(uri) as friend_pv 
+FROM actionlog._action_friend_log_1
+group by userid, ym;
+
+#  執行8_user_find_the_robot_register
+
+create table plsport_playsport._user_login_each_month engine = myisam
+select a.userid, a.ym, count(a.userid) as c
+from (
+	SELECT userid, signin_time, substr(signin_time,1,7) as ym
+	FROM plsport_playsport.member_signin_log_archive
+	where date(signin_time) between '2015-01-01' and '2015-09-30') as a
+group by a.userid, a.ym;
+
+create table plsport_playsport._user_login_each_month_1 engine = myisam
+SELECT a.userid, a.ym, a.c 
+FROM plsport_playsport._user_login_each_month a left join plsport_playsport._problem_members b on a.userid = b.userid
+where b.userid is null;
+
+		SELECT ym, count(userid) as user_count 
+		FROM actionlog._action_friend_log_1_by_month
+		group by ym;
+
+		SELECT ym, count(userid) as user_count 
+		FROM plsport_playsport._user_login_each_month_1
+		group by ym;
+
+create table plsport_playsport._who_spent_money engine = myisam
+select a.userid, a.ym, sum(a.amount) as spent
+from (
+	SELECT userid, amount, date, substr(date,1,7) as ym 
+	FROM plsport_playsport.pcash_log
+	where payed = 1 and type = 1
+	and date between '2015-01-01 00:00:00' and '2015-09-30 23:59:59') as a
+group by a.userid, a.ym;
+
+create table actionlog._action_friend_log_1_by_month_spent engine = myisam
+select a.userid, a.ym, a.spent, b.friend_pv
+from plsport_playsport._who_spent_money a left join actionlog._action_friend_log_1_by_month b on a.userid = b.userid and a.ym = b.ym;
+
+		SELECT ym, count(spent) as c 
+		FROM actionlog._action_friend_log_1_by_month_spent
+		where spent is not null
+		group by ym;
+
+		SELECT ym, count(friend_pv) as c 
+		FROM actionlog._action_friend_log_1_by_month_spent
+		where friend_pv is not null
+		group by ym;
+
+
+# 此任務可以使用前一個任務的資料表: actionlog._rp_click_5
+# 任務: [201505-A-3] 消費者訪談 - 購買金額佔比報告 [新建] (阿達) 2015-10-21
+
+ALTER TABLE actionlog._rp_click_5 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._action_friend_log_1_by_month convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._rp_click_5_temp0 engine = myisam SELECT * FROM actionlog._rp_click_5 limit 0, 5000000;
+create table actionlog._rp_click_5_temp1 engine = myisam SELECT * FROM actionlog._rp_click_5 limit 5000000, 5000000;
+create table actionlog._rp_click_5_temp2 engine = myisam SELECT * FROM actionlog._rp_click_5 limit 10000000, 5000000;
+create table actionlog._rp_click_5_temp3 engine = myisam SELECT * FROM actionlog._rp_click_5 limit 15000000, 5000000;
+create table actionlog._rp_click_5_temp4 engine = myisam SELECT * FROM actionlog._rp_click_5 limit 20000000, 5000000;
+create table actionlog._rp_click_5_temp5 engine = myisam SELECT * FROM actionlog._rp_click_5 limit 25000000, 5000000;
+
+create table actionlog._rp_click_6 engine = myisam SELECT userid, ym, rp, count(rp) as c FROM actionlog._rp_click_5_temp0 group by userid, ym, rp;
+insert ignore into actionlog._rp_click_6 SELECT userid, ym, rp, count(rp) as c FROM actionlog._rp_click_5_temp1 group by userid, ym, rp;
+insert ignore into actionlog._rp_click_6 SELECT userid, ym, rp, count(rp) as c FROM actionlog._rp_click_5_temp2 group by userid, ym, rp;
+insert ignore into actionlog._rp_click_6 SELECT userid, ym, rp, count(rp) as c FROM actionlog._rp_click_5_temp3 group by userid, ym, rp;
+insert ignore into actionlog._rp_click_6 SELECT userid, ym, rp, count(rp) as c FROM actionlog._rp_click_5_temp4 group by userid, ym, rp;
+insert ignore into actionlog._rp_click_6 SELECT userid, ym, rp, count(rp) as c FROM actionlog._rp_click_5_temp5 group by userid, ym, rp;
+
+create table actionlog._rp_click_7 engine = myisam
+SELECT userid, ym, rp, sum(c) as c 
+FROM actionlog._rp_click_6
+group by userid, ym, rp;
+
+ALTER TABLE actionlog._rp_click_7 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._rp_click_8 engine = myisam
+SELECT userid, 
+    (case when (rp = 'APP_F') then c else 0 end) as APP_F,
+    (case when (rp = 'APP_S') then c else 0 end) as APP_S,
+    (case when (rp = 'BRC') then c else 0 end) as BRC,
+    (case when (rp = 'BZ_') then c else 0 end) as BZ_,
+    (case when (rp = 'FRD') then c else 0 end) as FRD,
+    (case when (rp = 'FRL') then c else 0 end) as FRL,
+    (case when (rp = 'FRN') then c else 0 end) as FRN,
+    (case when (rp = 'HT_') then c else 0 end) as HT_,
+    (case when (rp = 'IDX') then c else 0 end) as IDX,
+    (case when (rp = 'LSC') then c else 0 end) as LSC,
+    (case when (rp = 'MPB') then c else 0 end) as MPB,
+    (case when (rp = 'USE') then c else 0 end) as US_,
+    (case when (rp = 'WPB') then c else 0 end) as WPB
+FROM actionlog._rp_click_7 
+where ym = '2015-08';
+
+create table actionlog._rp_click_9 engine = myisam
+SELECT userid, sum(APP_F) as APP_F,sum(APP_S) as APP_S,sum(BRC) as BRC,sum(BZ_) as BZ_,sum(FRD) as FRD,
+               sum(FRL) as FRL,sum(FRN) as FRN,sum(HT_) as HT_,sum(IDX) as IDX,sum(LSC) as LSC,sum(MPB) as MPB,
+               sum(US_) as US_ ,sum(WPB) as WPB
+FROM actionlog._rp_click_8
+group by userid;
+
+create table actionlog._action_friend_log_1_by_month_201508 engine = myisam
+SELECT * 
+FROM actionlog._action_friend_log_1_by_month
+where ym = '2015-08';
+
+create table plsport_playsport._pcash_log_with_p_201508 engine = myisam
+SELECT * FROM plsport_playsport._pcash_log_with_p_with_percent
+where ym = '2015-08';
+
+create table actionlog._rp_click_10 engine = myisam
+SELECT a.userid, a.BRC, a.BZ_, a.FRN, a.HT_, a.MPB, a.WPB, b.friend_pv
+FROM actionlog._rp_click_9 a left join actionlog._action_friend_log_1_by_month_201508 b on a.userid = b.userid;
+
+create table actionlog._rp_click_11 engine = myisam
+SELECT a.userid, a.BRC, a.BZ_, a.FRN, a.HT_, a.MPB, a.WPB, COALESCE(a.friend_pv,0) as friend_pv, (case when (a.friend_pv>0) then 1 else 0 end) as friend, b.spent, b.lv
+FROM actionlog._rp_click_10 a left join plsport_playsport._pcash_log_with_p_201508 b on a.userid = b.userid
+where b.spent is not null;
+
+create table actionlog._rp_click_12 engine = myisam
+SELECT a.userid, a.BRC, a.BZ_, a.FRN, a.HT_, a.MPB, a.WPB, COALESCE(a.friend_pv,0) as friend_pv, (case when (a.friend_pv>0) then 1 else 0 end) as friend, b.spent, b.lv
+FROM actionlog._rp_click_10 a left join plsport_playsport._pcash_log_with_p_201508 b on a.userid = b.userid
+where b.spent is null;
+
+
+SELECT 'userid','BRC','BZ_','FRN','HT_','MPB','WPB','friend_pv','friend','spent','lv' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_rp_click_11.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._rp_click_11);
+
+SELECT 'userid','BRC','BZ_','FRN','HT_','MPB','WPB','friend_pv','friend','spent','lv' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_rp_click_12.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._rp_click_12);
 
 
 
