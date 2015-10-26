@@ -20466,7 +20466,7 @@ group by p, lv;
 
 
 # =================================================================================================
-# 任務: [201505-A-4] 消費者訪談 - 明燈使用者購買報告 [新建]
+# 任務: [201505-A-4] 消費者訪談 - 明燈使用者購買報告 [新建] (阿達) 2015-10-23
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4975&projectId=11
 # 
 # 內容
@@ -20638,6 +20638,119 @@ SELECT *
 into outfile 'C:/Users/eddy/Desktop/_rp_click_12.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._rp_click_12);
+
+
+
+# =================================================================================================
+# 追蹤碼提供時間:10/12-10/15(轉給工程套用) (柔雅) 2015-10-26
+# http://redmine.playsport.cc/issues/288
+# 二、簡訊名單撈取
+# 對象:曾經儲值8888以上的消費者
+# 條件1.曾經參與過儲值優惠活動的消費者(2015/04&2014/09)
+# 條件2.半年內有儲值8888以上的人
+#  
+# 目的:提高金字塔級消費者的人數
+# 簡訊發送時間:10月28日下午6點
+# 名單提供時間:10月26日
+# =================================================================================================
+
+create table plsport_playsport._order_data engine = myisam
+SELECT userid, name, createon, ordernumber, price, payway, substr(createon,1,7) as ym
+FROM plsport_playsport.order_data
+where create_from = 8 # 曾經參與過儲值優惠活動的消費者
+and sellconfirm = 1
+and userid not in ('wenting0403lin', 'ckone1209');
+
+		SELECT ym, price, count(userid) as user_count 
+		FROM plsport_playsport._order_data
+		group by ym, price;
+
+# 二、簡訊名單撈取
+# 對象:曾經儲值8888以上的消費者
+# 條件1.曾經參與過儲值優惠活動(儲值3999以上)的消費者(2015/04&2014/09)
+# 條件2.半年內有儲值8888以上的人
+# 條件3.一個月內有儲值3999元以上的人
+# 條件4.去年棒球季(11月~1月)儲值8888以上的人
+
+create table plsport_playsport._list_1 engine = myisam
+SELECT userid, name, createon, ordernumber, price, payway, substr(createon,1,7) as ym, phone, (case when (userid is not null) then 'list1' else '' end) as mark
+FROM plsport_playsport.order_data
+where create_from = 8 
+and sellconfirm = 1 # 要成功付款
+and userid not in ('wenting0403lin', 'ckone1209') # 文婷和學長排掉
+and createon between '2014-09-01 00:00:00' AND now() # 近半年內
+and price >= 3999;
+
+create table plsport_playsport._list_2 engine = myisam
+SELECT userid, name, createon, ordernumber, price, payway, substr(createon,1,7) as ym, phone, (case when (userid is not null) then 'list2' else '' end) as mark
+FROM plsport_playsport.order_data
+where create_from <> 8 # 不要跟上面的名單重覆
+and sellconfirm = 1    # 要成功付款
+and userid not in ('wenting0403lin', 'ckone1209') # 文婷和學長排掉
+and createon between subdate(now(),186) AND now() # 近半年內
+and price >= 8888;
+
+
+create table plsport_playsport._list_3 engine = myisam
+SELECT userid, name, createon, ordernumber, price, payway, substr(createon,1,7) as ym, phone, (case when (userid is not null) then 'list3' else '' end) as mark
+FROM plsport_playsport.order_data
+where create_from <> 8 # 不要跟上面的名單重覆
+and sellconfirm = 1    # 要成功付款
+and userid not in ('wenting0403lin', 'ckone1209') # 文婷和學長排掉
+and createon between subdate(now(),31) AND now() # 近半年內
+and price >= 3999;
+
+
+create table plsport_playsport._list_4 engine = myisam
+SELECT userid, name, createon, ordernumber, price, payway, substr(createon,1,7) as ym, phone, (case when (userid is not null) then 'list4' else '' end) as mark
+FROM plsport_playsport.order_data
+where create_from <> 8 # 不要跟上面的名單重覆
+and sellconfirm = 1    # 要成功付款
+and userid not in ('wenting0403lin', 'ckone1209') # 文婷和學長排掉
+and createon between '2014-11-01 00:00:00' AND '2015-01-31 23:59:59' # 近半年內
+and price >= 8888;
+
+
+create table plsport_playsport._list_0 engine = myisam SELECT * FROM plsport_playsport._list_1;
+insert ignore into  plsport_playsport._list_0 select * from plsport_playsport._list_2;
+insert ignore into  plsport_playsport._list_0 select * from plsport_playsport._list_3;
+insert ignore into  plsport_playsport._list_0 select * from plsport_playsport._list_4;
+
+UPDATE plsport_playsport._list_0 set phone = replace(phone, '-','');
+UPDATE plsport_playsport._list_0 set phone = replace(phone, ' ','');
+UPDATE plsport_playsport._list_0 set phone = replace(phone, '+','');
+
+create table plsport_playsport._list_ok1_1 engine = myisam
+select * 
+from plsport_playsport._list_0
+where substr(phone,1,2) = '09'
+and length(phone) = 10;
+
+create table plsport_playsport._list_ok1_2 engine = myisam
+SELECT phone, userid, (case when (phone is not null) then 'buypcashbonus201510' else '' end) as text_campaign
+FROM plsport_playsport._list_ok1_1
+where userid not in ('g4','g12')
+group by phone;
+
+        # 給yoyo8簡訊發送
+        SELECT 'phone', 'id', 'campaign' UNION (
+        SELECT phone, userid, text_campaign
+        INTO outfile 'C:/Users/eddy/Desktop/_list_ok1_2.csv'
+        CHARACTER SET big5 fields terminated by ',' enclosed by '' lines terminated by '\r\n' 
+        FROM plsport_playsport._list_ok1_2);
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
