@@ -81,7 +81,7 @@ SELECT serialnumber, userid, version, completetime, spendminute, entrance,
            (case when (ourweb like '%6-2%') then 1 else 0 end) as '6_2',
        hearAboutUS, whereDoYouLive 
 FROM plsport_playsport.satisfactionquestionnaire_answer_ver_5_edited
-where userid not in ('yenhsun1982', 'monkey', 'chinginge', 'pauleanr', 'ydasam') # 工友都要排除掉
+where userid not in ('yenhsun1982', 'monkey', 'chinginge', 'pauleanr', 'ydasam', 'n12232001', 'sakyla', 'wenchi') # 工友都要排除掉
 and spendminute > 0.5; # 小於30秒完成問卷的人就不計
 
 /*--------------------------------------------

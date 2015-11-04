@@ -12653,8 +12653,9 @@ FROM plsport_playsport._order_data_check_2_for_r);
 
 
 # =================================================================================================
-# 任務: 貼圖使用狀況研究 [新建] (福利班) 2015-02-13
+# 任務: 貼圖使用狀況研究 [新建] (福利班) 2015-02-13 (學文)
 # http://pm.playsport.cc/index.php/tasksComments?tasksId=4451&projectId=11
+# http://redmine.playsport.cc/issues/303
 # 目標：
 #     1. 瞭解貼圖使用情形
 #     2. 瞭解貼圖是否提高回文數量
@@ -12670,7 +12671,7 @@ FROM plsport_playsport._order_data_check_2_for_r);
 CREATE TABLE plsport_playsport._forumcontent engine = myisam
 SELECT * 
 FROM plsport_playsport.forumcontent
-WHERE postdate between '2015-06-23 00:00:00' AND '2015-08-23 23:59:59';
+WHERE postdate between '2015-09-03 00:00:00' AND '2015-11-03 23:59:59';
 # WHERE postdate between '2015-02-03 00:00:00' AND now();
 # WHERE postdate between '2014-10-28 00:00:00' AND now();
 
@@ -12709,15 +12710,18 @@ SELECT subjectid, userid, content, postdate,
        (case when (locate('/includes/images/smiley/playsport27.png',content)>0) then 1 else 0 end) as p27,
        (case when (locate('/includes/images/smiley/playsport28.png',content)>0) then 1 else 0 end) as p28,
        (case when (locate('/includes/images/smiley/playsport29.png',content)>0) then 1 else 0 end) as p29,
-       (case when (locate('/includes/images/smiley/playsport30.png',content)>0) then 1 else 0 end) as p30,       
-       (case when (locate('/includes/images/smiley/playsport31.png',content)>0) then 1 else 0 end) as p31       
+       (case when (locate('/includes/images/smiley/playsport30.png',content)>0) then 1 else 0 end) as p30,
+       (case when (locate('/includes/images/smiley/playsport31.png',content)>0) then 1 else 0 end) as p31,
+       (case when (locate('/includes/images/smiley/playsport32.png',content)>0) then 1 else 0 end) as p32,
+       (case when (locate('/includes/images/smiley/playsport33.png',content)>0) then 1 else 0 end) as p33,
+       (case when (locate('/includes/images/smiley/playsport34.png',content)>0) then 1 else 0 end) as p34
 FROM plsport_playsport._forumcontent_1;
 
 CREATE TABLE plsport_playsport._forumcontent_2_all_icon_stat engine = myisam
 SELECT sum(p01), sum(p02), sum(p03), sum(p04), sum(p05), sum(p06), sum(p07), sum(p08), sum(p09), sum(p10), 
        sum(p11), sum(p12), sum(p13), sum(p14), sum(p15), sum(p16), sum(p17), sum(p18), sum(p19), sum(p20), 
        sum(p21), sum(p22), sum(p23), sum(p24), sum(p25), sum(p26), sum(p27), sum(p28), sum(p29), sum(p30),
-       sum(p31)
+       sum(p31), sum(p32), sum(p33), sum(p34)
 FROM plsport_playsport._forumcontent_2;
 
 CREATE TABLE plsport_playsport._forumcontent_1_1 engine = myisam

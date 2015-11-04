@@ -9,6 +9,7 @@ create table _action_201506 engine = myisam select userid, uri, time from action
 create table _action_201507 engine = myisam select userid, uri, time from action_201507;
 create table _action_201508 engine = myisam select userid, uri, time from action_201508;
 create table _action_201509 engine = myisam select userid, uri, time from action_201509;
+create table _action_201510 engine = myisam select userid, uri, time from action_201510;
 
 /*(2)計算每個月的登入人數, 排除重覆的人*/
 create table __action_201506_usercount engine = myisam
@@ -19,19 +20,21 @@ create table __action_201508_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201508 group by userid;
 create table __action_201509_usercount engine = myisam
 select userid, count(uri) as log_count, month(time) as log_month from _action_201509 group by userid;
+create table __action_201510_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from _action_201510 group by userid;
 -- note: 算完就可以drop, 要不然很佔空間
 
 -- 2014/1/2新增, 排除異常名單, 機器人
 -- 先執行 8_user_find_the robot_register
 
-        ALTER TABLE  actionlog.__action_201509_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE  actionlog.__action_201510_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
         ALTER TABLE  plsport_playsport._problem_members CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
         
 select count(a.userid) from actionlog.__action_201506_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201507_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201508_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201509_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
-
+select count(a.userid) from actionlog.__action_201510_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 
 -- ======================================================================================
 --  準備其它資料表
