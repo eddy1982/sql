@@ -289,7 +289,7 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2015-09-01' and '2015-09-30') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2015-10-01' and '2015-10-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
 
         ALTER TABLE _signin_list ADD INDEX (`userid`); 
@@ -362,7 +362,7 @@ insert into questionnaire._list_limit_3000 values ('chinginge'),('pauleanr'),('y
     #重要, 第一次執行要注意工友是否有2筆????
     # 輸出到桌面
     SELECT userid
-    into outfile 'C:/Users/1-7_ASUS/Desktop/questionnaire_list.csv'
+    into outfile 'C:/Users/eddy/Desktop/questionnaire_list.csv'
     fields terminated by ',' enclosed by '' lines terminated by '\r\n' 
     FROM questionnaire._list_limit_3000; 
     

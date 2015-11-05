@@ -20841,7 +20841,172 @@ FROM actionlog._predict_scale_6);
 
 
 
+# =================================================================================================
+# [201511-C]購牌專區改版-訪談名單 (靜怡) 2015-11-05
+# http://redmine.playsport.cc/issues/581
+# 概述
+# 說明
+# 提供購牌專區訪台名單
+# 內容
+# - 條件：近三個月使用購牌專區買牌前50%
+# - 欄位：帳號、暱稱、購牌專區pv、購牌專區消費金額、總購買預測金額，手機電腦使用比例
+# =================================================================================================
 
+create table actionlog._buy_predict engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201508
+where time between subdate(now(),92) AND now()
+and uri like '%buy_predict.php?%';
+	insert ignore into actionlog._buy_predict
+	SELECT userid, uri, time, platform_type 
+	FROM actionlog.action_201509
+	where time between subdate(now(),92) AND now()
+	and uri like '%buy_predict.php?%';
+	insert ignore into actionlog._buy_predict
+	SELECT userid, uri, time, platform_type 
+	FROM actionlog.action_201510
+	where time between subdate(now(),92) AND now()
+	and uri like '%buy_predict.php?%';
+	insert ignore into actionlog._buy_predict
+	SELECT userid, uri, time, platform_type 
+	FROM actionlog.action_201511
+	where time between subdate(now(),92) AND now()
+	and uri like '%buy_predict.php?%';
+
+		update actionlog._buy_predict set platform_type = 1 where platform_type = 3;
+
+create table actionlog._buy_predict_1 engine = myisam
+SELECT userid, platform_type, count(uri) as pv 
+FROM actionlog._buy_predict
+where userid  <> ''
+group by userid, platform_type;
+
+create table actionlog._buy_predict_2 engine = myisam
+SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc,
+               (case when (platform_type=2) then pv else 0 end) as mobile
+FROM actionlog._buy_predict_1;
+
+create table actionlog._buy_predict_3 engine = myisam
+select a.userid, (a.pc+a.mobile) as pv, round((a.pc/(a.pc+a.mobile)),3) as p_pc, round((a.mobile/(a.pc+a.mobile)),3) as p_mobile
+from (
+	SELECT userid, sum(pc) as pc, sum(mobile) as mobile
+	FROM actionlog._buy_predict_2
+	group by userid) as a;
+    
+    
+create table actionlog._buy_predict_4 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, p_pc, p_mobile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, p_pc, p_mobile
+      FROM actionlog._buy_predict_3, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._buy_predict_3) as ct;
+
+
+ALTER TABLE plsport_playsport.predict_buyer_cons_split convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport.predict_buyer convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport.predict_buyer_cons_split ADD INDEX (`id_predict_buyer`);
+ALTER TABLE plsport_playsport.predict_buyer ADD INDEX (`id`);
+
+
+create table actionlog._who_spent_on_BZ engine = myisam
+select c.buyerid, sum(c.buy_price) as spent_on_BZ
+from (
+	SELECT a.id, b.buyerid, b.buy_date, a.position, b.buy_price
+	FROM plsport_playsport.predict_buyer_cons_split a left join plsport_playsport.predict_buyer b on a.id_predict_buyer = b.id
+	where substr(a.position,1,2) = 'BZ'
+	and buy_date between subdate(now(),92) AND now()
+	and buy_price > 0) as c
+group by c.buyerid;
+
+ALTER TABLE actionlog._buy_predict_4 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._who_spent_on_BZ convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._buy_predict_5 engine = myisam
+SELECT a.userid, a.pv, a.pv_percentile, b.spent_on_BZ, a.p_pc, a.p_mobile 
+FROM actionlog._buy_predict_4 a left join actionlog._who_spent_on_BZ b on a.userid = b.buyerid
+order by a.pv desc;
+
+create table actionlog._click_BZ engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201508
+where time between subdate(now(),92) AND now()
+and uri like '%rp=BZ%';
+	insert ignore into actionlog._click_BZ
+	SELECT userid, uri, time, platform_type 
+	FROM actionlog.action_201509
+	where time between subdate(now(),92) AND now()
+	and uri like '%rp=BZ%';
+	insert ignore into actionlog._click_BZ
+	SELECT userid, uri, time, platform_type 
+	FROM actionlog.action_201510
+	where time between subdate(now(),92) AND now()
+	and uri like '%rp=BZ%';
+	insert ignore into actionlog._click_BZ
+	SELECT userid, uri, time, platform_type 
+	FROM actionlog.action_201511
+	where time between subdate(now(),92) AND now()
+	and uri like '%rp=BZ%';
+
+create table actionlog._click_BZ_1 engine = myisam
+SELECT userid, count(uri) as click 
+FROM actionlog._click_bz
+where userid <> ''
+group by userid;
+
+
+create table actionlog._click_BZ_2 engine = myisam
+select userid, click, round((cnt-rank+1)/cnt,2) as click_percentile
+from (SELECT userid, click, @curRank := @curRank + 1 AS rank
+      FROM actionlog._click_BZ_1, (SELECT @curRank := 0) r
+      order by click desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._click_BZ_1) as ct;
+
+ALTER TABLE actionlog._buy_predict_5 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._click_BZ_2 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._buy_predict_6 engine = myisam
+SELECT a.userid, a.pv, a.pv_percentile, a.spent_on_BZ, a.p_pc, a.p_mobile, b.click, b.click_percentile 
+FROM actionlog._buy_predict_5 a left join actionlog._click_BZ_2 b on a.userid = b.userid
+order by a.pv desc;
+
+create table actionlog._total_spent engine = myisam
+SELECT userid, sum(amount) as total_spent 
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and userid <> ''
+and date between subdate(now(),92) AND now()
+group by userid;
+
+create table actionlog._buy_predict_7 engine = myisam
+SELECT a.userid, a.pv, a.pv_percentile, a.click, a.click_percentile, a.spent_on_BZ, b.total_spent, a.p_pc, a.p_mobile
+FROM actionlog._buy_predict_6 a left join actionlog._total_spent b on a.userid = b.userid
+order by a.pv desc;
+
+CREATE TABLE plsport_playsport._last_time_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+ALTER TABLE plsport_playsport._last_time_login convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._last_time_login ADD INDEX (`userid`);
+ALTER TABLE actionlog._buy_predict_7 ADD INDEX (`userid`);
+
+create table actionlog._buy_predict_8 engine = myisam
+SELECT a.userid, a.pv, a.pv_percentile, a.click, a.click_percentile, a.spent_on_BZ, a.total_spent, a.p_pc, a.p_mobile, date(b.signin_time) as signin_date
+FROM actionlog._buy_predict_7 a left join plsport_playsport._last_time_login b on a.userid = b.userid
+order by a.pv desc;
+
+create table actionlog._buy_predict_9 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.click, a.click_percentile, a.spent_on_BZ, a.total_spent, a.p_pc, a.p_mobile, a.signin_date
+FROM actionlog._buy_predict_8 a left join plsport_playsport.member b on a.userid = b.userid
+order by a.spent_on_BZ desc;
+
+
+SELECT 'userid', '暱稱', '購牌專區pv', 'pv全站級距', '購牌點擊', '購牌點擊級距', '購牌專區消費金額', '總購買預測金額', '使用PC比例', '使用手機比例', '最後登入' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_buy_predict_8.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._buy_predict_9);
 
 
 
