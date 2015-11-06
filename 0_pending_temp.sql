@@ -372,3 +372,40 @@ where b.browses is null;
 
 
 
+
+
+
+
+# 幫社群捉分身 2015-11-05
+CREATE TABLE actionlog._cheat engine = myisam
+SELECT * FROM actionlog.action_201508
+WHERE userid in ('xyz0705','1583');
+insert ignore into actionlog._cheat
+SELECT * FROM actionlog.action_201509
+WHERE userid in ('xyz0705','1583');
+insert ignore into actionlog._cheat
+SELECT * FROM actionlog.action_201510
+WHERE userid in ('xyz0705','1583');
+insert ignore into actionlog._cheat
+SELECT * FROM actionlog.action_201511
+WHERE userid in ('xyz0705','1583');
+
+
+# 1. 比對user_agent
+SELECT userid, user_agent, count(userid) as c 
+FROM actionlog._cheat
+GROUP BY  userid, user_agent;
+
+# 2. 比對時間
+SELECT a.userid, a.t, count(a.userid) as c
+FROM (
+    SELECT userid, substr(time,1,13) as t 
+    FROM actionlog._cheat) as a
+GROUP BY a.userid, a.t;
+
+# 3. 比對造訪頁面
+SELECT a.userid, a.uri, count(a.userid) as c
+FROM (
+    SELECT userid, substr(uri,1,locate('.php',uri)-1) as uri
+    FROM actionlog._cheat) as a
+GROUP BY a.userid, a.uri;

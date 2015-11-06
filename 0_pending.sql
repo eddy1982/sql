@@ -21012,6 +21012,102 @@ FROM actionlog._buy_predict_9);
 
 
 
+# =================================================================================================
+# 2015/10月儲值優惠活動-成效分析
+# http://redmine.playsport.cc/issues/289
+# TO eddy:
+# 
+# 麻煩協助分析活動成效，項目如下:
+# 1.活動期間的業績總額(總儲值金額)
+# 2.活動參與人數
+# 3.金額分佈: 每個價格有多少筆數、有多少人購買該價格
+# 4.網站廣告點擊成效分析
+# 5.簡訊發送效益
+# 6.三個月後，分析有得到優惠的消費者的arpu，是否較沒有得到優惠的使用者高
+#  
+# 先完成1-5項，請安排分析可完成的時間
+# 第6項三個月後再報告，預計追蹤至2016年1月、2月初產出報告。
+# =================================================================================================
+
+
+# 儲值優惠10/29 12:00~10/30 12:00
+
+create table plsport_playsport._campaign engine = myisam
+SELECT userid, createon, price, payway, platform_type 
+FROM plsport_playsport.order_data
+where sellconfirm = 1
+and createon between '2015-10-29 12:00:00' and '2015-10-30 12:00:00'
+and price >= 999;
+
+
+SELECT sum(amount) as spent
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date between '2015-10-29 12:00:00' and '2015-10-30 12:00:00';
+
+
+
+create table actionlog._campaign_click engine = myisam
+SELECT userid, uri, time, platform_type  
+FROM actionlog.action_201510
+where uri like '%buypcashbonus%';
+
+create table actionlog._campaign_click_1 engine = myisam
+SELECT * FROM actionlog._campaign_click
+where userid not in ('ckone12093', 'ckone12092', 'a1', 'wenting0403lin', 'a1', 'a4', 'a8');
+
+update actionlog._campaign_click_1 set platform_type = 1 where platform_type = 3;
+
+
+SELECT uri, platform_type, count(uri) as click 
+FROM actionlog._campaign_click_1
+where uri not in ('/activity.php?action=buyPcashBonus20140401&from=header',
+                  '/activity.php?action=buyPcashBonus201510',
+                  '/activity.php?action=buyPcashBonus201510&from=text', 
+                  '/activity.php?action=buyPcashBonus201510&from=header&preview=1',
+                  '/activity.php?action=buyPcashBonus201510&from=header&today=1',
+                  '/activity.php?action=buyPcashBonus201510&from=header&utm_source=phone&utm_medium=text&utm_content=buypcashbouns201510&utm_campaign=buypcashbouns201510')
+group by uri, platform_type;
+
+
+SELECT *
+FROM actionlog._campaign_click_1
+where uri in ('/activity.php?action=buyPcashBonus201510&from=textmessage&utm_source=phone&utm_medium=text&utm_content=buypcashbouns201510&utm_campaign=buypcashbouns201510',
+              '/activity.php?action=buyPcashBonus201510&from=textmessage&utm_source=phone&utm_medium=text&utm_content=buypcashbouns201510&utm_campaign=buypcashbouns201510')
+and userid <> 'n12232001';
+
+
+create table actionlog._people_who_got_text engine = myisam
+SELECT userid
+FROM actionlog._campaign_click_1
+where uri in ('/activity.php?action=buyPcashBonus201510&from=textmessage&utm_source=phone&utm_medium=text&utm_content=buypcashbouns201510&utm_campaign=buypcashbouns201510',
+              '/activity.php?action=buyPcashBonus201510&from=textmessage&utm_source=phone&utm_medium=text&utm_content=buypcashbouns201510&utm_campaign=buypcashbouns201510')
+and userid <> 'n12232001'
+and userid <> ''
+group by userid;
+
+
+ALTER TABLE plsport_playsport.predict_buyer convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._people_who_got_text convert to character set utf8 collate utf8_general_ci;
+
+
+SELECT a.userid, a.createon, a.price, a.payway, a.platform_type 
+FROM plsport_playsport.order_data a inner join actionlog._people_who_got_text b on a.userid = b.userid
+where sellconfirm = 1
+and createon between '2015-10-29 12:00:00' and '2015-10-30 12:00:00';
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
