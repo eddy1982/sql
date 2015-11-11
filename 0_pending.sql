@@ -21046,7 +21046,6 @@ where payed = 1 and type = 1
 and date between '2015-10-29 12:00:00' and '2015-10-30 12:00:00';
 
 
-
 create table actionlog._campaign_click engine = myisam
 SELECT userid, uri, time, platform_type  
 FROM actionlog.action_201510
@@ -21090,19 +21089,122 @@ group by userid;
 ALTER TABLE plsport_playsport.predict_buyer convert to character set utf8 collate utf8_general_ci;
 ALTER TABLE actionlog._people_who_got_text convert to character set utf8 collate utf8_general_ci;
 
-
+create table actionlog._people_who_got_text_list engine = myisam
 SELECT a.userid, a.createon, a.price, a.payway, a.platform_type 
 FROM plsport_playsport.order_data a inner join actionlog._people_who_got_text b on a.userid = b.userid
 where sellconfirm = 1
 and createon between '2015-10-29 12:00:00' and '2015-10-30 12:00:00';
 
 
+# ＴＯ eddy:
+# 
+# 麻煩撈取以下更細的資料，以利我們做後續檢討改進。
+# 
+# 1.大戶（這次8888以上的人，之前是否有參與過儲值優惠活動
+# 2.收到簡訊回來儲值的人，是屬於哪一個名單規則內的。 
+# 3.上次有儲值999 1999的使用者，這次卻沒有參加活動的，再去查詢他的登入狀態（是否沒有登入、有登入不買、永久離開..等）
+
+create table plsport_playsport._who_has_redeem_more_than_8888 engine = myisam
+SELECT userid 
+FROM plsport_playsport._campaign
+where price >= 8888
+group by userid
+order by userid;
+
+create table plsport_playsport._who_has_redeem_more_than_8888_1 engine = myisam
+select d.userid, d.total_redeem, d.redeem_count, round((d.total_redeem/d.redeem_count),0) as avg_redeem
+from (
+	select c.userid, sum(c.price) as total_redeem, count(c.price) as redeem_count
+	from (
+		SELECT a.userid, a.createon, a.price, a.payway 
+		FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
+		where sellconfirm = 1) as c
+	group by c.userid) as d;
 
 
+# 這次儲值8888以上的人, 他們過去儲值的習慣是?
+create table plsport_playsport._who_has_redeem_more_than_8888_2 engine = myisam
+select c.userid, d.nickname, c.createon, c.price, c.total_redeem, c.redeem_count, c.avg_redeem
+from (
+	SELECT a.userid, a.createon, a.price, b.total_redeem, b.redeem_count, b.avg_redeem
+	FROM plsport_playsport._campaign a left join plsport_playsport._who_has_redeem_more_than_8888_1 b on a.userid = b.userid
+	where a.price >= 8888
+	group by a.userid
+	order by b.total_redeem desc) as c left join plsport_playsport.member d on c.userid = d.userid;
 
 
+# 這次儲值8888以上的人, 之前是否有參加過活動?
+create table plsport_playsport._who_has_join_campaign_1 engine = myisam
+select c.userid, d.nickname, c.createon, c.price, c.payway, c.create_from
+from (
+	SELECT a.userid, a.createon, a.price, a.payway, a.create_from
+	FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
+	where sellconfirm = 1
+	and createon between '2014-04-01 00:00:00' and '2014-04-01 23:59:59') as c left join plsport_playsport.member d on c.userid = d.userid;
+
+create table plsport_playsport._who_has_join_campaign_2 engine = myisam
+select c.userid, d.nickname, c.createon, c.price, c.payway, c.create_from
+from (
+	SELECT a.userid, a.createon, a.price, a.payway, a.create_from
+	FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
+	where sellconfirm = 1
+	and createon between '2014-09-09 12:00:00' and '2014-09-10 12:00:00') as c left join plsport_playsport.member d on c.userid = d.userid;
+
+create table plsport_playsport._who_has_join_campaign_3 engine = myisam
+select c.userid, d.nickname, c.createon, c.price, c.payway, c.create_from
+from (
+	SELECT a.userid, a.createon, a.price, a.payway, a.create_from
+	FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
+	where sellconfirm = 1
+	and createon between '2015-04-01 12:00:00' and '2015-04-02 12:00:00') as c left join plsport_playsport.member d on c.userid = d.userid;
 
 
+# 2.收到簡訊回來儲值的人，是屬於哪一個名單規則內的。
+SELECT * FROM plsport_playsport._list_0
+where userid in ('a6312717', 'abc76035', 'keajaen', 'gowin888');
+
+# 3.上次有儲值999 1999的使用者，這次卻沒有參加活動的，再去查詢他的登入狀態（是否沒有登入、有登入不買、永久離開..等）
+
+create table plsport_playsport._who_join_last_campaign_999 engine = myisam
+SELECT userid, createon, price, payway, create_from
+FROM plsport_playsport.order_data 
+where sellconfirm = 1
+and price in (999,1999)
+and createon between '2015-04-01 12:00:00' and '2015-04-02 12:00:00';
+
+create table plsport_playsport._who_join_last_campaign_but_not_thistime engine = myisam
+SELECT a.userid, a.createon, a.price, a.payway, a.create_from
+FROM plsport_playsport._who_join_last_campaign_999 a left join plsport_playsport._campaign b on a.userid = b.userid
+where b.createon is null;
+
+CREATE TABLE plsport_playsport._last_time_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+	create table plsport_playsport._who_join_last_campaign_but_not_thistime_1 engine = myisam
+	SELECT a.userid, date(a.createon) as last_campaign, a.price, substr(b.signin_time,1,7) as ym_last_login
+	FROM plsport_playsport._who_join_last_campaign_but_not_thistime a left join plsport_playsport._last_time_login b on a.userid = b.userid;
+
+# 上次有參加儲值活動的人, 最後一次登入的月份
+SELECT ym_last_login, count(userid) as c 
+FROM plsport_playsport._who_join_last_campaign_but_not_thistime_1
+group by ym_last_login;
+
+	create table plsport_playsport._last_time_redeem engine = myisam
+	SELECT userid, max(createon) as createon, price, payway, create_from
+	FROM plsport_playsport.order_data 
+	where sellconfirm = 1
+	group by userid;
+
+	create table plsport_playsport._who_join_last_campaign_but_not_thistime_2 engine = myisam
+	SELECT a.userid, date(a.createon) as last_campaign, a.price, substr(b.createon,1,7) as ym_last_login
+	FROM plsport_playsport._who_join_last_campaign_but_not_thistime a left join plsport_playsport._last_time_redeem b on a.userid = b.userid;
+
+# 上次有參加儲值活動的人, 最後一次儲值的月份
+SELECT ym_last_login, count(userid) as c 
+FROM plsport_playsport._who_join_last_campaign_but_not_thistime_2
+group by ym_last_login;
 
 
 
