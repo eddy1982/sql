@@ -20799,12 +20799,12 @@ group by userid, platform_type;
 create table actionlog._predict_scale_3 engine = myisam
 select b.userid, (b.pc+b.mobile) as pv, round((b.pc/(b.pc+b.mobile)),2) as p_pc, round((b.mobile/(b.pc+b.mobile)),2) as p_mobile
 from (
-	select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
-	from (
-		SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc,
-					   (case when ( platform_type=2) then pv else 0 end) as mobile
-		FROM actionlog._predict_scale_2) as a
-	group by a.userid) as b;
+    select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+    from (
+        SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc,
+                       (case when ( platform_type=2) then pv else 0 end) as mobile
+        FROM actionlog._predict_scale_2) as a
+    group by a.userid) as b;
 
 create table actionlog._predict_scale_4 engine = myisam
 select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, p_pc, p_mobile
@@ -20857,23 +20857,23 @@ SELECT userid, uri, time, platform_type
 FROM actionlog.action_201508
 where time between subdate(now(),92) AND now()
 and uri like '%buy_predict.php?%';
-	insert ignore into actionlog._buy_predict
-	SELECT userid, uri, time, platform_type 
-	FROM actionlog.action_201509
-	where time between subdate(now(),92) AND now()
-	and uri like '%buy_predict.php?%';
-	insert ignore into actionlog._buy_predict
-	SELECT userid, uri, time, platform_type 
-	FROM actionlog.action_201510
-	where time between subdate(now(),92) AND now()
-	and uri like '%buy_predict.php?%';
-	insert ignore into actionlog._buy_predict
-	SELECT userid, uri, time, platform_type 
-	FROM actionlog.action_201511
-	where time between subdate(now(),92) AND now()
-	and uri like '%buy_predict.php?%';
+    insert ignore into actionlog._buy_predict
+    SELECT userid, uri, time, platform_type 
+    FROM actionlog.action_201509
+    where time between subdate(now(),92) AND now()
+    and uri like '%buy_predict.php?%';
+    insert ignore into actionlog._buy_predict
+    SELECT userid, uri, time, platform_type 
+    FROM actionlog.action_201510
+    where time between subdate(now(),92) AND now()
+    and uri like '%buy_predict.php?%';
+    insert ignore into actionlog._buy_predict
+    SELECT userid, uri, time, platform_type 
+    FROM actionlog.action_201511
+    where time between subdate(now(),92) AND now()
+    and uri like '%buy_predict.php?%';
 
-		update actionlog._buy_predict set platform_type = 1 where platform_type = 3;
+        update actionlog._buy_predict set platform_type = 1 where platform_type = 3;
 
 create table actionlog._buy_predict_1 engine = myisam
 SELECT userid, platform_type, count(uri) as pv 
@@ -20889,9 +20889,9 @@ FROM actionlog._buy_predict_1;
 create table actionlog._buy_predict_3 engine = myisam
 select a.userid, (a.pc+a.mobile) as pv, round((a.pc/(a.pc+a.mobile)),3) as p_pc, round((a.mobile/(a.pc+a.mobile)),3) as p_mobile
 from (
-	SELECT userid, sum(pc) as pc, sum(mobile) as mobile
-	FROM actionlog._buy_predict_2
-	group by userid) as a;
+    SELECT userid, sum(pc) as pc, sum(mobile) as mobile
+    FROM actionlog._buy_predict_2
+    group by userid) as a;
     
     
 create table actionlog._buy_predict_4 engine = myisam
@@ -20911,11 +20911,11 @@ ALTER TABLE plsport_playsport.predict_buyer ADD INDEX (`id`);
 create table actionlog._who_spent_on_BZ engine = myisam
 select c.buyerid, sum(c.buy_price) as spent_on_BZ
 from (
-	SELECT a.id, b.buyerid, b.buy_date, a.position, b.buy_price
-	FROM plsport_playsport.predict_buyer_cons_split a left join plsport_playsport.predict_buyer b on a.id_predict_buyer = b.id
-	where substr(a.position,1,2) = 'BZ'
-	and buy_date between subdate(now(),92) AND now()
-	and buy_price > 0) as c
+    SELECT a.id, b.buyerid, b.buy_date, a.position, b.buy_price
+    FROM plsport_playsport.predict_buyer_cons_split a left join plsport_playsport.predict_buyer b on a.id_predict_buyer = b.id
+    where substr(a.position,1,2) = 'BZ'
+    and buy_date between subdate(now(),92) AND now()
+    and buy_price > 0) as c
 group by c.buyerid;
 
 ALTER TABLE actionlog._buy_predict_4 convert to character set utf8 collate utf8_general_ci;
@@ -20931,21 +20931,21 @@ SELECT userid, uri, time, platform_type
 FROM actionlog.action_201508
 where time between subdate(now(),92) AND now()
 and uri like '%rp=BZ%';
-	insert ignore into actionlog._click_BZ
-	SELECT userid, uri, time, platform_type 
-	FROM actionlog.action_201509
-	where time between subdate(now(),92) AND now()
-	and uri like '%rp=BZ%';
-	insert ignore into actionlog._click_BZ
-	SELECT userid, uri, time, platform_type 
-	FROM actionlog.action_201510
-	where time between subdate(now(),92) AND now()
-	and uri like '%rp=BZ%';
-	insert ignore into actionlog._click_BZ
-	SELECT userid, uri, time, platform_type 
-	FROM actionlog.action_201511
-	where time between subdate(now(),92) AND now()
-	and uri like '%rp=BZ%';
+    insert ignore into actionlog._click_BZ
+    SELECT userid, uri, time, platform_type 
+    FROM actionlog.action_201509
+    where time between subdate(now(),92) AND now()
+    and uri like '%rp=BZ%';
+    insert ignore into actionlog._click_BZ
+    SELECT userid, uri, time, platform_type 
+    FROM actionlog.action_201510
+    where time between subdate(now(),92) AND now()
+    and uri like '%rp=BZ%';
+    insert ignore into actionlog._click_BZ
+    SELECT userid, uri, time, platform_type 
+    FROM actionlog.action_201511
+    where time between subdate(now(),92) AND now()
+    and uri like '%rp=BZ%';
 
 create table actionlog._click_BZ_1 engine = myisam
 SELECT userid, count(uri) as click 
@@ -21114,49 +21114,49 @@ order by userid;
 create table plsport_playsport._who_has_redeem_more_than_8888_1 engine = myisam
 select d.userid, d.total_redeem, d.redeem_count, round((d.total_redeem/d.redeem_count),0) as avg_redeem
 from (
-	select c.userid, sum(c.price) as total_redeem, count(c.price) as redeem_count
-	from (
-		SELECT a.userid, a.createon, a.price, a.payway 
-		FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
-		where sellconfirm = 1) as c
-	group by c.userid) as d;
+    select c.userid, sum(c.price) as total_redeem, count(c.price) as redeem_count
+    from (
+        SELECT a.userid, a.createon, a.price, a.payway 
+        FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
+        where sellconfirm = 1) as c
+    group by c.userid) as d;
 
 
 # 這次儲值8888以上的人, 他們過去儲值的習慣是?
 create table plsport_playsport._who_has_redeem_more_than_8888_2 engine = myisam
 select c.userid, d.nickname, c.createon, c.price, c.total_redeem, c.redeem_count, c.avg_redeem
 from (
-	SELECT a.userid, a.createon, a.price, b.total_redeem, b.redeem_count, b.avg_redeem
-	FROM plsport_playsport._campaign a left join plsport_playsport._who_has_redeem_more_than_8888_1 b on a.userid = b.userid
-	where a.price >= 8888
-	group by a.userid
-	order by b.total_redeem desc) as c left join plsport_playsport.member d on c.userid = d.userid;
+    SELECT a.userid, a.createon, a.price, b.total_redeem, b.redeem_count, b.avg_redeem
+    FROM plsport_playsport._campaign a left join plsport_playsport._who_has_redeem_more_than_8888_1 b on a.userid = b.userid
+    where a.price >= 8888
+    group by a.userid
+    order by b.total_redeem desc) as c left join plsport_playsport.member d on c.userid = d.userid;
 
 
 # 這次儲值8888以上的人, 之前是否有參加過活動?
 create table plsport_playsport._who_has_join_campaign_1 engine = myisam
 select c.userid, d.nickname, c.createon, c.price, c.payway, c.create_from
 from (
-	SELECT a.userid, a.createon, a.price, a.payway, a.create_from
-	FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
-	where sellconfirm = 1
-	and createon between '2014-04-01 00:00:00' and '2014-04-01 23:59:59') as c left join plsport_playsport.member d on c.userid = d.userid;
+    SELECT a.userid, a.createon, a.price, a.payway, a.create_from
+    FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
+    where sellconfirm = 1
+    and createon between '2014-04-01 00:00:00' and '2014-04-01 23:59:59') as c left join plsport_playsport.member d on c.userid = d.userid;
 
 create table plsport_playsport._who_has_join_campaign_2 engine = myisam
 select c.userid, d.nickname, c.createon, c.price, c.payway, c.create_from
 from (
-	SELECT a.userid, a.createon, a.price, a.payway, a.create_from
-	FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
-	where sellconfirm = 1
-	and createon between '2014-09-09 12:00:00' and '2014-09-10 12:00:00') as c left join plsport_playsport.member d on c.userid = d.userid;
+    SELECT a.userid, a.createon, a.price, a.payway, a.create_from
+    FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
+    where sellconfirm = 1
+    and createon between '2014-09-09 12:00:00' and '2014-09-10 12:00:00') as c left join plsport_playsport.member d on c.userid = d.userid;
 
 create table plsport_playsport._who_has_join_campaign_3 engine = myisam
 select c.userid, d.nickname, c.createon, c.price, c.payway, c.create_from
 from (
-	SELECT a.userid, a.createon, a.price, a.payway, a.create_from
-	FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
-	where sellconfirm = 1
-	and createon between '2015-04-01 12:00:00' and '2015-04-02 12:00:00') as c left join plsport_playsport.member d on c.userid = d.userid;
+    SELECT a.userid, a.createon, a.price, a.payway, a.create_from
+    FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
+    where sellconfirm = 1
+    and createon between '2015-04-01 12:00:00' and '2015-04-02 12:00:00') as c left join plsport_playsport.member d on c.userid = d.userid;
 
 
 # 2.收到簡訊回來儲值的人，是屬於哪一個名單規則內的。
@@ -21182,29 +21182,206 @@ SELECT userid, max(signin_time) as signin_time
 FROM plsport_playsport.member_signin_log_archive
 GROUP BY userid;
 
-	create table plsport_playsport._who_join_last_campaign_but_not_thistime_1 engine = myisam
-	SELECT a.userid, date(a.createon) as last_campaign, a.price, substr(b.signin_time,1,7) as ym_last_login
-	FROM plsport_playsport._who_join_last_campaign_but_not_thistime a left join plsport_playsport._last_time_login b on a.userid = b.userid;
+    create table plsport_playsport._who_join_last_campaign_but_not_thistime_1 engine = myisam
+    SELECT a.userid, date(a.createon) as last_campaign, a.price, substr(b.signin_time,1,7) as ym_last_login
+    FROM plsport_playsport._who_join_last_campaign_but_not_thistime a left join plsport_playsport._last_time_login b on a.userid = b.userid;
 
 # 上次有參加儲值活動的人, 最後一次登入的月份
 SELECT ym_last_login, count(userid) as c 
 FROM plsport_playsport._who_join_last_campaign_but_not_thistime_1
 group by ym_last_login;
 
-	create table plsport_playsport._last_time_redeem engine = myisam
-	SELECT userid, max(createon) as createon, price, payway, create_from
-	FROM plsport_playsport.order_data 
-	where sellconfirm = 1
-	group by userid;
+    create table plsport_playsport._last_time_redeem engine = myisam
+    SELECT userid, max(createon) as createon, price, payway, create_from
+    FROM plsport_playsport.order_data 
+    where sellconfirm = 1
+    group by userid;
 
-	create table plsport_playsport._who_join_last_campaign_but_not_thistime_2 engine = myisam
-	SELECT a.userid, date(a.createon) as last_campaign, a.price, substr(b.createon,1,7) as ym_last_login
-	FROM plsport_playsport._who_join_last_campaign_but_not_thistime a left join plsport_playsport._last_time_redeem b on a.userid = b.userid;
+    create table plsport_playsport._who_join_last_campaign_but_not_thistime_2 engine = myisam
+    SELECT a.userid, date(a.createon) as last_campaign, a.price, substr(b.createon,1,7) as ym_last_login
+    FROM plsport_playsport._who_join_last_campaign_but_not_thistime a left join plsport_playsport._last_time_redeem b on a.userid = b.userid;
 
 # 上次有參加儲值活動的人, 最後一次儲值的月份
 SELECT ym_last_login, count(userid) as c 
 FROM plsport_playsport._who_join_last_campaign_but_not_thistime_2
 group by ym_last_login;
+
+
+
+# =================================================================================================
+# [201508-A]-2新增莊家殺手主推連過版標-ABtesting
+# http://redmine.playsport.cc/issues/404
+# 概述
+# 說明¶
+# 了解新增國際盤莊殺主推版標，是否對營業額有助益
+# 內容  - ABtesting設定
+# 設定組別
+# 
+# - ABtesting報告
+# 	單殺主推與莊殺主推購買次數
+# 	整體營業額
+# 	重度與中度消費者使用狀況
+# 	實驗時間：10/6~11/6
+# 	報告時間：11/12
+#  
+# - 版標出現地方
+# 	首頁
+# 	頭三標
+# 	推薦專區
+# 	購買後推薦專區
+# 	個人頁
+# =================================================================================================
+
+
+# 先捉出賣家是莊殺還是單殺
+create table plsport_playsport._predict_seller_with_medal engine = myisam
+SELECT id, sellerid, mode, sale_allianceid, sale_gameid, sale_date, substr(sale_date,1,7) as m, substr(sale_date,1,10) as d, sale_price, buyer_count, rank, rank_sk, selltype,
+       (case when (selltype = 1) then '莊殺'
+             when (selltype = 2) then '單殺'
+             when (selltype = 3) then '雙殺' end ) as killtype,
+       (case when (rank <11 and selltype = 1) then '金牌'
+             when (rank <31 and selltype = 1) then '銀牌'
+             when (rank <52 and selltype = 1) then '銅牌'
+             when (rank_sk< 11 and selltype = 2) then '金牌'
+             when (rank_sk< 31 and selltype = 2) then '銀牌'
+             when (rank_sk< 52 and selltype = 2) then '銅牌'
+             when (rank < 11 and selltype = 3) then '金牌'
+             when (rank_sk < 11 and selltype = 3) then '金牌' else '銀牌' end) as killmedal     
+FROM plsport_playsport.predict_seller /*最好是指定精確的日期區間*/
+where sale_date between '2015-10-04 18:00:00' and now()
+order by sale_date desc; /*<====記得要改*/
+
+create table plsport_playsport._predict_buyer engine = myisam
+SELECT id, buyerid, buy_date, id_bought, buy_price, buy_allianceid 
+FROM plsport_playsport.predict_buyer
+where buy_date between '2015-10-06 18:00:00' and now();
+
+	ALTER TABLE plsport_playsport._predict_seller_with_medal ADD INDEX (`id`); 
+	ALTER TABLE plsport_playsport._predict_buyer ADD INDEX (`buyerid`); 
+	ALTER TABLE plsport_playsport._predict_seller_with_medal convert to character set utf8 collate utf8_general_ci;
+	ALTER TABLE plsport_playsport._predict_buyer convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._predict_buyer_1 engine = myisam
+SELECT a.id, a.buyerid, a.buy_date, a.buy_price, a.buy_allianceid, b.sellerid, b.mode, b.killtype, b.killmedal
+FROM plsport_playsport._predict_buyer a left join plsport_playsport._predict_seller_with_medal b on a.id_bought = b.id
+order by buy_date;
+
+create table plsport_playsport._predict_buyer_2 engine = myisam
+SELECT a.id, a.buyerid, a.buy_date as date, a.buy_price as price, a.buy_allianceid as allianceid, 
+       a.sellerid, (case when (a.mode=2) then '國際' else '運彩' end) as m, 
+       a.killtype, a.killmedal, b.position, substr(b.position,1,3) as p, b.cons, b.type as con_type
+FROM plsport_playsport._predict_buyer_1 a left join plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer
+order by buy_date;
+
+create table plsport_playsport._predict_buyer_3 engine = myisam
+SELECT a.id, (case when (((b.id%20)+1)>10) then 'a' else 'b' end) as abtest ,a.buyerid, a.date, a.price, a.allianceid, 
+       a.sellerid, a.m, a.killtype, a.killmedal, a.position, a.p, a.cons, a.con_type
+FROM plsport_playsport._predict_buyer_2 a left join plsport_playsport.member b on a.buyerid = b.userid;
+
+
+# 單殺主推與莊殺主推購買次數(含使用抵用卷)
+select *
+from (
+	SELECT abtest, m, killtype, p, count(buyerid) as c 
+	FROM plsport_playsport._predict_buyer_3
+	where con_type = 1     # 主推
+	and killtype <> '雙殺'  # 排除雙殺
+	and p <> 'MPB'         # 主推榜不要看
+	and p in ('BRC', 'BZ_', 'HT_', 'IDX')
+	group by abtest, m, killtype, p) as a
+where a.c > 10;
+
+# 單殺主推與莊殺主推購買次數(限只有噱幣)
+select *
+from (
+	SELECT abtest, m, killtype, p, count(buyerid) as c 
+	FROM plsport_playsport._predict_buyer_3
+	where con_type = 1     # 主推
+	and killtype <> '雙殺'  # 排除雙殺
+	and p <> 'MPB'         # 主推榜不要看
+	and p in ('BRC', 'BZ_', 'HT_', 'IDX')
+    and price > 0
+	group by abtest, m, killtype, p) as a
+where a.c > 10;
+
+
+	# 單殺主推與莊殺主推購買次數(含使用抵用卷)
+	select *
+	from (
+		SELECT abtest, m, killtype, count(buyerid) as c 
+		FROM plsport_playsport._predict_buyer_3
+		where con_type is not null
+		group by abtest, m, killtype) as a
+	where a.c > 10;
+
+	# 單殺主推與莊殺主推購買次數(限只有噱幣)
+	select *
+	from (
+		SELECT abtest, m, killtype, count(buyerid) as c 
+		FROM plsport_playsport._predict_buyer_3
+		where con_type is not null
+		and price > 0
+		group by abtest, m, killtype) as a
+	where a.c > 10;
+
+
+create table plsport_playsport._abtest_list_all_position engine = myisam
+SELECT abtest, buyerid, sum(price) as spent, count(price) as buy_count 
+FROM plsport_playsport._predict_buyer_3
+where price > 0
+group by abtest, buyerid;
+
+
+create table plsport_playsport._abtest_list_some_position engine = myisam
+SELECT a.abtest, a.buyerid, sum(a.price) as spent, count(a.price) as buy_count 
+FROM plsport_playsport._predict_buyer_3 a inner join (SELECT buyerid
+													  FROM plsport_playsport._predict_buyer_3
+													  where p in ('BRC', 'BZ_', 'HT_', 'IDX')
+													  group by buyerid) b on a.buyerid = b.buyerid
+where a.price > 0
+group by a.abtest, a.buyerid;
+
+
+create table plsport_playsport._abtest_list_all_position_1 engine = myisam
+select abtest, buyerid, spent, round((cnt-rank+1)/cnt,2) as spent_percentile, buy_count
+from (SELECT abtest, buyerid, spent, @curRank := @curRank + 1 AS rank, buy_count
+      FROM plsport_playsport._abtest_list_all_position, (SELECT @curRank := 0) r
+      order by spent desc) as dt,
+     (select count(distinct buyerid) as cnt from plsport_playsport._abtest_list_all_position) as ct;
+
+
+# 所有位置的買牌記錄
+create table plsport_playsport._abtest_list_all_position_2 engine = myisam
+SELECT abtest, buyerid as userid, spent, buy_count, (case when (spent_percentile>0.75) then 'lv1'
+                                                          when (spent_percentile>0.50) then 'lv2' else 'lv3' end) as lv
+FROM plsport_playsport._abtest_list_all_position_1;
+
+# 限定特定位置的買牌記錄
+create table plsport_playsport._abtest_list_some_position_1 engine = myisam
+SELECT a.abtest, a.buyerid as userid, a.spent, a.buy_count, b.lv
+FROM plsport_playsport._abtest_list_some_position a left join plsport_playsport._abtest_list_all_position_2 b on a.buyerid = b.userid;
+
+
+SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_abtest_list_all_position.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._abtest_list_all_position_2);
+
+
+SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_abtest_list_some_position.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._abtest_list_some_position_1);
+
+
+
+
+
+
+
+
 
 
 
