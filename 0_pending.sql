@@ -21208,6 +21208,59 @@ group by ym_last_login;
 
 
 
+
+# 補充:
+
+# 在還有在登入
+create table plsport_playsport._who_join_last_campaign_still_login_now engine = myisam
+SELECT userid 
+FROM plsport_playsport._who_join_last_campaign_but_not_thistime_1
+where ym_last_login in ('2015-10','2015-11')
+group by userid;
+
+
+create table plsport_playsport._who_join_last_campaign_still_login_now_1 engine = myisam
+SELECT a.userid, a.signin_time 
+FROM plsport_playsport.member_signin_log_archive a inner join plsport_playsport._who_join_last_campaign_still_login_now b on a.userid = b.userid
+where a.signin_time between '2015-10-28 18:00:00' and '2015-10-30 12:00:00';
+
+
+# 在活動期間還有在登入的使用者
+create table _who_join_last_campaign_still_login_now_2 engine = myisam
+SELECT userid 
+FROM plsport_playsport._who_join_last_campaign_still_login_now_1
+group by userid;
+
+
+SELECT a.userid, a.price, date(max(a.createon)) as last_redeem, a.create_from
+FROM plsport_playsport.order_data a inner join _who_join_last_campaign_still_login_now_2 b on a.userid = b.userid
+where a.sellconfirm = 1
+group by a.userid;
+
+select avg(c.price)
+from (
+	SELECT a.userid, a.price, date(max(a.createon)) as last_redeem, a.create_from
+	FROM plsport_playsport.order_data a inner join _who_join_last_campaign_still_login_now_2 b on a.userid = b.userid
+	where a.sellconfirm = 1
+	group by a.userid) as c;
+
+
+SELECT a.userid, date(b.signin_time)
+FROM plsport_playsport._who_join_last_campaign_still_login_now_2 a inner join plsport_playsport._last_time_login b on a.userid = b.userid;
+
+
+create table plsport_playsport._remind_pcash engine = myisam
+SELECT userid, pcash_after, max(date) as date
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+group by userid;
+
+
+SELECT a.userid, b.pcash_after, date(b.date)
+FROM plsport_playsport._who_join_last_campaign_still_login_now_2 a inner join plsport_playsport._remind_pcash b on a.userid = b.userid;
+
+
+
 # =================================================================================================
 # [201508-A]-2新增莊家殺手主推連過版標-ABtesting
 # http://redmine.playsport.cc/issues/404
@@ -21248,13 +21301,13 @@ SELECT id, sellerid, mode, sale_allianceid, sale_gameid, sale_date, substr(sale_
              when (rank < 11 and selltype = 3) then '金牌'
              when (rank_sk < 11 and selltype = 3) then '金牌' else '銀牌' end) as killmedal     
 FROM plsport_playsport.predict_seller /*最好是指定精確的日期區間*/
-where sale_date between '2015-10-04 18:00:00' and now()
+where sale_date between '2015-10-04 18:00:00' and '2015-10-10 23:59:59'
 order by sale_date desc; /*<====記得要改*/
 
 create table plsport_playsport._predict_buyer engine = myisam
 SELECT id, buyerid, buy_date, id_bought, buy_price, buy_allianceid 
 FROM plsport_playsport.predict_buyer
-where buy_date between '2015-10-06 18:00:00' and now();
+where buy_date between '2015-10-06 18:00:00' and '2015-10-10 23:59:59';
 
 	ALTER TABLE plsport_playsport._predict_seller_with_medal ADD INDEX (`id`); 
 	ALTER TABLE plsport_playsport._predict_buyer ADD INDEX (`buyerid`); 
