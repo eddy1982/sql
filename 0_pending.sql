@@ -21431,6 +21431,92 @@ FROM plsport_playsport._abtest_list_some_position_1);
 
 
 
+# =================================================================================================
+# 撈取世界12強賽事相關數據
+# http://redmine.playsport.cc/issues/649
+# 是由 文 文工友 於 5 天 前加入. 於 5 天 前更新.
+# 
+# 狀態:	新建立	開始日期:	2015-11-20
+# 優先權:	正常	完成日期:	2015-11-27
+# 被分派者:	黃 Eddy	完成百分比:	
+# 
+# TO Eddy:
+# 世界12強賽事將於11/21結束
+# 結束後需要請您撈取一些數據
+# 
+# 1.12強販售金額
+# 2.12強討論區聯盟發文數、回文數量
+# 3.12強討論區看版的瀏覽量(我們想知道有多熱)
+# 4.12強討論區的亮單文數量
+# 5.全站亮單文數量
+# =================================================================================================
+
+create table plsport_playsport._major_12_forum engine = myisam
+SELECT subjectid, allianceid, gametype, postuser, posttime, viewtimes, replycount, pushcount, date(posttime) as d
+FROM plsport_playsport.forum
+where posttime between '2015-11-01 00:00:00' and '2015-11-21 23:59:59'
+and allianceid in (3,116,4,91,92);
+
+# 3	    5014
+# 116	2605
+# 4	    983
+# 91	583
+# 92	534
+
+create table plsport_playsport._major_12_forum_1 engine = myisam
+SELECT d, allianceid, count(subjectid) as post_count, sum(replycount) as reply_count, sum(viewtimes) as viewtimes
+FROM plsport_playsport._major_12_forum
+group by d, allianceid;
+
+create table plsport_playsport._major_12_forum_1_showoff engine = myisam
+SELECT d, allianceid, count(subjectid) as showoff_post_count
+FROM plsport_playsport._major_12_forum
+where gametype = 3
+group by d, allianceid;
+
+create table plsport_playsport._major_12_forum_2 engine = myisam
+SELECT a.d, a.allianceid, a.post_count, a.reply_count, a.viewtimes, COALESCE(b.showoff_post_count,0) as showoff_count
+FROM plsport_playsport._major_12_forum_1 a left join plsport_playsport._major_12_forum_1_showoff b on a.d = b.d and a.allianceid = b.allianceid;
+
+SELECT 'd', 'allianceid', 'post_count', 'reply_count', 'viewtimes', 'showoff_count' union (
+SELECT *
+into outfile 'C:/proc/dumps/_major_12_forum_2.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._major_12_forum_2);
+
+create table plsport_playsport._major_12_sale engine = myisam
+SELECT a.buyerid, a.buy_date, b.sale_allianceid, b.sale_price, date(b.sale_date) as d
+FROM plsport_playsport.predict_buyer a left join plsport_playsport.predict_seller b on a.id_bought = b.id
+where b.sale_date between '2015-11-01 00:00:00' and '2015-11-21 23:59:59'
+and b.sale_allianceid in (3,116,4,91,92);
+
+create table plsport_playsport._major_12_sale_1 engine = myisam
+SELECT sale_allianceid as allianceid, d, sum(sale_price) as sale 
+FROM plsport_playsport._major_12_sale
+group by sale_allianceid, d;
+
+create table plsport_playsport._major_12_forum_3 engine = myisam
+SELECT a.d, a.allianceid, a.post_count, a.reply_count, a.viewtimes, a.showoff_count, COALESCE(b.sale,0) as sale
+FROM plsport_playsport._major_12_forum_2 a left join plsport_playsport._major_12_sale_1 b on a.d = b.d and a.allianceid = b.allianceid;
+
+SELECT 'd', 'allianceid', 'post_count', 'reply_count', 'viewtimes', 'showoff_count', 'sale' union (
+SELECT *
+into outfile 'C:/proc/dumps/_major_12_forum_3.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._major_12_forum_3);
+
+SELECT allianceid, sum(post_count) as post_count,
+                      sum(reply_count) as reply_count,
+					  sum(viewtimes) as viewtimes,
+                      sum(showoff_count) as showoff,
+                      sum(sale) as sale
+FROM plsport_playsport._major_12_forum_3
+where d between '2015-11-08' and '2015-11-26'
+group by allianceid;
+
+
+
+
 
 
 
