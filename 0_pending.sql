@@ -21239,10 +21239,10 @@ group by a.userid;
 
 select avg(c.price)
 from (
-	SELECT a.userid, a.price, date(max(a.createon)) as last_redeem, a.create_from
-	FROM plsport_playsport.order_data a inner join _who_join_last_campaign_still_login_now_2 b on a.userid = b.userid
-	where a.sellconfirm = 1
-	group by a.userid) as c;
+    SELECT a.userid, a.price, date(max(a.createon)) as last_redeem, a.create_from
+    FROM plsport_playsport.order_data a inner join _who_join_last_campaign_still_login_now_2 b on a.userid = b.userid
+    where a.sellconfirm = 1
+    group by a.userid) as c;
 
 
 SELECT a.userid, date(b.signin_time)
@@ -21271,18 +21271,18 @@ FROM plsport_playsport._who_join_last_campaign_still_login_now_2 a inner join pl
 # 設定組別
 # 
 # - ABtesting報告
-# 	單殺主推與莊殺主推購買次數
-# 	整體營業額
-# 	重度與中度消費者使用狀況
-# 	實驗時間：10/6~11/6
-# 	報告時間：11/12
+#   單殺主推與莊殺主推購買次數
+#   整體營業額
+#   重度與中度消費者使用狀況
+#   實驗時間：10/6~11/6
+#   報告時間：11/12
 #  
 # - 版標出現地方
-# 	首頁
-# 	頭三標
-# 	推薦專區
-# 	購買後推薦專區
-# 	個人頁
+#   首頁
+#   頭三標
+#   推薦專區
+#   購買後推薦專區
+#   個人頁
 # =================================================================================================
 
 
@@ -21309,10 +21309,10 @@ SELECT id, buyerid, buy_date, id_bought, buy_price, buy_allianceid
 FROM plsport_playsport.predict_buyer
 where buy_date between '2015-10-06 18:00:00' and '2015-10-10 23:59:59';
 
-	ALTER TABLE plsport_playsport._predict_seller_with_medal ADD INDEX (`id`); 
-	ALTER TABLE plsport_playsport._predict_buyer ADD INDEX (`buyerid`); 
-	ALTER TABLE plsport_playsport._predict_seller_with_medal convert to character set utf8 collate utf8_general_ci;
-	ALTER TABLE plsport_playsport._predict_buyer convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE plsport_playsport._predict_seller_with_medal ADD INDEX (`id`); 
+    ALTER TABLE plsport_playsport._predict_buyer ADD INDEX (`buyerid`); 
+    ALTER TABLE plsport_playsport._predict_seller_with_medal convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE plsport_playsport._predict_buyer convert to character set utf8 collate utf8_general_ci;
 
 create table plsport_playsport._predict_buyer_1 engine = myisam
 SELECT a.id, a.buyerid, a.buy_date, a.buy_price, a.buy_allianceid, b.sellerid, b.mode, b.killtype, b.killmedal
@@ -21335,47 +21335,47 @@ FROM plsport_playsport._predict_buyer_2 a left join plsport_playsport.member b o
 # 單殺主推與莊殺主推購買次數(含使用抵用卷)
 select *
 from (
-	SELECT abtest, m, killtype, p, count(buyerid) as c 
-	FROM plsport_playsport._predict_buyer_3
-	where con_type = 1     # 主推
-	and killtype <> '雙殺'  # 排除雙殺
-	and p <> 'MPB'         # 主推榜不要看
-	and p in ('BRC', 'BZ_', 'HT_', 'IDX')
-	group by abtest, m, killtype, p) as a
+    SELECT abtest, m, killtype, p, count(buyerid) as c 
+    FROM plsport_playsport._predict_buyer_3
+    where con_type = 1     # 主推
+    and killtype <> '雙殺'  # 排除雙殺
+    and p <> 'MPB'         # 主推榜不要看
+    and p in ('BRC', 'BZ_', 'HT_', 'IDX')
+    group by abtest, m, killtype, p) as a
 where a.c > 10;
 
 # 單殺主推與莊殺主推購買次數(限只有噱幣)
 select *
 from (
-	SELECT abtest, m, killtype, p, count(buyerid) as c 
-	FROM plsport_playsport._predict_buyer_3
-	where con_type = 1     # 主推
-	and killtype <> '雙殺'  # 排除雙殺
-	and p <> 'MPB'         # 主推榜不要看
-	and p in ('BRC', 'BZ_', 'HT_', 'IDX')
+    SELECT abtest, m, killtype, p, count(buyerid) as c 
+    FROM plsport_playsport._predict_buyer_3
+    where con_type = 1     # 主推
+    and killtype <> '雙殺'  # 排除雙殺
+    and p <> 'MPB'         # 主推榜不要看
+    and p in ('BRC', 'BZ_', 'HT_', 'IDX')
     and price > 0
-	group by abtest, m, killtype, p) as a
+    group by abtest, m, killtype, p) as a
 where a.c > 10;
 
 
-	# 單殺主推與莊殺主推購買次數(含使用抵用卷)
-	select *
-	from (
-		SELECT abtest, m, killtype, count(buyerid) as c 
-		FROM plsport_playsport._predict_buyer_3
-		where con_type is not null
-		group by abtest, m, killtype) as a
-	where a.c > 10;
+    # 單殺主推與莊殺主推購買次數(含使用抵用卷)
+    select *
+    from (
+        SELECT abtest, m, killtype, count(buyerid) as c 
+        FROM plsport_playsport._predict_buyer_3
+        where con_type is not null
+        group by abtest, m, killtype) as a
+    where a.c > 10;
 
-	# 單殺主推與莊殺主推購買次數(限只有噱幣)
-	select *
-	from (
-		SELECT abtest, m, killtype, count(buyerid) as c 
-		FROM plsport_playsport._predict_buyer_3
-		where con_type is not null
-		and price > 0
-		group by abtest, m, killtype) as a
-	where a.c > 10;
+    # 單殺主推與莊殺主推購買次數(限只有噱幣)
+    select *
+    from (
+        SELECT abtest, m, killtype, count(buyerid) as c 
+        FROM plsport_playsport._predict_buyer_3
+        where con_type is not null
+        and price > 0
+        group by abtest, m, killtype) as a
+    where a.c > 10;
 
 
 create table plsport_playsport._abtest_list_all_position engine = myisam
@@ -21388,9 +21388,9 @@ group by abtest, buyerid;
 create table plsport_playsport._abtest_list_some_position engine = myisam
 SELECT a.abtest, a.buyerid, sum(a.price) as spent, count(a.price) as buy_count 
 FROM plsport_playsport._predict_buyer_3 a inner join (SELECT buyerid
-													  FROM plsport_playsport._predict_buyer_3
-													  where p in ('BRC', 'BZ_', 'HT_', 'IDX')
-													  group by buyerid) b on a.buyerid = b.buyerid
+                                                      FROM plsport_playsport._predict_buyer_3
+                                                      where p in ('BRC', 'BZ_', 'HT_', 'IDX')
+                                                      group by buyerid) b on a.buyerid = b.buyerid
 where a.price > 0
 group by a.abtest, a.buyerid;
 
@@ -21436,9 +21436,9 @@ FROM plsport_playsport._abtest_list_some_position_1);
 # http://redmine.playsport.cc/issues/649
 # 是由 文 文工友 於 5 天 前加入. 於 5 天 前更新.
 # 
-# 狀態:	新建立	開始日期:	2015-11-20
-# 優先權:	正常	完成日期:	2015-11-27
-# 被分派者:	黃 Eddy	完成百分比:	
+# 狀態:   新建立 開始日期:   2015-11-20
+# 優先權:  正常  完成日期:   2015-11-27
+# 被分派者: 黃 Eddy  完成百分比:  
 # 
 # TO Eddy:
 # 世界12強賽事將於11/21結束
@@ -21457,11 +21457,11 @@ FROM plsport_playsport.forum
 where posttime between '2015-11-01 00:00:00' and '2015-11-21 23:59:59'
 and allianceid in (3,116,4,91,92);
 
-# 3	    5014
-# 116	2605
-# 4	    983
-# 91	583
-# 92	534
+# 3     5014
+# 116   2605
+# 4     983
+# 91    583
+# 92    534
 
 create table plsport_playsport._major_12_forum_1 engine = myisam
 SELECT d, allianceid, count(subjectid) as post_count, sum(replycount) as reply_count, sum(viewtimes) as viewtimes
@@ -21485,15 +21485,15 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._major_12_forum_2);
 
 create table plsport_playsport._major_12_sale engine = myisam
-SELECT a.buyerid, a.buy_date, b.sale_allianceid, b.sale_price, date(b.sale_date) as d
-FROM plsport_playsport.predict_buyer a left join plsport_playsport.predict_seller b on a.id_bought = b.id
-where b.sale_date between '2015-11-01 00:00:00' and '2015-11-21 23:59:59'
-and b.sale_allianceid in (3,116,4,91,92);
+SELECT buyerid, buy_date, buy_price, buy_allianceid, date(buy_date) as d
+FROM plsport_playsport.predict_buyer 
+where buy_date between '2015-11-01 00:00:00' and '2015-11-21 23:59:59'
+and buy_allianceid in (3,116,4,91,92);
 
 create table plsport_playsport._major_12_sale_1 engine = myisam
-SELECT sale_allianceid as allianceid, d, sum(sale_price) as sale 
+SELECT buy_allianceid as allianceid, d, sum(buy_price) as sale 
 FROM plsport_playsport._major_12_sale
-group by sale_allianceid, d;
+group by buy_allianceid, d;
 
 create table plsport_playsport._major_12_forum_3 engine = myisam
 SELECT a.d, a.allianceid, a.post_count, a.reply_count, a.viewtimes, a.showoff_count, COALESCE(b.sale,0) as sale
@@ -21507,12 +21507,215 @@ FROM plsport_playsport._major_12_forum_3);
 
 SELECT allianceid, sum(post_count) as post_count,
                       sum(reply_count) as reply_count,
-					  sum(viewtimes) as viewtimes,
+                      sum(viewtimes) as viewtimes,
                       sum(showoff_count) as showoff,
                       sum(sale) as sale
 FROM plsport_playsport._major_12_forum_3
 where d between '2015-11-08' and '2015-11-26'
 group by allianceid;
+
+# TO eddy
+# 感謝!
+# 另外需要再麻煩您撈取
+# 
+# 1. 11/8-11/21逐日的全站亮單文數量、12強聯盟的亮單文數量、nba聯盟的亮單文數量
+# 2.用關鍵字"挑戰"、＂串關＂，撈取世界１２強的聯盟文章數量
+
+select a.d, count(a.subjectid) as c
+from (
+	SELECT subjectid, allianceid, gametype, postuser, posttime, viewtimes, replycount, pushcount, date(posttime) as d
+	FROM plsport_playsport.forum
+	where posttime between '2015-11-08 00:00:00' and '2015-11-21 23:59:59'
+	and gametype = 3) as a
+where a.allianceid = 116
+group by a.d;
+
+select a.d, count(a.subjectid) as c
+from (
+	SELECT subjectid, subject, date(postTime) as d
+	FROM plsport_playsport.forum
+	where allianceid = 116) as a
+where (a.subject like '%挑戰%') or (a.subject like '%串關%')
+group by a.d;
+
+select *
+from (
+	SELECT subjectid, subject, date(postTime) as d
+	FROM plsport_playsport.forum
+	where allianceid = 116) as a
+where (a.subject like '%挑戰%') or (a.subject like '%串關%');
+
+
+# =================================================================================================
+# [201507-A-5]開發討論區會員追蹤功能-MVP名單提供
+# http://redmine.playsport.cc/issues/691 
+# 是由 郭 靜怡 於 約 20 小時 前加入.
+# 狀態:	新建立	開始日期:	2015-11-26
+# 
+# 說明 提供MVP測試名單
+# 內容  
+# - 撈取時間:近三個月
+# - 需求欄位:暱稱、ID、討論區PV(前50%)、個人頁PV(前50%)、購買預測金額、裝置使用比列、最後登入時間
+# =================================================================================================
+
+create table actionlog._pv engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201508
+where time between subdate(now(),92) AND now()
+and ((uri like '%forumdetail.php%') or (uri like '%visit_member.php%'))
+and userid <> '';
+		insert ignore into actionlog._pv 
+		SELECT userid, uri, time, platform_type 
+		FROM actionlog.action_201509
+		where time between subdate(now(),92) AND now()
+		and ((uri like '%forumdetail.php%') or (uri like '%visit_member.php%'))
+		and userid <> '';
+		insert ignore into actionlog._pv 
+		SELECT userid, uri, time, platform_type 
+		FROM actionlog.action_201510
+		where time between subdate(now(),92) AND now()
+		and ((uri like '%forumdetail.php%') or (uri like '%visit_member.php%'))
+		and userid <> '';
+		insert ignore into actionlog._pv 
+		SELECT userid, uri, time, platform_type 
+		FROM actionlog.action_201511
+		where time between subdate(now(),92) AND now()
+		and ((uri like '%forumdetail.php%') or (uri like '%visit_member.php%'))
+		and userid <> '';
+
+update actionlog._pv set platform_type = 1 where platform_type = 3;
+
+
+create table actionlog._pv_visitmember engine = myisam
+SELECT userid, platform_type, count(uri) as pv
+FROM actionlog._pv
+where uri like '%visit_member.php%'
+group by userid, platform_type;
+
+create table actionlog._pv_forumdetail engine = myisam
+SELECT userid, platform_type, count(uri) as pv
+FROM actionlog._pv
+where uri like '%forumdetail.php%'
+group by userid, platform_type;
+
+
+create table actionlog._pv_visitmember_1 engine = myisam
+select b.userid, (b.pc+b.mobile) as vm_pv, b.pc, b.mobile
+from (
+	select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+	from (
+		SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc, (case when (platform_type=2) then pv else 0 end) as mobile
+		FROM actionlog._pv_visitmember) as a
+	group by a.userid) as b;
+
+create table actionlog._pv_forumdetail_1 engine = myisam
+select b.userid, (b.pc+b.mobile) as fd_pv, b.pc, b.mobile
+from (
+	select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+	from (
+		SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc, (case when (platform_type=2) then pv else 0 end) as mobile
+		FROM actionlog._pv_forumdetail) as a
+	group by a.userid) as b;
+
+		ALTER TABLE actionlog._pv_visitmember_1 convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE actionlog._pv_forumdetail_1 convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE actionlog._pv_visitmember_1 ADD INDEX (`userid`);
+		ALTER TABLE actionlog._pv_forumdetail_1 ADD INDEX (`userid`);
+
+create table actionlog._pv_visitmember_2 engine = myisam
+select userid, vm_pv, round((cnt-rank+1)/cnt,2) as vm_pv_percentile
+from (SELECT userid, vm_pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._pv_visitmember_1, (SELECT @curRank := 0) r
+      order by vm_pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._pv_visitmember_1) as ct;
+
+create table actionlog._pv_forumdetail_2 engine = myisam
+select userid, fd_pv, round((cnt-rank+1)/cnt,2) as fd_pv_percentile
+from (SELECT userid, fd_pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._pv_forumdetail_1, (SELECT @curRank := 0) r
+      order by fd_pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._pv_forumdetail_1) as ct;
+
+		ALTER TABLE actionlog._pv_visitmember_2 convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE actionlog._pv_forumdetail_2 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._list_1 engine = myisam
+SELECT userid 
+FROM actionlog._pv
+group by userid;
+
+		ALTER TABLE actionlog._list_1 convert to character set utf8 collate utf8_general_ci;
+        
+create table actionlog._list_2 engine = myisam
+SELECT a.userid, b.fd_pv, b.fd_pv_percentile
+FROM actionlog._list_1 a left join actionlog._pv_forumdetail_2 b on a.userid = b.userid;
+
+create table actionlog._list_3 engine = myisam
+SELECT a.userid, a.fd_pv, a.fd_pv_percentile, b.vm_pv, b.vm_pv_percentile
+FROM actionlog._list_2 a left join actionlog._pv_visitmember_2 b on a.userid = b.userid;
+
+create table actionlog._list_4 engine = myisam
+SELECT a.userid, a.fd_pv, a.fd_pv_percentile, a.vm_pv, a.vm_pv_percentile, b.pc as pc1, b.mobile as mobile1
+FROM actionlog._list_3 a left join actionlog._pv_visitmember_1 b on a.userid = b.userid;
+
+create table actionlog._list_5 engine = myisam
+SELECT a.userid, a.fd_pv, a.fd_pv_percentile, a.vm_pv, a.vm_pv_percentile, a.pc1, a.mobile1, b.pc as pc2, b.mobile as mobile2
+FROM actionlog._list_4 a left join actionlog._pv_forumdetail_1 b on a.userid = b.userid;
+
+create table actionlog._list_6 engine = myisam
+SELECT userid, fd_pv, fd_pv_percentile, vm_pv, vm_pv_percentile, (pc1+pc2) as pc, (mobile1+mobile2) as mobile
+FROM actionlog._list_5;
+
+create table actionlog._list_7 engine = myisam
+SELECT userid, fd_pv, fd_pv_percentile, vm_pv, vm_pv_percentile, round((pc/(pc+mobile)),2) as p_pc, round((mobile/(pc+mobile)),2) as p_mobile
+FROM actionlog._list_6
+where fd_pv_percentile > 0.69 and vm_pv_percentile > 0.69
+order by fd_pv_percentile desc;
+
+create table actionlog._list_8 engine = myisam
+SELECT a.userid, b.nickname, a.fd_pv, a.fd_pv_percentile, a.vm_pv, a.vm_pv_percentile, a.p_pc, a.p_mobile
+FROM actionlog._list_7 a left join plsport_playsport.member b on a.userid = b.userid;
+
+		create table actionlog._spent engine = myisam
+		SELECT userid, sum(amount) as spent 
+		FROM plsport_playsport.pcash_log
+		where date between subdate(now(),92) AND now()
+		and payed = 1 and type = 1
+		group by userid;
+
+		CREATE TABLE plsport_playsport._last_login engine = myisam
+		SELECT userid, max(signin_time) as signin_time 
+		FROM plsport_playsport.member_signin_log_archive
+		GROUP BY userid;
+
+		ALTER TABLE actionlog._spent convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._spent ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
+
+create table actionlog._list_9 engine = myisam
+SELECT a.userid, a.nickname, a.fd_pv, a.fd_pv_percentile, a.vm_pv, a.vm_pv_percentile, COALESCE(b.spent,0) as spent, a.p_pc, a.p_mobile
+FROM actionlog._list_8 a left join actionlog._spent b on a.userid = b.userid;
+
+create table actionlog._list_10 engine = myisam
+SELECT a.userid, a.nickname, a.fd_pv, a.fd_pv_percentile, a.vm_pv, a.vm_pv_percentile, a.spent, a.p_pc, a.p_mobile, date(b.signin_time) as d
+FROM actionlog._list_9 a left join plsport_playsport._last_login b on a.userid = b.userid;
+
+
+SELECT * 
+FROM actionlog._list_10;
+
+
+SELECT 'userid', '暱稱', '討論區PV', '討論區PV級距', '個人頁PV', '個人頁PV級距', '購買預測金額', '使用pc比例', '使用mobile比例', '最後登入時間' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_list_10.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._list_10);
+
+
+
+
+
 
 
 
@@ -21547,7 +21750,6 @@ group by allianceid;
 
 
 # 討論區投搜尋功能
-
 create table actionlog._temp engine = myisam
 SELECT userid, uri, time, platform_type 
 FROM actionlog.action_201510
@@ -21563,7 +21765,6 @@ where time between '2015-10-27 16:07:17' and now();
 
 
 # 禁文
-
 create table plsport_playsport._gobucket engine = myisam
 SELECT id, reporter_id, reporter_nickname, userid, nickname, subjectid, subject, articleid, content, contenttype, type, process, rule_number, moderator, reason, allianceid
 FROM plsport_playsport.gobucket
@@ -21585,9 +21786,6 @@ create table plsport_playsport._forum_1 engine = myisam
 SELECT subjectid, includeprediction, forumtype, allianceid, gametype, subject, viewtimes, postuser, posttime, substr(posttime,12,2) as hours, replycount, pushcount
 FROM plsport_playsport._forum;
 
-
-
-
 create table plsport_playsport._forum_with_user_detail engine = myisam
 SELECT a.subjectid, a.gametype, a.postuser,  a.pushcount, datediff(a.posttime,b.createon) as diffdate
 FROM plsport_playsport.forum a left join plsport_playsport.member b on a.postuser = b.userid;
@@ -21596,12 +21794,12 @@ FROM plsport_playsport.forum a left join plsport_playsport.member b on a.postuse
 create table plsport_playsport._forum_with_user_detail_1 engine = myisam
 select c.postuser, count(c.subjectid) as delete_count
 from (
-	SELECT a.subjectid, a.gametype, a.postuser, a.pushcount, a.diffdate 
-	FROM plsport_playsport._forum_with_user_detail a inner join (SELECT subjectid 
-																FROM plsport_playsport.forumdelete
-																where description <> ''
-																and subjectid <> ''
-																group by subjectid) as b on a.subjectid = b.subjectid) as c
+    SELECT a.subjectid, a.gametype, a.postuser, a.pushcount, a.diffdate 
+    FROM plsport_playsport._forum_with_user_detail a inner join (SELECT subjectid 
+                                                                FROM plsport_playsport.forumdelete
+                                                                where description <> ''
+                                                                and subjectid <> ''
+                                                                group by subjectid) as b on a.subjectid = b.subjectid) as c
 where c.postuser <> ''
 group by c.postuser;
 
@@ -21674,10 +21872,10 @@ FROM plsport_playsport.userlevel
 where userid <> ''
 group by userid;
 
-		ALTER TABLE plsport_playsport._userlevel ADD INDEX (`userid`);
-		ALTER TABLE plsport_playsport._forumcontent ADD INDEX (`userid`);
-		ALTER TABLE plsport_playsport._userlevel convert to character set utf8 collate utf8_general_ci;
-		ALTER TABLE plsport_playsport._forumcontent convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._userlevel ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._forumcontent ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._userlevel convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._forumcontent convert to character set utf8 collate utf8_general_ci;
 
 create table plsport_playsport._forumcontent_1 engine = myisam
 SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, b.max_level
