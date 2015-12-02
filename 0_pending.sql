@@ -21511,7 +21511,7 @@ SELECT allianceid, sum(post_count) as post_count,
                       sum(showoff_count) as showoff,
                       sum(sale) as sale
 FROM plsport_playsport._major_12_forum_3
-where d between '2015-11-08' and '2015-11-26'
+where d between '2015-11-08' and '2015-11-21'
 group by allianceid;
 
 # TO eddy
@@ -21714,26 +21714,124 @@ FROM actionlog._list_10);
 
 
 
+# =================================================================================================
+# 任務: [201506-A-8] 討論區文章搜尋 - A/B testing報告及問卷分析 [進行中] (阿達) 2015-12-01
+# 負責人：Eddy
+# 時間：12/2 分析報告
+# 內容
+# 1. A/B testing報告
+# - 實驗組與對照組討論區總pv、觀看文章數是否有差
+# - 實驗組文章搜尋使用量
+# 
+# 2. 問卷分析
+# 待問卷上線後再更新主文
+# =================================================================================================
+
+# 討論區投搜尋功能
+create table actionlog._use_forum_search engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201510
+where uri like '%forum.php?keyword%';
+insert ignore into actionlog._use_forum_search
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201511
+where uri like '%forum.php?keyword%';
+
+
+create table actionlog._use_forum_search_1 engine = myisam
+SELECT * 
+FROM actionlog._use_forum_search
+where time between '2015-10-27 16:18:32' and now()
+and userid not in ('yenhsun1982','a3','a6','sakyla','g4','BOSS4963ZSS','kom4kimo');
+
+update actionlog._use_forum_search_1 set platform_type = 1 where platform_type = 3;
+
+
+		select a.d, a.platform_type, count(userid) as c
+		from (
+			SELECT userid, date(time) as d, platform_type 
+			FROM actionlog._use_forum_search_1) as a
+		group by a.d, a.platform_type;
+
+		select b.d, b.platform_type, count(userid) as c
+		from (
+			select a.d, a.platform_type, a.userid
+			from (
+				SELECT userid, date(time) as d, platform_type 
+				FROM actionlog._use_forum_search_1) as a
+			group by a.d, a.platform_type, a.userid) as b
+		group by b.d, b.platform_type;
+
+# 搜尋次數排行
+select *
+from (
+	SELECT userid, count(uri) as search_count 
+	FROM actionlog._use_forum_search_1
+	where userid  <> ''
+	group by userid) as a
+order by a.search_count desc;
+
+
+select * 
+from (
+	SELECT keyword, count(id) as c 
+	FROM plsport_playsport.forum_search_log
+	where create_time <> '0000-00-00 00:00:00'
+	and userid not in ('yenhsun1982','a3','a6','sakyla','g4','BOSS4963ZSS','kom4kimo','ydasam')
+	group by keyword) as a
+order by a.c desc;
 
 
 
+create table actionlog._use_forumdetail engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201510
+where uri like '%forumdetail.php%' and userid <> '';
+insert ignore into actionlog._use_forum_search
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201511
+where uri like '%forumdetail.php?%' and userid <> '';
+
+create table actionlog._use_forumdetail_1 engine = myisam
+SELECT * FROM actionlog._use_forumdetail
+where time between '2015-10-27 16:18:32' and now();
+
+ALTER TABLE actionlog._use_forumdetail_1 ADD INDEX (`userid`);
+ALTER TABLE actionlog._use_forumdetail_1 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._use_forumdetail_2 engine = myisam
+SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest , a.userid, a.uri, a.time, a.platform_type
+FROM actionlog._use_forumdetail_1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+# 2組人數
+select a.abtest, count(a.userid) as c
+from (
+	SELECT abtest, userid 
+	FROM actionlog._use_forumdetail_2
+	group by abtest, userid) as a
+group by a.abtest;
+
+create table actionlog._use_forumdetail_3 engine = myisam
+SELECT abtest, userid, uri, time, platform_type, substr(uri, locate('subjectid',uri)+10, 15) as c
+FROM actionlog._use_forumdetail_2;
+
+create table actionlog._use_forumdetail_4 engine = myisam
+SELECT abtest, userid, c 
+FROM actionlog._use_forumdetail_3
+group by abtest, userid, c;
+
+create table actionlog._use_forumdetail_5 engine = myisam
+SELECT abtest, userid, count(c) as read_count 
+FROM actionlog._use_forumdetail_4
+group by abtest, userid;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+SELECT 'abtest', 'userid', 'read_count' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_use_forumdetail_5.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._use_forumdetail_5);
 
 
 
