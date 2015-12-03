@@ -20872,8 +20872,13 @@ and uri like '%buy_predict.php?%';
     FROM actionlog.action_201511
     where time between subdate(now(),92) AND now()
     and uri like '%buy_predict.php?%';
+    insert ignore into actionlog._buy_predict
+    SELECT userid, uri, time, platform_type 
+    FROM actionlog.action_201512
+    where time between subdate(now(),92) AND now()
+    and uri like '%buy_predict.php?%';
 
-        update actionlog._buy_predict set platform_type = 1 where platform_type = 3;
+    update actionlog._buy_predict set platform_type = 1 where platform_type = 3;
 
 create table actionlog._buy_predict_1 engine = myisam
 SELECT userid, platform_type, count(uri) as pv 
@@ -20944,6 +20949,11 @@ and uri like '%rp=BZ%';
     insert ignore into actionlog._click_BZ
     SELECT userid, uri, time, platform_type 
     FROM actionlog.action_201511
+    where time between subdate(now(),92) AND now()
+    and uri like '%rp=BZ%';
+    insert ignore into actionlog._click_BZ
+    SELECT userid, uri, time, platform_type 
+    FROM actionlog.action_201512
     where time between subdate(now(),92) AND now()
     and uri like '%rp=BZ%';
 
