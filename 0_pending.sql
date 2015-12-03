@@ -21747,7 +21747,6 @@ SELECT userid, uri, time, platform_type
 FROM actionlog.action_201511
 where uri like '%forum.php?keyword%';
 
-
 create table actionlog._use_forum_search_1 engine = myisam
 SELECT * 
 FROM actionlog._use_forum_search
@@ -21755,7 +21754,6 @@ where time between '2015-10-27 16:18:32' and now()
 and userid not in ('yenhsun1982','a3','a6','sakyla','g4','BOSS4963ZSS','kom4kimo');
 
 update actionlog._use_forum_search_1 set platform_type = 1 where platform_type = 3;
-
 
 		select a.d, a.platform_type, count(userid) as c
 		from (
@@ -21781,7 +21779,6 @@ from (
 	group by userid) as a
 order by a.search_count desc;
 
-
 select * 
 from (
 	SELECT keyword, count(id) as c 
@@ -21790,8 +21787,6 @@ from (
 	and userid not in ('yenhsun1982','a3','a6','sakyla','g4','BOSS4963ZSS','kom4kimo','ydasam')
 	group by keyword) as a
 order by a.c desc;
-
-
 
 create table actionlog._use_forumdetail engine = myisam
 SELECT userid, uri, time, platform_type 
@@ -21835,8 +21830,6 @@ SELECT abtest, userid, count(c) as read_count
 FROM actionlog._use_forumdetail_4
 group by abtest, userid;
 
-
-
 SELECT 'abtest', 'userid', 'read_count' union (
 SELECT *
 into outfile 'C:/Users/eddy/Desktop/_use_forumdetail_5.txt'
@@ -21845,6 +21838,85 @@ FROM actionlog._use_forumdetail_5);
 
 
 
+# =================================================================================================
+# 產品專案 #533: [201510-B] 進階預測比例
+# http://redmine.playsport.cc/issues/714#change-3246
+# [201510-B-5] 進階預測比例 - 消費者研究
+# 是由 吳 阿達 於 1 天 前加入. 於 1 天 前更新.
+# 
+# 狀態:	新建立	開始日期:	2015-12-02
+# 優先權:	儘快	完成日期:	2015-12-04
+# 
+# 說明
+# 研究消費者是否有使用預測比例
+#  
+# 內容
+# 1. 消費者研究
+# 研究近一個月的重、中、輕度消費者中，有使用預測比例的人數比例
+# =================================================================================================
+
+create table actionlog._use_predictgame_scale engine = myisam
+SELECT userid, uri, time 
+FROM actionlog.action_201511
+where userid <> ''
+and uri like '%predictgame.php?action=scale%'
+and time between subdate(now(),32) AND now();
+
+insert ignore into actionlog._use_predictgame_scale
+SELECT userid, uri, time 
+FROM actionlog.action_201512
+where userid <> ''
+and uri like '%predictgame.php?action=scale%'
+and time between subdate(now(),32) AND now();
+
+create table actionlog._use_predictgame_scale_1 engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._use_predictgame_scale
+group by userid;
+
+create table actionlog._use_predictgame_scale_2 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._use_predictgame_scale_1, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._use_predictgame_scale_1) as ct;
+
+
+create table actionlog._people_who_redeem engine = myisam
+SELECT userid, sum(price) as redeem
+FROM plsport_playsport.order_data
+where sellconfirm = 1
+and createon between subdate(now(),32) AND now()
+group by userid;
+
+create table actionlog._people_who_redeem_1 engine = myisam
+select userid, redeem, round((cnt-rank+1)/cnt,2) as redeem_percentile
+from (SELECT userid, redeem, @curRank := @curRank + 1 AS rank
+      FROM actionlog._people_who_redeem, (SELECT @curRank := 0) r
+      order by redeem desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._people_who_redeem) as ct;
+
+
+
+create table actionlog._people_who_redeem_2 engine = myisam
+SELECT userid, redeem, redeem_percentile, (case when (redeem_percentile>0.89) then 'vip'
+                                                when (redeem_percentile>0.69 and redeem_percentile<0.90) then 'lv1' else 'lv2' end) as lv
+FROM actionlog._people_who_redeem_1;
+
+create table actionlog._use_predictgame_scale_3 engine = myisam
+SELECT userid, (case when (pv_percentile>0.89) then 'a'
+                     when (pv_percentile>0.79 and pv_percentile<0.90) then 'b'
+					 when (pv_percentile>0.59 and pv_percentile<0.80) then 'c' 
+                     when (pv_percentile>0.39 and pv_percentile<0.60) then 'd' else 'e' end) as scale_usage
+FROM actionlog._use_predictgame_scale_2;
+
+
+ALTER TABLE actionlog._people_who_redeem_2 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._use_predictgame_scale_3 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._main engine = myisam
+SELECT a.userid, a.redeem, a.lv, b.scale_usage
+FROM actionlog._people_who_redeem_2 a left join actionlog._use_predictgame_scale_3 b on a.userid = b.userid;
 
 
 
@@ -21857,17 +21929,13 @@ FROM actionlog._use_forumdetail_5);
 
 
 
-# 討論區投搜尋功能
-create table actionlog._temp engine = myisam
-SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201510
-where uri like '%forum.php?keyword%';
 
-ALTER TABLE actionlog._temp convert to character set utf8 collate utf8_general_ci;
 
-SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time, a.platform_type 
-FROM actionlog._temp a left join plsport_playsport.member b on a.userid = b.userid
-where time between '2015-10-27 16:07:17' and now();
+
+
+
+
+
 
 
 
