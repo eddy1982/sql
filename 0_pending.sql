@@ -21311,13 +21311,13 @@ SELECT id, sellerid, mode, sale_allianceid, sale_gameid, sale_date, substr(sale_
              when (rank < 11 and selltype = 3) then '金牌'
              when (rank_sk < 11 and selltype = 3) then '金牌' else '銀牌' end) as killmedal     
 FROM plsport_playsport.predict_seller /*最好是指定精確的日期區間*/
-where sale_date between '2015-10-04 18:00:00' and '2015-10-10 23:59:59'
+where sale_date between '2015-10-03 16:00:00' and '2015-11-10 23:59:59'
 order by sale_date desc; /*<====記得要改*/
 
 create table plsport_playsport._predict_buyer engine = myisam
 SELECT id, buyerid, buy_date, id_bought, buy_price, buy_allianceid 
 FROM plsport_playsport.predict_buyer
-where buy_date between '2015-10-06 18:00:00' and '2015-10-10 23:59:59';
+where buy_date between '2015-10-05 16:00:00' and '2015-11-10 23:59:59';
 
     ALTER TABLE plsport_playsport._predict_seller_with_medal ADD INDEX (`id`); 
     ALTER TABLE plsport_playsport._predict_buyer ADD INDEX (`buyerid`); 
@@ -21328,6 +21328,11 @@ create table plsport_playsport._predict_buyer_1 engine = myisam
 SELECT a.id, a.buyerid, a.buy_date, a.buy_price, a.buy_allianceid, b.sellerid, b.mode, b.killtype, b.killmedal
 FROM plsport_playsport._predict_buyer a left join plsport_playsport._predict_seller_with_medal b on a.id_bought = b.id
 order by buy_date;
+
+    ALTER TABLE plsport_playsport._predict_buyer_1 ADD INDEX (`id`);
+    ALTER TABLE plsport_playsport.predict_buyer_cons_split ADD INDEX (`id_predict_buyer`);
+    ALTER TABLE plsport_playsport._predict_buyer_1 convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE plsport_playsport.predict_buyer_cons_split convert to character set utf8 collate utf8_general_ci;
 
 create table plsport_playsport._predict_buyer_2 engine = myisam
 SELECT a.id, a.buyerid, a.buy_date as date, a.buy_price as price, a.buy_allianceid as allianceid, 
@@ -21341,18 +21346,11 @@ SELECT a.id, (case when (((b.id%20)+1)>10) then 'a' else 'b' end) as abtest ,a.b
        a.sellerid, a.m, a.killtype, a.killmedal, a.position, a.p, a.cons, a.con_type
 FROM plsport_playsport._predict_buyer_2 a left join plsport_playsport.member b on a.buyerid = b.userid;
 
+update plsport_playsport._predict_buyer_3 set p = '購買後' where p = 'BRC';
+update plsport_playsport._predict_buyer_3 set p = '莊單殺' where p = 'BZ_';
+update plsport_playsport._predict_buyer_3 set p = '頭3標' where p = 'HT_';
+update plsport_playsport._predict_buyer_3 set p = '首頁' where p = 'IDX';
 
-# 單殺主推與莊殺主推購買次數(含使用抵用卷)
-select *
-from (
-    SELECT abtest, m, killtype, p, count(buyerid) as c 
-    FROM plsport_playsport._predict_buyer_3
-    where con_type = 1     # 主推
-    and killtype <> '雙殺'  # 排除雙殺
-    and p <> 'MPB'         # 主推榜不要看
-    and p in ('BRC', 'BZ_', 'HT_', 'IDX')
-    group by abtest, m, killtype, p) as a
-where a.c > 10;
 
 # 單殺主推與莊殺主推購買次數(限只有噱幣)
 select *
@@ -21361,32 +21359,32 @@ from (
     FROM plsport_playsport._predict_buyer_3
     where con_type = 1     # 主推
     and killtype <> '雙殺'  # 排除雙殺
-    and p <> 'MPB'         # 主推榜不要看
-    and p in ('BRC', 'BZ_', 'HT_', 'IDX')
+    and p in ('購買後', '莊單殺', '頭3標', '首頁')
     and price > 0
     group by abtest, m, killtype, p) as a
 where a.c > 10;
 
+# 單殺主推與莊殺-所有版標類型-購買次數(限只有噱幣)
+select *
+from (
+    SELECT abtest, m, killtype, p, count(buyerid) as c 
+    FROM plsport_playsport._predict_buyer_3
+    where con_type is not null     # 主推
+    and killtype <> '雙殺'  # 排除雙殺
+    and p in ('購買後', '莊單殺', '頭3標', '首頁')
+    and price > 0
+    group by abtest, m, killtype, p) as a
+where a.c > 10;
 
-    # 單殺主推與莊殺主推購買次數(含使用抵用卷)
-    select *
-    from (
-        SELECT abtest, m, killtype, count(buyerid) as c 
-        FROM plsport_playsport._predict_buyer_3
-        where con_type is not null
-        group by abtest, m, killtype) as a
-    where a.c > 10;
-
-    # 單殺主推與莊殺主推購買次數(限只有噱幣)
-    select *
-    from (
-        SELECT abtest, m, killtype, count(buyerid) as c 
-        FROM plsport_playsport._predict_buyer_3
-        where con_type is not null
-        and price > 0
-        group by abtest, m, killtype) as a
-    where a.c > 10;
-
+# 全站整體購買次數(限只有噱幣)
+select *
+from (
+	SELECT abtest, m, killtype, count(buyerid) as c 
+	FROM plsport_playsport._predict_buyer_3
+	where con_type is not null
+	and price > 0
+	group by abtest, m, killtype) as a
+where a.c > 10;
 
 create table plsport_playsport._abtest_list_all_position engine = myisam
 SELECT abtest, buyerid, sum(price) as spent, count(price) as buy_count 
@@ -21394,16 +21392,14 @@ FROM plsport_playsport._predict_buyer_3
 where price > 0
 group by abtest, buyerid;
 
-
 create table plsport_playsport._abtest_list_some_position engine = myisam
 SELECT a.abtest, a.buyerid, sum(a.price) as spent, count(a.price) as buy_count 
 FROM plsport_playsport._predict_buyer_3 a inner join (SELECT buyerid
                                                       FROM plsport_playsport._predict_buyer_3
-                                                      where p in ('BRC', 'BZ_', 'HT_', 'IDX')
+                                                      where p in ('購買後', '莊單殺', '頭3標', '首頁')
                                                       group by buyerid) b on a.buyerid = b.buyerid
 where a.price > 0
 group by a.abtest, a.buyerid;
-
 
 create table plsport_playsport._abtest_list_all_position_1 engine = myisam
 select abtest, buyerid, spent, round((cnt-rank+1)/cnt,2) as spent_percentile, buy_count
@@ -21424,19 +21420,18 @@ create table plsport_playsport._abtest_list_some_position_1 engine = myisam
 SELECT a.abtest, a.buyerid as userid, a.spent, a.buy_count, b.lv
 FROM plsport_playsport._abtest_list_some_position a left join plsport_playsport._abtest_list_all_position_2 b on a.buyerid = b.userid;
 
+		SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' union (
+		SELECT *
+		into outfile 'C:/Users/eddy/Desktop/_abtest_list_all_position.txt'
+		fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+		FROM plsport_playsport._abtest_list_all_position_2);
 
-SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' union (
-SELECT *
-into outfile 'C:/Users/eddy/Desktop/_abtest_list_all_position.txt'
-fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM plsport_playsport._abtest_list_all_position_2);
 
-
-SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' union (
-SELECT *
-into outfile 'C:/Users/eddy/Desktop/_abtest_list_some_position.txt'
-fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM plsport_playsport._abtest_list_some_position_1);
+		SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' union (
+		SELECT *
+		into outfile 'C:/Users/eddy/Desktop/_abtest_list_some_position.txt'
+		fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+		FROM plsport_playsport._abtest_list_some_position_1);
 
 
 
@@ -21903,11 +21898,16 @@ SELECT userid, redeem, redeem_percentile, (case when (redeem_percentile>0.89) th
                                                 when (redeem_percentile>0.69 and redeem_percentile<0.90) then 'lv1' else 'lv2' end) as lv
 FROM actionlog._people_who_redeem_1;
 
+# create table actionlog._use_predictgame_scale_3 engine = myisam
+# SELECT userid, (case when (pv_percentile>0.89) then 'a'
+#                      when (pv_percentile>0.79 and pv_percentile<0.90) then 'b'
+# 					   when (pv_percentile>0.59 and pv_percentile<0.80) then 'c' 
+#                      when (pv_percentile>0.39 and pv_percentile<0.60) then 'd' else 'e' end) as scale_usage
+# FROM actionlog._use_predictgame_scale_2;
+
 create table actionlog._use_predictgame_scale_3 engine = myisam
 SELECT userid, (case when (pv_percentile>0.89) then 'a'
-                     when (pv_percentile>0.79 and pv_percentile<0.90) then 'b'
-					 when (pv_percentile>0.59 and pv_percentile<0.80) then 'c' 
-                     when (pv_percentile>0.39 and pv_percentile<0.60) then 'd' else 'e' end) as scale_usage
+                     when (pv_percentile>0.69 and pv_percentile<0.90) then 'b' else 'c' end) as scale_usage
 FROM actionlog._use_predictgame_scale_2;
 
 
@@ -22077,4 +22077,20 @@ where dif < 4
 group by subjectid;
 
 
+
+create table actionlog._ab_check engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201512
+where userid <> ''
+and uri like '%forumdetail.php%'
+and uri like '%push%'
+and time between '2015-12-03 12:00:00' and now();
+
+        ALTER TABLE actionlog._ab_check convert to character set utf8 collate utf8_general_ci;
+
+select a.g, count(a.uri) as c
+from (
+	SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time, a.platform_type 
+	FROM actionlog._ab_check a left join plsport_playsport.member b on a.userid = b.userid) as a
+group by a.g;
 
