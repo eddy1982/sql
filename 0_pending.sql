@@ -21427,11 +21427,12 @@ FROM plsport_playsport._abtest_list_some_position a left join plsport_playsport.
 		FROM plsport_playsport._abtest_list_all_position_2);
 
 
-		SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' union (
-		SELECT *
-		into outfile 'C:/Users/eddy/Desktop/_abtest_list_some_position.txt'
-		fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-		FROM plsport_playsport._abtest_list_some_position_1);
+		SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' 
+UNION (SELECT 
+    *
+INTO OUTFILE 'C:/Users/eddy/Desktop/_abtest_list_some_position.txt' FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '
+' FROM
+    plsport_playsport._abtest_list_some_position_1);
 
 
 
@@ -21565,31 +21566,18 @@ where (a.subject like '%挑戰%') or (a.subject like '%串關%');
 
 create table actionlog._pv engine = myisam
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201508
-where time between subdate(now(),92) AND now()
+FROM actionlog.action_201511
+where time between subdate(now(),32) AND now()
 and ((uri like '%forumdetail.php%') or (uri like '%visit_member.php%'))
 and userid <> '';
-		insert ignore into actionlog._pv 
-		SELECT userid, uri, time, platform_type 
-		FROM actionlog.action_201509
-		where time between subdate(now(),92) AND now()
-		and ((uri like '%forumdetail.php%') or (uri like '%visit_member.php%'))
-		and userid <> '';
-		insert ignore into actionlog._pv 
-		SELECT userid, uri, time, platform_type 
-		FROM actionlog.action_201510
-		where time between subdate(now(),92) AND now()
-		and ((uri like '%forumdetail.php%') or (uri like '%visit_member.php%'))
-		and userid <> '';
-		insert ignore into actionlog._pv 
-		SELECT userid, uri, time, platform_type 
-		FROM actionlog.action_201511
-		where time between subdate(now(),92) AND now()
-		and ((uri like '%forumdetail.php%') or (uri like '%visit_member.php%'))
-		and userid <> '';
+insert ignore into actionlog._pv 
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201512
+where time between subdate(now(),32) AND now()
+and ((uri like '%forumdetail.php%') or (uri like '%visit_member.php%'))
+and userid <> '';
 
 update actionlog._pv set platform_type = 1 where platform_type = 3;
-
 
 create table actionlog._pv_visitmember engine = myisam
 SELECT userid, platform_type, count(uri) as pv
@@ -21684,7 +21672,7 @@ FROM actionlog._list_7 a left join plsport_playsport.member b on a.userid = b.us
 		create table actionlog._spent engine = myisam
 		SELECT userid, sum(amount) as spent 
 		FROM plsport_playsport.pcash_log
-		where date between subdate(now(),92) AND now()
+		where date between subdate(now(),32) AND now()
 		and payed = 1 and type = 1
 		group by userid;
 
@@ -21710,12 +21698,30 @@ FROM actionlog._list_9 a left join plsport_playsport._last_login b on a.userid =
 SELECT * 
 FROM actionlog._list_10;
 
+# 麻煩重新提供名單，謝謝
+# - 撈取時間:近三個月
+# - 需求欄位:暱稱、ID、討論區PV(前30%)、個人頁PV(前30%)、購買預測金額、裝置使用比列、最後登入時間，問卷選擇為非常需要與需要者
 
-SELECT 'userid', '暱稱', '討論區PV', '討論區PV級距', '個人頁PV', '個人頁PV級距', '購買預測金額', '使用pc比例', '使用mobile比例', '最後登入時間' union (
+ALTER TABLE plsport_playsport.questionnaire_201506031444432350_answer CHANGE `1433314771` q1 VARCHAR(20);
+
+create table plsport_playsport._questionnaire_list engine = myisam
+SELECT userid, q1 
+FROM plsport_playsport.questionnaire_201506031444432350_answer
+where q1 in (1,2);
+
+update plsport_playsport._questionnaire_list set q1 = '非常需要' where q1 = 1;
+update plsport_playsport._questionnaire_list set q1 = '需要' where q1 = 2;
+
+create table actionlog._list_11 engine = myisam
+SELECT a.userid, a.nickname, a.fd_pv, a.fd_pv_percentile, a.vm_pv, a.vm_pv_percentile, a.spent, a.p_pc, a.p_mobile, a.d, b.q1 as ans
+FROM actionlog._list_10 a left join plsport_playsport._questionnaire_list b on a.userid = b.userid
+where b.q1 is not null;
+
+SELECT 'userid', '暱稱', '討論區PV', '討論區PV級距', '個人頁PV', '個人頁PV級距', '購買預測金額', '使用pc比例', '使用mobile比例', '最後登入時間', '問券回答' union (
 SELECT *
-into outfile 'C:/Users/eddy/Desktop/_list_10.txt'
+into outfile 'C:/Users/eddy/Desktop/_list_11.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM actionlog._list_10);
+FROM actionlog._list_11);
 
 
 
