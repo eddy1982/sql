@@ -21694,7 +21694,6 @@ create table actionlog._list_10 engine = myisam
 SELECT a.userid, a.nickname, a.fd_pv, a.fd_pv_percentile, a.vm_pv, a.vm_pv_percentile, a.spent, a.p_pc, a.p_mobile, date(b.signin_time) as d
 FROM actionlog._list_9 a left join plsport_playsport._last_login b on a.userid = b.userid;
 
-
 SELECT * 
 FROM actionlog._list_10;
 
@@ -21897,8 +21896,6 @@ from (SELECT userid, redeem, @curRank := @curRank + 1 AS rank
       order by redeem desc) as dt,
      (select count(distinct userid) as cnt from actionlog._people_who_redeem) as ct;
 
-
-
 create table actionlog._people_who_redeem_2 engine = myisam
 SELECT userid, redeem, redeem_percentile, (case when (redeem_percentile>0.89) then 'vip'
                                                 when (redeem_percentile>0.69 and redeem_percentile<0.90) then 'lv1' else 'lv2' end) as lv
@@ -21926,9 +21923,279 @@ FROM actionlog._people_who_redeem_2 a left join actionlog._use_predictgame_scale
 
 
 
+# =================================================================================================
+# http://redmine.playsport.cc/issues/715
+# [201510-B-6] 進階預測比例 - MVP工程
+# 內容 1. 預測比例分類
+# 
+# 請先做出下列三個預測比例分類，並且每五分鐘自動更新
+# - 月勝率60%以上
+# - 全站主推
+# - 月勝率前100名
+# 
+# 麻煩協助家遠驗證預測比例，謝謝！
+# =================================================================================================
+
+# 注意要更新:
+# (1)prediction
+# (2)billboard_ranker 勝率榜的資料
+# (3)games 賽事資訊的表 (dateon是比賽開始的時間,比賽開始後就不能再點預測了)
+
+# 建立可以檢驗的資料
+drop table if exists plsport_playsport._test;
+create table plsport_playsport._test engine = myisam
+SELECT * 
+FROM plsport_playsport.prediction
+where createon between '2015-12-07 00:00:00' and now()
+order by createon desc;
+
+# gameid 檢查區
+SELECT * FROM plsport_playsport._test
+where gameid = '2015120980300'
+and gametype = 1;
+
+SELECT * FROM plsport_playsport._test
+where userid = 'yenhsun1982';
+
+SELECT predict, count(userid) as c 
+FROM plsport_playsport._test
+where gameid = '2015120980300'
+and gametype = 12
+group by predict;
+
+# 勝率榜
+SELECT * FROM plsport_playsport.billboard_ranker
+where allianceid = 3
+and mode = 2     # 1:運彩盤, 2:國際盤
+and gametype = 0 # 11:國際盤讓分, 12:國際盤大小, 0:全部, 1:運彩讓分, 2:運彩大小, 3:運彩不讓分
+and during = 'lastweek'
+and billboard_type = 'pbillboard' # pbillboard:勝率榜
+order by rank ;
 
 
+# 學長的資料-主推
+create table plsport_playsport._games engine = myisam
+SELECT a.gameid, a.gsn, a.allianceid, b.alliancename, a.createon, a.dateon, a.hometeam, a.visitteam 
+FROM plsport_playsport.games a left join plsport_playsport.alliance b on a.allianceid = b.allianceid
+where a.createon between '2015-12-05 00:00:00' and now()
+order by createon desc;
 
+create table plsport_playsport._scale_advance_type1 engine = myisam SELECT * FROM plsport_playsport.scale_advance where scale_type = 1;
+create table plsport_playsport._scale_advance_type2 engine = myisam SELECT * FROM plsport_playsport.scale_advance where scale_type = 2;
+create table plsport_playsport._scale_advance_type3 engine = myisam SELECT * FROM plsport_playsport.scale_advance where scale_type = 3;
+
+ALTER TABLE plsport_playsport._scale_advance_type1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._scale_advance_type2 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._scale_advance_type3 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._games convert to character set utf8 collate utf8_general_ci;
+
+# (1)學長的數據-主站主推
+create table plsport_playsport._games_type1 engine = myisam
+SELECT a.gameid, a.gsn, a.allianceid, a.alliancename, a.createon, a.dateon, a.hometeam, a.visitteam,
+       b.ihomeahead_p as c11_1, b.ivisitahead_p as c11_2, b.ihomebig_p as c12_1, b.ivisitbig_p as c12_2, b.homeahead_p as c1_1, b.visitahead_p as c1_2, b.homebig_p as c2_1, 
+       b.visitbig_p as c2_2, b.homewin_p as c3_1, b.visitwin_p as c3_2, b.nowin_p as c3_3, b.last_update_time
+FROM plsport_playsport._games a left join plsport_playsport._scale_advance_type1 b on a.gameid = b.gameid
+where b.ihomeahead_p is not null
+order by dateon desc;
+
+# (2)學長的數據-月勝率60%
+create table plsport_playsport._games_type2 engine = myisam
+SELECT a.gameid, a.gsn, a.allianceid, a.alliancename, a.createon, a.dateon, a.hometeam, a.visitteam,
+       b.ihomeahead_p as c11_1, b.ivisitahead_p as c11_2, b.ihomebig_p as c12_1, b.ivisitbig_p as c12_2, b.homeahead_p as c1_1, b.visitahead_p as c1_2, b.homebig_p as c2_1, 
+       b.visitbig_p as c2_2, b.homewin_p as c3_1, b.visitwin_p as c3_2, b.nowin_p as c3_3, b.last_update_time
+FROM plsport_playsport._games a left join plsport_playsport._scale_advance_type2 b on a.gameid = b.gameid
+where b.ihomeahead_p is not null
+order by dateon desc;
+# (3)學長的數據-月勝率前100
+create table plsport_playsport._games_type3 engine = myisam
+SELECT a.gameid, a.gsn, a.allianceid, a.alliancename, a.createon, a.dateon, a.hometeam, a.visitteam,
+       b.ihomeahead_p as c11_1, b.ivisitahead_p as c11_2, b.ihomebig_p as c12_1, b.ivisitbig_p as c12_2, b.homeahead_p as c1_1, b.visitahead_p as c1_2, b.homebig_p as c2_1, 
+       b.visitbig_p as c2_2, b.homewin_p as c3_1, b.visitwin_p as c3_2, b.nowin_p as c3_3, b.last_update_time
+FROM plsport_playsport._games a left join plsport_playsport._scale_advance_type3 b on a.gameid = b.gameid
+where b.ihomeahead_p is not null
+order by dateon desc;
+
+
+# eddy的資料-主推
+drop table if exists plsport_playsport._prediction;
+create table plsport_playsport._prediction engine = myisam
+SELECT id, userid, nickname, gameid, allianceid, gametype, predict, winner, createon, (case when (length(gametype)=1) then 1 else 2 end) as mode
+FROM plsport_playsport.prediction
+where createon between '2015-12-06 00:00:00' and now()
+order by createon desc;
+
+# 主站主推的主要inquery寫法 
+create table plsport_playsport._prediction_main_push engine = myisam
+SELECT allianceid, gameid, gametype, predict, count(userid) as c
+FROM plsport_playsport._prediction
+where gohomer = 1
+group by gameid, gametype, predict;
+
+create table plsport_playsport._prediction_main_push_1 engine = myisam
+select b.allianceid, b.gameid, sum(b.d11_1) as d11_1, sum(b.d11_2) as d11_2, sum(b.d12_1) as d12_1, sum(b.d12_2) as d12_2, sum(b.d1_1) as d1_1, sum(b.d1_2) as d1_2,
+							   sum(b.d2_1) as d2_1, sum(b.d2_2) as d2_2, sum(b.d3_1) as d3_1, sum(b.d3_2) as d3_2, sum(b.d3_3) as d3_3
+from (                               
+	select a.allianceid, a.gameid, (case when (a.gp = '11_1') then c else 0 end) as d11_1,
+								   (case when (a.gp = '11_2') then c else 0 end) as d11_2,
+								   (case when (a.gp = '12_1') then c else 0 end) as d12_1,
+								   (case when (a.gp = '12_2') then c else 0 end) as d12_2,
+								   (case when (a.gp = '1_1') then c else 0 end) as d1_1,
+								   (case when (a.gp = '1_2') then c else 0 end) as d1_2,
+								   (case when (a.gp = '2_1') then c else 0 end) as d2_1,
+								   (case when (a.gp = '2_2') then c else 0 end) as d2_2,
+								   (case when (a.gp = '3_1') then c else 0 end) as d3_1,
+								   (case when (a.gp = '3_2') then c else 0 end) as d3_2,
+								   (case when (a.gp = '3_3') then c else 0 end) as d3_3
+	from (
+		SELECT allianceid, gameid, concat(gametype,'_',predict) as gp, c 
+		FROM plsport_playsport._prediction_main_push) as a) as b
+group by b.gameid;
+
+create table plsport_playsport._prediction_main_push_2 engine = myisam
+SELECT a.gameid, a.gsn, a.allianceid, a.alliancename, a.createon, a.dateon, date(a.dateon) as d, a.hometeam, a.visitteam, 
+	   a.last_update_time, d11_1, d11_2, d12_1, d12_2, d1_1, d1_2, d2_1, d2_2, d3_1, d3_2, d3_3, 
+		(c11_1-d11_1) as e11_1, (c11_2-d11_2) as e11_2, (c12_1-d12_1) as e12_1, 
+		(c12_2-d12_2) as e12_2, (c1_1-d1_1) as e1_1, (c1_2-d1_2) as e1_2, (c2_1-d2_1) as e2_1, 
+		(c2_2-d2_2) as e2_2, (c3_1-d3_1) as e3_1, (c3_2-d3_2) as e3_2, (c3_3-d3_3) as e3_3
+FROM plsport_playsport._games_type1 a left join plsport_playsport._prediction_main_push_1 b on a.gameid = b.gameid
+where d11_1 is not null
+order by a.allianceid, a.gameid;
+
+# 檢查月勝率60%
+drop table if exists plsport_playsport._billboard_ranker;
+create table plsport_playsport._billboard_ranker engine = myisam
+SELECT * FROM billboard_ranker_data.billboard_ranker
+where billboard_type = 'pbillboard'
+and during = 'thismonth'
+and winpercentage >= 60
+and total_game >= 28;
+
+# 符合月勝率60%的人的名單
+drop table if exists plsport_playsport._billboard_ranker_with_60_winpercent;
+create table plsport_playsport._billboard_ranker_with_60_winpercent engine = myisam
+SELECT allianceid, mode, gametype, winpercentage, rank, process_time, userid 
+FROM plsport_playsport._billboard_ranker;
+
+		ALTER TABLE plsport_playsport._billboard_ranker_with_60_winpercent ADD INDEX (`userid`,`allianceid`,`mode`,`gametype`);
+		ALTER TABLE plsport_playsport._prediction ADD INDEX (`userid`,`allianceid`,`gametype`);
+
+drop table if exists plsport_playsport._billboard_ranker_with_60_winpercent_1;
+create table plsport_playsport._billboard_ranker_with_60_winpercent_1 engine = myisam
+SELECT a.allianceid, a.gameid, a.gametype, a.predict, a.userid, a.nickname, b.winpercentage, b.rank
+FROM plsport_playsport._prediction a left join plsport_playsport._billboard_ranker_with_60_winpercent b 
+	on (a.userid = b.userid and a.allianceid = b.allianceid and a.gametype = b.gametype)
+where b.winpercentage is not null;
+
+drop table if exists plsport_playsport._billboard_ranker_with_60_winpercent_2;
+create table plsport_playsport._billboard_ranker_with_60_winpercent_2 engine = myisam
+SELECT a.allianceid, a.gameid, a.gametype, a.predict, a.userid, a.nickname, a.winpercentage, a.rank 
+FROM plsport_playsport._billboard_ranker_with_60_winpercent_1 a inner join plsport_playsport._games b on a.gameid = b.gameid
+where substr(a.gameid,1,8) = '20151215';
+
+drop table if exists plsport_playsport._billboard_ranker_with_60_winpercent_3;
+create table plsport_playsport._billboard_ranker_with_60_winpercent_3 engine = myisam
+SELECT gameid, allianceid, gametype, predict, count(userid) as c
+FROM plsport_playsport._billboard_ranker_with_60_winpercent_2
+group by gameid, allianceid, gametype, predict;
+
+drop table if exists plsport_playsport._prediction_month_winrate60_1;
+create table plsport_playsport._prediction_month_winrate60_1 engine = myisam
+select b.allianceid, b.gameid, sum(b.d11_1) as d11_1, sum(b.d11_2) as d11_2, sum(b.d12_1) as d12_1, sum(b.d12_2) as d12_2, sum(b.d1_1) as d1_1, sum(b.d1_2) as d1_2,
+							   sum(b.d2_1) as d2_1, sum(b.d2_2) as d2_2, sum(b.d3_1) as d3_1, sum(b.d3_2) as d3_2, sum(b.d3_3) as d3_3
+from (                               
+	select a.allianceid, a.gameid, (case when (a.gp = '11_1') then c else 0 end) as d11_1,
+								   (case when (a.gp = '11_2') then c else 0 end) as d11_2,
+								   (case when (a.gp = '12_1') then c else 0 end) as d12_1,
+								   (case when (a.gp = '12_2') then c else 0 end) as d12_2,
+								   (case when (a.gp = '1_1') then c else 0 end) as d1_1,
+								   (case when (a.gp = '1_2') then c else 0 end) as d1_2,
+								   (case when (a.gp = '2_1') then c else 0 end) as d2_1,
+								   (case when (a.gp = '2_2') then c else 0 end) as d2_2,
+								   (case when (a.gp = '3_1') then c else 0 end) as d3_1,
+								   (case when (a.gp = '3_2') then c else 0 end) as d3_2,
+								   (case when (a.gp = '3_3') then c else 0 end) as d3_3
+	from (
+		SELECT allianceid, gameid, concat(gametype,'_',predict) as gp, c 
+		FROM plsport_playsport._billboard_ranker_with_60_winpercent_3) as a) as b
+group by b.gameid;
+
+drop table if exists plsport_playsport._prediction_month_winrate60_2;
+create table plsport_playsport._prediction_month_winrate60_2 engine = myisam
+SELECT a.gameid, a.gsn, a.allianceid, a.alliancename, a.createon, a.dateon, date(a.dateon) as d, a.hometeam, a.visitteam, 
+	   a.last_update_time, d11_1, d11_2, d12_1, d12_2, d1_1, d1_2, d2_1, d2_2, d3_1, d3_2, d3_3, 
+		(c11_1-d11_1) as e11_1, (c11_2-d11_2) as e11_2, (c12_1-d12_1) as e12_1, 
+		(c12_2-d12_2) as e12_2, (c1_1-d1_1) as e1_1, (c1_2-d1_2) as e1_2, (c2_1-d2_1) as e2_1, 
+		(c2_2-d2_2) as e2_2, (c3_1-d3_1) as e3_1, (c3_2-d3_2) as e3_2, (c3_3-d3_3) as e3_3
+FROM plsport_playsport._games_type2 a left join plsport_playsport._prediction_month_winrate60_1 b on a.gameid = b.gameid
+where d11_1 is not null
+order by a.allianceid, a.gameid;
+
+# 月勝率前100
+drop table if exists plsport_playsport._billboard_ranker_top100;
+create table plsport_playsport._billboard_ranker_top100 engine = myisam
+SELECT * FROM billboard_ranker_data.billboard_ranker
+where billboard_type = 'pbillboard'
+and during = 'thismonth'
+and rank <=100;
+
+# 符合月勝率前100的人的名單
+drop table if exists plsport_playsport._billboard_ranker_top100_1;
+create table plsport_playsport._billboard_ranker_top100_1 engine = myisam
+SELECT allianceid, mode, gametype, winpercentage, rank, process_time, userid 
+FROM plsport_playsport._billboard_ranker_top100;
+
+		ALTER TABLE plsport_playsport._billboard_ranker_top100_1 ADD INDEX (`userid`,`allianceid`,`gametype`);
+
+drop table if exists plsport_playsport._billboard_ranker_top100_2;
+create table plsport_playsport._billboard_ranker_top100_2 engine = myisam
+SELECT a.allianceid, a.gameid, a.gametype, a.predict, a.userid, a.nickname, b.winpercentage, b.rank
+FROM plsport_playsport._prediction a left join plsport_playsport._billboard_ranker_top100_1 b 
+	on (a.userid = b.userid and a.allianceid = b.allianceid and a.gametype = b.gametype)
+where b.rank is not null;
+
+drop table if exists plsport_playsport._billboard_ranker_top100_3;
+create table plsport_playsport._billboard_ranker_top100_3 engine = myisam
+SELECT a.allianceid, a.gameid, a.gametype, a.predict, a.userid, a.nickname, a.winpercentage, a.rank 
+FROM plsport_playsport._billboard_ranker_top100_2 a inner join plsport_playsport._games b on a.gameid = b.gameid
+where substr(a.gameid,1,8) = '20151215';
+
+drop table if exists plsport_playsport._billboard_ranker_top100_4;
+create table plsport_playsport._billboard_ranker_top100_4 engine = myisam
+SELECT gameid, allianceid, gametype, predict, count(userid) as c
+FROM plsport_playsport._billboard_ranker_top100_3
+group by gameid, allianceid, gametype, predict;
+
+drop table if exists plsport_playsport._billboard_ranker_top100_5;
+create table plsport_playsport._billboard_ranker_top100_5 engine = myisam
+select b.allianceid, b.gameid, sum(b.d11_1) as d11_1, sum(b.d11_2) as d11_2, sum(b.d12_1) as d12_1, sum(b.d12_2) as d12_2, sum(b.d1_1) as d1_1, sum(b.d1_2) as d1_2,
+							   sum(b.d2_1) as d2_1, sum(b.d2_2) as d2_2, sum(b.d3_1) as d3_1, sum(b.d3_2) as d3_2, sum(b.d3_3) as d3_3
+from (                               
+	select a.allianceid, a.gameid, (case when (a.gp = '11_1') then c else 0 end) as d11_1,
+								   (case when (a.gp = '11_2') then c else 0 end) as d11_2,
+								   (case when (a.gp = '12_1') then c else 0 end) as d12_1,
+								   (case when (a.gp = '12_2') then c else 0 end) as d12_2,
+								   (case when (a.gp = '1_1') then c else 0 end) as d1_1,
+								   (case when (a.gp = '1_2') then c else 0 end) as d1_2,
+								   (case when (a.gp = '2_1') then c else 0 end) as d2_1,
+								   (case when (a.gp = '2_2') then c else 0 end) as d2_2,
+								   (case when (a.gp = '3_1') then c else 0 end) as d3_1,
+								   (case when (a.gp = '3_2') then c else 0 end) as d3_2,
+								   (case when (a.gp = '3_3') then c else 0 end) as d3_3
+	from (
+		SELECT allianceid, gameid, concat(gametype,'_',predict) as gp, c 
+		FROM plsport_playsport._billboard_ranker_top100_4) as a) as b
+group by b.gameid;
+
+drop table if exists plsport_playsport._billboard_ranker_top100_6;
+create table plsport_playsport._billboard_ranker_top100_6 engine = myisam
+SELECT a.gameid, a.gsn, a.allianceid, a.alliancename, a.createon, a.dateon, date(a.dateon) as d, a.hometeam, a.visitteam, 
+	   a.last_update_time, d11_1, d11_2, d12_1, d12_2, d1_1, d1_2, d2_1, d2_2, d3_1, d3_2, d3_3, 
+		(c11_1-d11_1) as e11_1, (c11_2-d11_2) as e11_2, (c12_1-d12_1) as e12_1, 
+		(c12_2-d12_2) as e12_2, (c1_1-d1_1) as e1_1, (c1_2-d1_2) as e1_2, (c2_1-d2_1) as e2_1, 
+		(c2_2-d2_2) as e2_2, (c3_1-d3_1) as e3_1, (c3_2-d3_2) as e3_2, (c3_3-d3_3) as e3_3
+FROM plsport_playsport._games_type3 a left join plsport_playsport._billboard_ranker_top100_5 b on a.gameid = b.gameid
+where d11_1 is not null
+order by a.allianceid, a.gameid;
 
 
 
