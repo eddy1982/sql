@@ -22199,171 +22199,64 @@ order by a.allianceid, a.gameid;
 
 
 
+# =================================================================================================
+# 任務: [201412-F-23] 即時比分顯示隔日賽事數據- 分析問卷結果 [新建]
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4986&projectId=11
+# • 更多動作
+# 說明
+# 分析"NBA即時比分賽事數據"問卷結果
+# 負責人：Eddy
+# 時間：12/16(三)
+# =================================================================================================
 
+# 先匯入questionnaire_201509081556429556_answer
 
+create table plsport_playsport._temp_question engine = myisam
+select * 
+from plsport_playsport.questionnaire_201512071121491907_answer;
 
+ALTER TABLE plsport_playsport._temp_question CHANGE `1449458487` ans varchar(1000);
 
+update plsport_playsport._temp_question set ans = replace(ans, '!',' '); 
+update plsport_playsport._temp_question set ans = replace(ans, '?',' '); 
+update plsport_playsport._temp_question set ans = replace(ans, '.',' '); 
+update plsport_playsport._temp_question set ans = replace(ans, ',',' '); 
+update plsport_playsport._temp_question set ans = replace(ans, ';',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '/',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '\\','_');
+update plsport_playsport._temp_question set ans = replace(ans, '"',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '&',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '#',' ');
+update plsport_playsport._temp_question set ans = replace(ans, ' ',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '\n',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '\b',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '\t',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '\r',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '謝謝',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '~',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '感謝',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '謝',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '3Q',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '*',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '(',' ');
+update plsport_playsport._temp_question set ans = replace(ans, ')',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '，',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '。',' ');
+update plsport_playsport._temp_question set ans = replace(ans, '了','');
+update plsport_playsport._temp_question set ans = replace(ans, '不需要','沒有');
+update plsport_playsport._temp_question set ans = replace(ans, '沒','沒有');
+update plsport_playsport._temp_question set ans = replace(ans, '不用','沒有');
+update plsport_playsport._temp_question set ans = replace(ans, '無','沒有');
+update plsport_playsport._temp_question set ans = replace(ans, '夠','沒有');
+update plsport_playsport._temp_question set ans = replace(ans, 'no','沒有');
+update plsport_playsport._temp_question set ans = replace(ans, 'No','沒有');
+update plsport_playsport._temp_question set ans = replace(ans, 'Ok','沒有');
+update plsport_playsport._temp_question set ans = replace(ans, 'ok','沒有');
+update plsport_playsport._temp_question set ans = replace(ans, '可以','沒有');
+update plsport_playsport._temp_question set ans = replace(ans, '夠','沒有');
+update plsport_playsport._temp_question set ans = replace(ans, '沒有有','沒有');
 
-
-
-
-
-
-
-
-
-
-# 禁文
-create table plsport_playsport._gobucket engine = myisam
-SELECT id, reporter_id, reporter_nickname, userid, nickname, subjectid, subject, articleid, content, contenttype, type, process, rule_number, moderator, reason, allianceid
-FROM plsport_playsport.gobucket
-where process = 1
-order by id desc;
-
-ALTER TABLE plsport_playsport._gobucket CHANGE `contenttype` `contenttype` VARCHAR(10) NOT NULL COMMENT '0:回文,1:主文';
-ALTER TABLE plsport_playsport._gobucket CHANGE `type` `type` VARCHAR(10) NOT NULL COMMENT '';
-update plsport_playsport._gobucket set contenttype='回文' where contenttype='1';
-update plsport_playsport._gobucket set contenttype='主文' where contenttype='0';
-update plsport_playsport._gobucket set type='永久禁文' where type='0';
-update plsport_playsport._gobucket set type='禁文1週' where type='1';
-update plsport_playsport._gobucket set type='禁文2週' where type='2';
-update plsport_playsport._gobucket set type='禁文2天' where type='3';
-update plsport_playsport._gobucket set type='永久禁文' where type='99';
-update plsport_playsport._gobucket set rule_number='0' where rule_number is null;
-
-create table plsport_playsport._forum_1 engine = myisam
-SELECT subjectid, includeprediction, forumtype, allianceid, gametype, subject, viewtimes, postuser, posttime, substr(posttime,12,2) as hours, replycount, pushcount
-FROM plsport_playsport._forum;
-
-create table plsport_playsport._forum_with_user_detail engine = myisam
-SELECT a.subjectid, a.gametype, a.postuser,  a.pushcount, datediff(a.posttime,b.createon) as diffdate
-FROM plsport_playsport.forum a left join plsport_playsport.member b on a.postuser = b.userid;
-
-
-create table plsport_playsport._forum_with_user_detail_1 engine = myisam
-select c.postuser, count(c.subjectid) as delete_count
-from (
-    SELECT a.subjectid, a.gametype, a.postuser, a.pushcount, a.diffdate 
-    FROM plsport_playsport._forum_with_user_detail a inner join (SELECT subjectid 
-                                                                FROM plsport_playsport.forumdelete
-                                                                where description <> ''
-                                                                and subjectid <> ''
-                                                                group by subjectid) as b on a.subjectid = b.subjectid) as c
-where c.postuser <> ''
-group by c.postuser;
-
-
-ALTER TABLE plsport_playsport._forum_with_user_detail ADD INDEX (`postuser`);
-ALTER TABLE plsport_playsport._forum_with_user_detail_1 ADD INDEX (`postuser`);
-
-
-create table plsport_playsport._forum_with_user_detail_2 engine = myisam
-SELECT a.subjectid, a.gametype, a.postuser, a.pushcount, a.diffdate, b.delete_count
-FROM plsport_playsport._forum_with_user_detail a left join plsport_playsport._forum_with_user_detail_1 b on a.postuser = b.postuser;
-
-
-create table plsport_playsport._forum_gobucket_count engine = myisam
-SELECT userid, count(userid) as gobucket_count 
-FROM plsport_playsport.gobucket
-where process = 1
-group by userid;
-
-ALTER TABLE plsport_playsport._forum_with_user_detail_2 ADD INDEX (`postuser`);
-ALTER TABLE plsport_playsport._forum_gobucket_count ADD INDEX (`userid`);
-
-create table plsport_playsport._forum_with_user_detail_3 engine = myisam
-SELECT a.subjectid, a.postuser as userid, a.gametype, a.pushcount, a.diffdate, a.delete_count, b.gobucket_count
-FROM plsport_playsport._forum_with_user_detail_2 a left join plsport_playsport._forum_gobucket_count b on a.postuser = b.userid;
-
-
-
-create table plsport_playsport._forumdelete engine = myisam
-SELECT id, userid, description, subjectid, subject, max(date) as date, deleter 
-FROM plsport_playsport.forumdelete
-where description <> ''
-group by subjectid;
-
-ALTER TABLE plsport_playsport._forumdelete ADD INDEX (`subjectid`);
-ALTER TABLE plsport_playsport._forumdelete convert to character set utf8 collate utf8_general_ci;
-
-
-create table plsport_playsport._forum_with_user_detail_4 engine = myisam
-SELECT a.subjectid, a.userid, a.gametype, COALESCE(a.pushcount,0) as pushcount, COALESCE(a.diffdate,0) as diffdate, 
-       COALESCE(a.delete_count,0) as delete_count, COALESCE(a.gobucket_count,0) as gobucket_count
-FROM plsport_playsport._forum_with_user_detail_3 a inner join plsport_playsport._forumdelete b on a.subjectid = b.subjectid;
-
-
-SELECT 'subjectid', 'userid', 'gametype', 'pushcount', 'diffdate', 'delete_count', 'gobuckget_count' union (
-SELECT *
-into outfile 'C:/proc/dumps/forum_with_user_detail.csv'
-fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM plsport_playsport._forum_with_user_detail_4);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 新加入使用者等級和新手的資訊, 用於澳創工友
-create table plsport_playsport._userlevel engine = myisam
-SELECT userid, max(level) as max_level 
-FROM plsport_playsport.userlevel
-where userid <> ''
-group by userid;
-
-        ALTER TABLE plsport_playsport._userlevel ADD INDEX (`userid`);
-        ALTER TABLE plsport_playsport._forumcontent ADD INDEX (`userid`);
-        ALTER TABLE plsport_playsport._userlevel convert to character set utf8 collate utf8_general_ci;
-        ALTER TABLE plsport_playsport._forumcontent convert to character set utf8 collate utf8_general_ci;
-
-create table plsport_playsport._forumcontent_1 engine = myisam
-SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, b.max_level
-FROM plsport_playsport._forumcontent a left join plsport_playsport._userlevel b on a.userid = b.userid;
-
-create table plsport_playsport._forumcontent_2 engine = myisam
-SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, COALESCE(a.max_level,0) as max_lv, datediff(a.postdate,b.createon) as dif
-FROM plsport_playsport._forumcontent_1 a left join plsport_playsport.member b on a.userid = b.userid;
-
-
-# 每篇po中有多少等級1的使用者
-create table plsport_playsport._addition_info_1 engine = myisam
-SELECT subjectid, count(userid) as lv_zero_count
-FROM plsport_playsport._forumcontent_2
-where max_lv = 0
-group by subjectid;
-
-# 每篇po中有多少3天內註冊的新使用者
-create table plsport_playsport._addition_info_2 engine = myisam
-SELECT subjectid, count(userid) as new_user_count
-FROM plsport_playsport._forumcontent_2
-where dif < 4
-group by subjectid;
-
-
-
-create table actionlog._ab_check engine = myisam
-SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201512
-where userid <> ''
-and uri like '%forumdetail.php%'
-and uri like '%push%'
-and time between '2015-12-03 12:00:00' and now();
-
-        ALTER TABLE actionlog._ab_check convert to character set utf8 collate utf8_general_ci;
-
-select a.g, count(a.uri) as c
-from (
-	SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time, a.platform_type 
-	FROM actionlog._ab_check a left join plsport_playsport.member b on a.userid = b.userid) as a
-group by a.g;
+SELECT ans 
+FROM plsport_playsport._temp_question
+where ans <> '';
 
