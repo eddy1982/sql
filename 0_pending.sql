@@ -22256,7 +22256,78 @@ update plsport_playsport._temp_question set ans = replace(ans, '可以','沒有'
 update plsport_playsport._temp_question set ans = replace(ans, '夠','沒有');
 update plsport_playsport._temp_question set ans = replace(ans, '沒有有','沒有');
 
-SELECT ans 
+SELECT ans
 FROM plsport_playsport._temp_question
-where ans <> '';
+WHERE ans <> '';
+
+
+
+# =================================================================================================
+# 產品專案 #580: [201511-C]購牌專區改版
+# [201511-C-5]購牌專區改版-購牌區點擊了解
+# http://redmine.playsport.cc/issues/780
+# 說明 了解推薦專區等區域的點擊購牌狀況
+# 內容 - 需求區域：推薦專區、國際盤讓分大小、運彩盤讓分大小
+# - 統計時間：近一年
+# - 各區域的總點擊狀況與總購買金額
+# =================================================================================================
+
+create table actionlog._rp_BZ_201512 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201512 where uri like '%rp=BZ%';
+create table actionlog._rp_BZ_201511 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201511 where uri like '%rp=BZ%';
+create table actionlog._rp_BZ_201510 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201510 where uri like '%rp=BZ%';
+create table actionlog._rp_BZ_201509 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201509 where uri like '%rp=BZ%';
+create table actionlog._rp_BZ_201508 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201508 where uri like '%rp=BZ%';
+create table actionlog._rp_BZ_201507 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201507 where uri like '%rp=BZ%';
+create table actionlog._rp_BZ_201506 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201506 where uri like '%rp=BZ%';
+create table actionlog._rp_BZ_201505 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201505 where uri like '%rp=BZ%';
+create table actionlog._rp_BZ_201504 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201504 where uri like '%rp=BZ%';
+create table actionlog._rp_BZ_201503 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201503 where uri like '%rp=BZ%';
+create table actionlog._rp_BZ_201502 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201502 where uri like '%rp=BZ%';
+create table actionlog._rp_BZ_201501 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201501 where uri like '%rp=BZ%';
+
+create table actionlog._rp_BZ engine = myisam select * from actionlog._rp_BZ_201512;
+insert ignore into actionlog._rp_BZ select * from actionlog._rp_BZ_201511;
+insert ignore into actionlog._rp_BZ select * from actionlog._rp_BZ_201510;
+insert ignore into actionlog._rp_BZ select * from actionlog._rp_BZ_201509;
+insert ignore into actionlog._rp_BZ select * from actionlog._rp_BZ_201508;
+insert ignore into actionlog._rp_BZ select * from actionlog._rp_BZ_201507;
+insert ignore into actionlog._rp_BZ select * from actionlog._rp_BZ_201506;
+insert ignore into actionlog._rp_BZ select * from actionlog._rp_BZ_201505;
+insert ignore into actionlog._rp_BZ select * from actionlog._rp_BZ_201504;
+insert ignore into actionlog._rp_BZ select * from actionlog._rp_BZ_201503;
+insert ignore into actionlog._rp_BZ select * from actionlog._rp_BZ_201502;
+insert ignore into actionlog._rp_BZ select * from actionlog._rp_BZ_201501;
+
+create table actionlog._rp_BZ_1 engine = myisam
+SELECT userid, uri, time, platform_type, substr(uri,locate('&rp=',uri)+4,length(uri)) as p
+FROM actionlog._rp_BZ;
+
+create table actionlog._rp_BZ_2 engine = myisam
+SELECT userid, uri, time, platform_type, (case when (locate('&',p)=0) then p else substr(p,1,locate('&',p)-1) end) as p
+FROM actionlog._rp_bz_1;
+
+create table actionlog._rp_BZ_3 engine = myisam
+SELECT userid, uri, substr(time,1,7) as ym, platform_type, p 
+FROM actionlog._rp_bz_2;
+
+create table actionlog._rp_BZ_4_grouped engine = myisam
+SELECT ym, p, count(uri) as click 
+FROM actionlog._rp_bz_3
+group by ym, p;
+
+create table actionlog._rp_BZ_5 engine = myisam
+SELECT * FROM actionlog._rp_bz_4_grouped
+where p in ('BZ_MF','BZ_SK','BZ_RCT','BZ_RC2','BZ_RC1');
 
