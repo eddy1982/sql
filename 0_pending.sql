@@ -22337,6 +22337,7 @@ where p in ('BZ_MF','BZ_SK','BZ_RCT','BZ_RC2','BZ_RC1');
 # http://redmine.playsport.cc/issues/824
 # 開發討論區會員追蹤功能MVP使用狀況了解
 # 概述
+
 # TO EDDY
 # 麻煩協助了解參與MVP的使用者
 # 是否有使用追蹤會員功能
@@ -22356,12 +22357,10 @@ where p in ('BZ_MF','BZ_SK','BZ_RCT','BZ_RC2','BZ_RC1');
 # bowen0925	神柏
 # =================================================================================================
 
-
 SELECT a.id, a.userid, b.nickname, a.postuser, a.traced, a.create_time, a.modify_time 
 FROM plsport_playsport.forum_tracing_postUser a left join plsport_playsport.member b on a.userid = b.userid
 where a.userid in ('david30519','cs112345','polohong','a0981415848','happylala3388','FB1420051617','fushengidy','jimmy5693','aa6565931','bowen0925')
 order by a.userid;
-
 
 SELECT userid, postuser, count(subjectid) as subjectid_count
 FROM plsport_playsport.forum_tracing_notify
@@ -22370,8 +22369,130 @@ group by userid, postuser;
 
 
 
+# =================================================================================================
+# http://redmine.playsport.cc/issues/838
+# 說明 提供MVP測試名單
+# 負責人：Eddy
+# 時間：12/23
+# 
+# 內容 1. MVP測試名單
+# 條件：
+# a. 使用者為(userid%20)+1 in (1,2,3,4,5,6,7,8,9,10)
+# b. 近一個月使用勝率榜、主推榜pv前40%
+# c. 於冥燈排行榜問卷第一題回答非常需要或需要，第二題回答贊成
+# 欄位：
+# 帳號、暱稱、勝率榜/主推榜pv及全站佔比、冥燈榜購買金額、近兩個月儲值金額 *最後一次登入時間
+# =================================================================================================
+
+create table actionlog._billboard engine = myisam
+SELECT userid, uri, time 
+FROM actionlog.action_201512
+where time between subdate(now(),32) AND now()
+and userid <> ''
+and uri like '%billboard.php%';
+insert ignore into actionlog._billboard
+SELECT userid, uri, time 
+FROM actionlog.action_201511
+where time between subdate(now(),32) AND now()
+and userid <> ''
+and uri like '%billboard.php%';
+
+create table actionlog._billboard_1 engine = myisam
+SELECT userid, count(uri) as pv
+FROM actionlog._billboard
+group by userid;
 
 
+ALTER TABLE actionlog._billboard_1 convert to character set utf8 collate utf8_general_ci;
 
+create table actionlog._billboard_2 engine = myisam
+SELECT a.userid, b.nickname, a.pv 
+FROM actionlog._billboard_1 a left join plsport_playsport.member b on a.userid = b.userid
+order by a.pv desc;
+
+create table actionlog._billboard_3 engine = myisam
+select userid, nickname, pv, round((cnt-rank+1)/cnt,2) as pv_percentile
+from (SELECT userid, nickname, pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._billboard_2, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._billboard_2) as ct;
+
+
+# 匯入plsport_playsport.billboard_anti_buyer
+# 匯入order_data
+
+create table plsport_playsport._billboard_anti_buyer engine = myisam
+SELECT userid, sum(buy_price) as antiBuy 
+FROM plsport_playsport.billboard_anti_buyer
+group by userid;
+
+ALTER TABLE plsport_playsport._billboard_anti_buyer convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._billboard_4 engine = myisam
+select a.userid, a.nickname, a.pv, a.pv_percentile, b.antiBuy
+from actionlog._billboard_3 a left join plsport_playsport._billboard_anti_buyer b on a.userid = b.userid;
+
+create table plsport_playsport._order_data engine = myisam
+SELECT userid, sum(price) as redeem
+FROM plsport_playsport.order_data
+where sellconfirm = 1
+and createon between subdate(now(),62) AND now()
+group by userid;
+
+ALTER TABLE plsport_playsport._order_data convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._billboard_5 engine = myisam
+select a.userid, a.nickname, a.pv, a.pv_percentile, a.antiBuy, b.redeem
+from actionlog._billboard_4 a left join plsport_playsport._order_data b on a.userid = b.userid;
+
+
+# 匯入questionnaire_201510281609494834_answer
+
+ALTER TABLE plsport_playsport.questionnaire_201510281609494834_answer CHANGE `1446019601` q1 VARCHAR(20);
+ALTER TABLE plsport_playsport.questionnaire_201510281609494834_answer CHANGE `1446048092` q2 VARCHAR(20);
+
+update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '非常需要' where q1 = 1;
+update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '需要'    where q1 = 2;
+update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '沒意見'   where q1 = 3;
+update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '不需要'   where q1 = 4;
+update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '非常不需要' where q1 = 5;
+
+update plsport_playsport.questionnaire_201510281609494834_answer set q2 = '贊成' where q2 = 1;
+update plsport_playsport.questionnaire_201510281609494834_answer set q2 = '反對' where q2 = 2;
+update plsport_playsport.questionnaire_201510281609494834_answer set q2 = '沒意見' where q2 = 3;
+
+ALTER TABLE plsport_playsport.questionnaire_201510281609494834_answer convert to character set utf8 collate utf8_general_ci;
+
+
+create table actionlog._billboard_6 engine = myisam
+select a.userid, a.nickname, a.pv, a.pv_percentile, a.antiBuy, a.redeem, b.q1, b.q2
+from actionlog._billboard_5 a left join plsport_playsport.questionnaire_201510281609494834_answer b on a.userid = b.userid;
+
+create table actionlog._billboard_7 engine = myisam
+SELECT * FROM actionlog._billboard_6
+where pv_percentile >= 0.4
+and q2 = '贊成'
+and (q1 like '%非常需要%' or q1 like '%需要%')
+order by pv desc;
+
+		CREATE TABLE plsport_playsport._last_login engine = myisam
+		SELECT userid, max(signin_time) as signin_time 
+		FROM plsport_playsport.member_signin_log_archive
+		GROUP BY userid;
+        
+ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._billboard_8 engine = myisam
+select a.userid, a.nickname, a.pv, a.pv_percentile, a.antiBuy, a.redeem, a.q1, a.q2, date(b.signin_time) as signin_time
+from actionlog._billboard_7 a left join plsport_playsport._last_login b on a.userid = b.userid
+order by pv desc;
+
+# 帳號、暱稱、勝率榜/主推榜pv及全站佔比、冥燈榜購買金額、近兩個月儲值金額 *最後一次登入時間
+
+SELECT 'userid', '暱稱', '勝率主推pv', '全站佔比', '冥燈榜購買金額', '近兩個月儲值金額', '第1題', '第2題', '最後登入時間' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_billboard_8.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._billboard_8);
 
 
