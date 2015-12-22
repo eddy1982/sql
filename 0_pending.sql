@@ -22331,3 +22331,47 @@ create table actionlog._rp_BZ_5 engine = myisam
 SELECT * FROM actionlog._rp_bz_4_grouped
 where p in ('BZ_MF','BZ_SK','BZ_RCT','BZ_RC2','BZ_RC1');
 
+
+
+# =================================================================================================
+# http://redmine.playsport.cc/issues/824
+# 開發討論區會員追蹤功能MVP使用狀況了解
+# 概述
+# TO EDDY
+# 麻煩協助了解參與MVP的使用者
+# 是否有使用追蹤會員功能
+# 提供他們追蹤會員的數量
+# 
+# 謝謝
+# 帳號	暱稱
+# david30519	JJ胖
+# cs112345	加七安全感
+# polohong	polohong
+# a0981415848	莊家都輸我
+# happylala3388	菜圃
+# FB1420051617	林毛
+# fushengidy	生哥哥
+# jimmy5693	法課喬丹
+# aa6565931	盈盈
+# bowen0925	神柏
+# =================================================================================================
+
+
+SELECT a.id, a.userid, b.nickname, a.postuser, a.traced, a.create_time, a.modify_time 
+FROM plsport_playsport.forum_tracing_postUser a left join plsport_playsport.member b on a.userid = b.userid
+where a.userid in ('david30519','cs112345','polohong','a0981415848','happylala3388','FB1420051617','fushengidy','jimmy5693','aa6565931','bowen0925')
+order by a.userid;
+
+
+SELECT userid, postuser, count(subjectid) as subjectid_count
+FROM plsport_playsport.forum_tracing_notify
+where userid in ('david30519','cs112345','polohong','a0981415848','happylala3388','FB1420051617','fushengidy','jimmy5693','aa6565931','bowen0925')
+group by userid, postuser;
+
+
+
+
+
+
+
+
