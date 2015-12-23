@@ -21379,11 +21379,11 @@ where a.c > 10;
 # 全站整體購買次數(限只有噱幣)
 select *
 from (
-	SELECT abtest, m, killtype, count(buyerid) as c 
-	FROM plsport_playsport._predict_buyer_3
-	where con_type is not null
-	and price > 0
-	group by abtest, m, killtype) as a
+    SELECT abtest, m, killtype, count(buyerid) as c 
+    FROM plsport_playsport._predict_buyer_3
+    where con_type is not null
+    and price > 0
+    group by abtest, m, killtype) as a
 where a.c > 10;
 
 create table plsport_playsport._abtest_list_all_position engine = myisam
@@ -21420,14 +21420,14 @@ create table plsport_playsport._abtest_list_some_position_1 engine = myisam
 SELECT a.abtest, a.buyerid as userid, a.spent, a.buy_count, b.lv
 FROM plsport_playsport._abtest_list_some_position a left join plsport_playsport._abtest_list_all_position_2 b on a.buyerid = b.userid;
 
-		SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' union (
-		SELECT *
-		into outfile 'C:/Users/eddy/Desktop/_abtest_list_all_position.txt'
-		fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-		FROM plsport_playsport._abtest_list_all_position_2);
+        SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' union (
+        SELECT *
+        into outfile 'C:/Users/eddy/Desktop/_abtest_list_all_position.txt'
+        fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+        FROM plsport_playsport._abtest_list_all_position_2);
 
 
-		SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' 
+        SELECT 'abtest', 'userid', 'spent', 'buy_count', 'lv' 
 UNION (SELECT 
     *
 INTO OUTFILE 'C:/Users/eddy/Desktop/_abtest_list_some_position.txt' FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '
@@ -21529,26 +21529,26 @@ group by allianceid;
 
 select a.d, count(a.subjectid) as c
 from (
-	SELECT subjectid, allianceid, gametype, postuser, posttime, viewtimes, replycount, pushcount, date(posttime) as d
-	FROM plsport_playsport.forum
-	where posttime between '2015-11-08 00:00:00' and '2015-11-21 23:59:59'
-	and gametype = 3) as a
+    SELECT subjectid, allianceid, gametype, postuser, posttime, viewtimes, replycount, pushcount, date(posttime) as d
+    FROM plsport_playsport.forum
+    where posttime between '2015-11-08 00:00:00' and '2015-11-21 23:59:59'
+    and gametype = 3) as a
 where a.allianceid = 116
 group by a.d;
 
 select a.d, count(a.subjectid) as c
 from (
-	SELECT subjectid, subject, date(postTime) as d
-	FROM plsport_playsport.forum
-	where allianceid = 116) as a
+    SELECT subjectid, subject, date(postTime) as d
+    FROM plsport_playsport.forum
+    where allianceid = 116) as a
 where (a.subject like '%挑戰%') or (a.subject like '%串關%')
 group by a.d;
 
 select *
 from (
-	SELECT subjectid, subject, date(postTime) as d
-	FROM plsport_playsport.forum
-	where allianceid = 116) as a
+    SELECT subjectid, subject, date(postTime) as d
+    FROM plsport_playsport.forum
+    where allianceid = 116) as a
 where (a.subject like '%挑戰%') or (a.subject like '%串關%');
 
 
@@ -21556,7 +21556,7 @@ where (a.subject like '%挑戰%') or (a.subject like '%串關%');
 # [201507-A-5]開發討論區會員追蹤功能-MVP名單提供
 # http://redmine.playsport.cc/issues/691 
 # 是由 郭 靜怡 於 約 20 小時 前加入.
-# 狀態:	新建立	開始日期:	2015-11-26
+# 狀態:   新建立 開始日期:   2015-11-26
 # 
 # 說明 提供MVP測試名單
 # 內容  
@@ -21595,25 +21595,25 @@ group by userid, platform_type;
 create table actionlog._pv_visitmember_1 engine = myisam
 select b.userid, (b.pc+b.mobile) as vm_pv, b.pc, b.mobile
 from (
-	select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
-	from (
-		SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc, (case when (platform_type=2) then pv else 0 end) as mobile
-		FROM actionlog._pv_visitmember) as a
-	group by a.userid) as b;
+    select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+    from (
+        SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc, (case when (platform_type=2) then pv else 0 end) as mobile
+        FROM actionlog._pv_visitmember) as a
+    group by a.userid) as b;
 
 create table actionlog._pv_forumdetail_1 engine = myisam
 select b.userid, (b.pc+b.mobile) as fd_pv, b.pc, b.mobile
 from (
-	select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
-	from (
-		SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc, (case when (platform_type=2) then pv else 0 end) as mobile
-		FROM actionlog._pv_forumdetail) as a
-	group by a.userid) as b;
+    select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+    from (
+        SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc, (case when (platform_type=2) then pv else 0 end) as mobile
+        FROM actionlog._pv_forumdetail) as a
+    group by a.userid) as b;
 
-		ALTER TABLE actionlog._pv_visitmember_1 convert to character set utf8 collate utf8_general_ci;
-		ALTER TABLE actionlog._pv_forumdetail_1 convert to character set utf8 collate utf8_general_ci;
-		ALTER TABLE actionlog._pv_visitmember_1 ADD INDEX (`userid`);
-		ALTER TABLE actionlog._pv_forumdetail_1 ADD INDEX (`userid`);
+        ALTER TABLE actionlog._pv_visitmember_1 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._pv_forumdetail_1 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._pv_visitmember_1 ADD INDEX (`userid`);
+        ALTER TABLE actionlog._pv_forumdetail_1 ADD INDEX (`userid`);
 
 create table actionlog._pv_visitmember_2 engine = myisam
 select userid, vm_pv, round((cnt-rank+1)/cnt,2) as vm_pv_percentile
@@ -21629,15 +21629,15 @@ from (SELECT userid, fd_pv, @curRank := @curRank + 1 AS rank
       order by fd_pv desc) as dt,
      (select count(distinct userid) as cnt from actionlog._pv_forumdetail_1) as ct;
 
-		ALTER TABLE actionlog._pv_visitmember_2 convert to character set utf8 collate utf8_general_ci;
-		ALTER TABLE actionlog._pv_forumdetail_2 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._pv_visitmember_2 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._pv_forumdetail_2 convert to character set utf8 collate utf8_general_ci;
 
 create table actionlog._list_1 engine = myisam
 SELECT userid 
 FROM actionlog._pv
 group by userid;
 
-		ALTER TABLE actionlog._list_1 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._list_1 convert to character set utf8 collate utf8_general_ci;
         
 create table actionlog._list_2 engine = myisam
 SELECT a.userid, b.fd_pv, b.fd_pv_percentile
@@ -21669,20 +21669,20 @@ create table actionlog._list_8 engine = myisam
 SELECT a.userid, b.nickname, a.fd_pv, a.fd_pv_percentile, a.vm_pv, a.vm_pv_percentile, a.p_pc, a.p_mobile
 FROM actionlog._list_7 a left join plsport_playsport.member b on a.userid = b.userid;
 
-		create table actionlog._spent engine = myisam
-		SELECT userid, sum(amount) as spent 
-		FROM plsport_playsport.pcash_log
-		where date between subdate(now(),32) AND now()
-		and payed = 1 and type = 1
-		group by userid;
+        create table actionlog._spent engine = myisam
+        SELECT userid, sum(amount) as spent 
+        FROM plsport_playsport.pcash_log
+        where date between subdate(now(),32) AND now()
+        and payed = 1 and type = 1
+        group by userid;
 
-		CREATE TABLE plsport_playsport._last_login engine = myisam
-		SELECT userid, max(signin_time) as signin_time 
-		FROM plsport_playsport.member_signin_log_archive
-		GROUP BY userid;
+        CREATE TABLE plsport_playsport._last_login engine = myisam
+        SELECT userid, max(signin_time) as signin_time 
+        FROM plsport_playsport.member_signin_log_archive
+        GROUP BY userid;
 
-		ALTER TABLE actionlog._spent convert to character set utf8 collate utf8_general_ci;
-		ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._spent convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
         ALTER TABLE actionlog._spent ADD INDEX (`userid`);
         ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
 
@@ -21755,37 +21755,37 @@ and userid not in ('yenhsun1982','a3','a6','sakyla','g4','BOSS4963ZSS','kom4kimo
 
 update actionlog._use_forum_search_1 set platform_type = 1 where platform_type = 3;
 
-		select a.d, a.platform_type, count(userid) as c
-		from (
-			SELECT userid, date(time) as d, platform_type 
-			FROM actionlog._use_forum_search_1) as a
-		group by a.d, a.platform_type;
+        select a.d, a.platform_type, count(userid) as c
+        from (
+            SELECT userid, date(time) as d, platform_type 
+            FROM actionlog._use_forum_search_1) as a
+        group by a.d, a.platform_type;
 
-		select b.d, b.platform_type, count(userid) as c
-		from (
-			select a.d, a.platform_type, a.userid
-			from (
-				SELECT userid, date(time) as d, platform_type 
-				FROM actionlog._use_forum_search_1) as a
-			group by a.d, a.platform_type, a.userid) as b
-		group by b.d, b.platform_type;
+        select b.d, b.platform_type, count(userid) as c
+        from (
+            select a.d, a.platform_type, a.userid
+            from (
+                SELECT userid, date(time) as d, platform_type 
+                FROM actionlog._use_forum_search_1) as a
+            group by a.d, a.platform_type, a.userid) as b
+        group by b.d, b.platform_type;
 
 # 搜尋次數排行
 select *
 from (
-	SELECT userid, count(uri) as search_count 
-	FROM actionlog._use_forum_search_1
-	where userid  <> ''
-	group by userid) as a
+    SELECT userid, count(uri) as search_count 
+    FROM actionlog._use_forum_search_1
+    where userid  <> ''
+    group by userid) as a
 order by a.search_count desc;
 
 select * 
 from (
-	SELECT keyword, count(id) as c 
-	FROM plsport_playsport.forum_search_log
-	where create_time <> '0000-00-00 00:00:00'
-	and userid not in ('yenhsun1982','a3','a6','sakyla','g4','BOSS4963ZSS','kom4kimo','ydasam')
-	group by keyword) as a
+    SELECT keyword, count(id) as c 
+    FROM plsport_playsport.forum_search_log
+    where create_time <> '0000-00-00 00:00:00'
+    and userid not in ('yenhsun1982','a3','a6','sakyla','g4','BOSS4963ZSS','kom4kimo','ydasam')
+    group by keyword) as a
 order by a.c desc;
 
 create table actionlog._use_forumdetail engine = myisam
@@ -21811,9 +21811,9 @@ FROM actionlog._use_forumdetail_1 a left join plsport_playsport.member b on a.us
 # 2組人數
 select a.abtest, count(a.userid) as c
 from (
-	SELECT abtest, userid 
-	FROM actionlog._use_forumdetail_2
-	group by abtest, userid) as a
+    SELECT abtest, userid 
+    FROM actionlog._use_forumdetail_2
+    group by abtest, userid) as a
 group by a.abtest;
 
 create table actionlog._use_forumdetail_3 engine = myisam
@@ -21844,8 +21844,8 @@ FROM actionlog._use_forumdetail_5);
 # [201510-B-5] 進階預測比例 - 消費者研究
 # 是由 吳 阿達 於 1 天 前加入. 於 1 天 前更新.
 # 
-# 狀態:	新建立	開始日期:	2015-12-02
-# 優先權:	儘快	完成日期:	2015-12-04
+# 狀態:   新建立 開始日期:   2015-12-02
+# 優先權:  儘快  完成日期:   2015-12-04
 # 
 # 說明
 # 研究消費者是否有使用預測比例
@@ -21904,7 +21904,7 @@ FROM actionlog._people_who_redeem_1;
 # create table actionlog._use_predictgame_scale_3 engine = myisam
 # SELECT userid, (case when (pv_percentile>0.89) then 'a'
 #                      when (pv_percentile>0.79 and pv_percentile<0.90) then 'b'
-# 					   when (pv_percentile>0.59 and pv_percentile<0.80) then 'c' 
+#                      when (pv_percentile>0.59 and pv_percentile<0.80) then 'c' 
 #                      when (pv_percentile>0.39 and pv_percentile<0.60) then 'd' else 'e' end) as scale_usage
 # FROM actionlog._use_predictgame_scale_2;
 
@@ -22033,30 +22033,30 @@ group by gameid, gametype, predict;
 
 create table plsport_playsport._prediction_main_push_1 engine = myisam
 select b.allianceid, b.gameid, sum(b.d11_1) as d11_1, sum(b.d11_2) as d11_2, sum(b.d12_1) as d12_1, sum(b.d12_2) as d12_2, sum(b.d1_1) as d1_1, sum(b.d1_2) as d1_2,
-							   sum(b.d2_1) as d2_1, sum(b.d2_2) as d2_2, sum(b.d3_1) as d3_1, sum(b.d3_2) as d3_2, sum(b.d3_3) as d3_3
+                               sum(b.d2_1) as d2_1, sum(b.d2_2) as d2_2, sum(b.d3_1) as d3_1, sum(b.d3_2) as d3_2, sum(b.d3_3) as d3_3
 from (                               
-	select a.allianceid, a.gameid, (case when (a.gp = '11_1') then c else 0 end) as d11_1,
-								   (case when (a.gp = '11_2') then c else 0 end) as d11_2,
-								   (case when (a.gp = '12_1') then c else 0 end) as d12_1,
-								   (case when (a.gp = '12_2') then c else 0 end) as d12_2,
-								   (case when (a.gp = '1_1') then c else 0 end) as d1_1,
-								   (case when (a.gp = '1_2') then c else 0 end) as d1_2,
-								   (case when (a.gp = '2_1') then c else 0 end) as d2_1,
-								   (case when (a.gp = '2_2') then c else 0 end) as d2_2,
-								   (case when (a.gp = '3_1') then c else 0 end) as d3_1,
-								   (case when (a.gp = '3_2') then c else 0 end) as d3_2,
-								   (case when (a.gp = '3_3') then c else 0 end) as d3_3
-	from (
-		SELECT allianceid, gameid, concat(gametype,'_',predict) as gp, c 
-		FROM plsport_playsport._prediction_main_push) as a) as b
+    select a.allianceid, a.gameid, (case when (a.gp = '11_1') then c else 0 end) as d11_1,
+                                   (case when (a.gp = '11_2') then c else 0 end) as d11_2,
+                                   (case when (a.gp = '12_1') then c else 0 end) as d12_1,
+                                   (case when (a.gp = '12_2') then c else 0 end) as d12_2,
+                                   (case when (a.gp = '1_1') then c else 0 end) as d1_1,
+                                   (case when (a.gp = '1_2') then c else 0 end) as d1_2,
+                                   (case when (a.gp = '2_1') then c else 0 end) as d2_1,
+                                   (case when (a.gp = '2_2') then c else 0 end) as d2_2,
+                                   (case when (a.gp = '3_1') then c else 0 end) as d3_1,
+                                   (case when (a.gp = '3_2') then c else 0 end) as d3_2,
+                                   (case when (a.gp = '3_3') then c else 0 end) as d3_3
+    from (
+        SELECT allianceid, gameid, concat(gametype,'_',predict) as gp, c 
+        FROM plsport_playsport._prediction_main_push) as a) as b
 group by b.gameid;
 
 create table plsport_playsport._prediction_main_push_2 engine = myisam
 SELECT a.gameid, a.gsn, a.allianceid, a.alliancename, a.createon, a.dateon, date(a.dateon) as d, a.hometeam, a.visitteam, 
-	   a.last_update_time, d11_1, d11_2, d12_1, d12_2, d1_1, d1_2, d2_1, d2_2, d3_1, d3_2, d3_3, 
-		(c11_1-d11_1) as e11_1, (c11_2-d11_2) as e11_2, (c12_1-d12_1) as e12_1, 
-		(c12_2-d12_2) as e12_2, (c1_1-d1_1) as e1_1, (c1_2-d1_2) as e1_2, (c2_1-d2_1) as e2_1, 
-		(c2_2-d2_2) as e2_2, (c3_1-d3_1) as e3_1, (c3_2-d3_2) as e3_2, (c3_3-d3_3) as e3_3
+       a.last_update_time, d11_1, d11_2, d12_1, d12_2, d1_1, d1_2, d2_1, d2_2, d3_1, d3_2, d3_3, 
+        (c11_1-d11_1) as e11_1, (c11_2-d11_2) as e11_2, (c12_1-d12_1) as e12_1, 
+        (c12_2-d12_2) as e12_2, (c1_1-d1_1) as e1_1, (c1_2-d1_2) as e1_2, (c2_1-d2_1) as e2_1, 
+        (c2_2-d2_2) as e2_2, (c3_1-d3_1) as e3_1, (c3_2-d3_2) as e3_2, (c3_3-d3_3) as e3_3
 FROM plsport_playsport._games_type1 a left join plsport_playsport._prediction_main_push_1 b on a.gameid = b.gameid
 where d11_1 is not null
 order by a.allianceid, a.gameid;
@@ -22076,14 +22076,14 @@ create table plsport_playsport._billboard_ranker_with_60_winpercent engine = myi
 SELECT allianceid, mode, gametype, winpercentage, rank, process_time, userid 
 FROM plsport_playsport._billboard_ranker;
 
-		ALTER TABLE plsport_playsport._billboard_ranker_with_60_winpercent ADD INDEX (`userid`,`allianceid`,`mode`,`gametype`);
-		ALTER TABLE plsport_playsport._prediction ADD INDEX (`userid`,`allianceid`,`gametype`);
+        ALTER TABLE plsport_playsport._billboard_ranker_with_60_winpercent ADD INDEX (`userid`,`allianceid`,`mode`,`gametype`);
+        ALTER TABLE plsport_playsport._prediction ADD INDEX (`userid`,`allianceid`,`gametype`);
 
 drop table if exists plsport_playsport._billboard_ranker_with_60_winpercent_1;
 create table plsport_playsport._billboard_ranker_with_60_winpercent_1 engine = myisam
 SELECT a.allianceid, a.gameid, a.gametype, a.predict, a.userid, a.nickname, b.winpercentage, b.rank
 FROM plsport_playsport._prediction a left join plsport_playsport._billboard_ranker_with_60_winpercent b 
-	on (a.userid = b.userid and a.allianceid = b.allianceid and a.gametype = b.gametype)
+    on (a.userid = b.userid and a.allianceid = b.allianceid and a.gametype = b.gametype)
 where b.winpercentage is not null;
 
 drop table if exists plsport_playsport._billboard_ranker_with_60_winpercent_2;
@@ -22101,31 +22101,31 @@ group by gameid, allianceid, gametype, predict;
 drop table if exists plsport_playsport._prediction_month_winrate60_1;
 create table plsport_playsport._prediction_month_winrate60_1 engine = myisam
 select b.allianceid, b.gameid, sum(b.d11_1) as d11_1, sum(b.d11_2) as d11_2, sum(b.d12_1) as d12_1, sum(b.d12_2) as d12_2, sum(b.d1_1) as d1_1, sum(b.d1_2) as d1_2,
-							   sum(b.d2_1) as d2_1, sum(b.d2_2) as d2_2, sum(b.d3_1) as d3_1, sum(b.d3_2) as d3_2, sum(b.d3_3) as d3_3
+                               sum(b.d2_1) as d2_1, sum(b.d2_2) as d2_2, sum(b.d3_1) as d3_1, sum(b.d3_2) as d3_2, sum(b.d3_3) as d3_3
 from (                               
-	select a.allianceid, a.gameid, (case when (a.gp = '11_1') then c else 0 end) as d11_1,
-								   (case when (a.gp = '11_2') then c else 0 end) as d11_2,
-								   (case when (a.gp = '12_1') then c else 0 end) as d12_1,
-								   (case when (a.gp = '12_2') then c else 0 end) as d12_2,
-								   (case when (a.gp = '1_1') then c else 0 end) as d1_1,
-								   (case when (a.gp = '1_2') then c else 0 end) as d1_2,
-								   (case when (a.gp = '2_1') then c else 0 end) as d2_1,
-								   (case when (a.gp = '2_2') then c else 0 end) as d2_2,
-								   (case when (a.gp = '3_1') then c else 0 end) as d3_1,
-								   (case when (a.gp = '3_2') then c else 0 end) as d3_2,
-								   (case when (a.gp = '3_3') then c else 0 end) as d3_3
-	from (
-		SELECT allianceid, gameid, concat(gametype,'_',predict) as gp, c 
-		FROM plsport_playsport._billboard_ranker_with_60_winpercent_3) as a) as b
+    select a.allianceid, a.gameid, (case when (a.gp = '11_1') then c else 0 end) as d11_1,
+                                   (case when (a.gp = '11_2') then c else 0 end) as d11_2,
+                                   (case when (a.gp = '12_1') then c else 0 end) as d12_1,
+                                   (case when (a.gp = '12_2') then c else 0 end) as d12_2,
+                                   (case when (a.gp = '1_1') then c else 0 end) as d1_1,
+                                   (case when (a.gp = '1_2') then c else 0 end) as d1_2,
+                                   (case when (a.gp = '2_1') then c else 0 end) as d2_1,
+                                   (case when (a.gp = '2_2') then c else 0 end) as d2_2,
+                                   (case when (a.gp = '3_1') then c else 0 end) as d3_1,
+                                   (case when (a.gp = '3_2') then c else 0 end) as d3_2,
+                                   (case when (a.gp = '3_3') then c else 0 end) as d3_3
+    from (
+        SELECT allianceid, gameid, concat(gametype,'_',predict) as gp, c 
+        FROM plsport_playsport._billboard_ranker_with_60_winpercent_3) as a) as b
 group by b.gameid;
 
 drop table if exists plsport_playsport._prediction_month_winrate60_2;
 create table plsport_playsport._prediction_month_winrate60_2 engine = myisam
 SELECT a.gameid, a.gsn, a.allianceid, a.alliancename, a.createon, a.dateon, date(a.dateon) as d, a.hometeam, a.visitteam, 
-	   a.last_update_time, d11_1, d11_2, d12_1, d12_2, d1_1, d1_2, d2_1, d2_2, d3_1, d3_2, d3_3, 
-		(c11_1-d11_1) as e11_1, (c11_2-d11_2) as e11_2, (c12_1-d12_1) as e12_1, 
-		(c12_2-d12_2) as e12_2, (c1_1-d1_1) as e1_1, (c1_2-d1_2) as e1_2, (c2_1-d2_1) as e2_1, 
-		(c2_2-d2_2) as e2_2, (c3_1-d3_1) as e3_1, (c3_2-d3_2) as e3_2, (c3_3-d3_3) as e3_3
+       a.last_update_time, d11_1, d11_2, d12_1, d12_2, d1_1, d1_2, d2_1, d2_2, d3_1, d3_2, d3_3, 
+        (c11_1-d11_1) as e11_1, (c11_2-d11_2) as e11_2, (c12_1-d12_1) as e12_1, 
+        (c12_2-d12_2) as e12_2, (c1_1-d1_1) as e1_1, (c1_2-d1_2) as e1_2, (c2_1-d2_1) as e2_1, 
+        (c2_2-d2_2) as e2_2, (c3_1-d3_1) as e3_1, (c3_2-d3_2) as e3_2, (c3_3-d3_3) as e3_3
 FROM plsport_playsport._games_type2 a left join plsport_playsport._prediction_month_winrate60_1 b on a.gameid = b.gameid
 where d11_1 is not null
 order by a.allianceid, a.gameid;
@@ -22144,13 +22144,13 @@ create table plsport_playsport._billboard_ranker_top100_1 engine = myisam
 SELECT allianceid, mode, gametype, winpercentage, rank, process_time, userid 
 FROM plsport_playsport._billboard_ranker_top100;
 
-		ALTER TABLE plsport_playsport._billboard_ranker_top100_1 ADD INDEX (`userid`,`allianceid`,`gametype`);
+        ALTER TABLE plsport_playsport._billboard_ranker_top100_1 ADD INDEX (`userid`,`allianceid`,`gametype`);
 
 drop table if exists plsport_playsport._billboard_ranker_top100_2;
 create table plsport_playsport._billboard_ranker_top100_2 engine = myisam
 SELECT a.allianceid, a.gameid, a.gametype, a.predict, a.userid, a.nickname, b.winpercentage, b.rank
 FROM plsport_playsport._prediction a left join plsport_playsport._billboard_ranker_top100_1 b 
-	on (a.userid = b.userid and a.allianceid = b.allianceid and a.gametype = b.gametype)
+    on (a.userid = b.userid and a.allianceid = b.allianceid and a.gametype = b.gametype)
 where b.rank is not null;
 
 drop table if exists plsport_playsport._billboard_ranker_top100_3;
@@ -22168,31 +22168,31 @@ group by gameid, allianceid, gametype, predict;
 drop table if exists plsport_playsport._billboard_ranker_top100_5;
 create table plsport_playsport._billboard_ranker_top100_5 engine = myisam
 select b.allianceid, b.gameid, sum(b.d11_1) as d11_1, sum(b.d11_2) as d11_2, sum(b.d12_1) as d12_1, sum(b.d12_2) as d12_2, sum(b.d1_1) as d1_1, sum(b.d1_2) as d1_2,
-							   sum(b.d2_1) as d2_1, sum(b.d2_2) as d2_2, sum(b.d3_1) as d3_1, sum(b.d3_2) as d3_2, sum(b.d3_3) as d3_3
+                               sum(b.d2_1) as d2_1, sum(b.d2_2) as d2_2, sum(b.d3_1) as d3_1, sum(b.d3_2) as d3_2, sum(b.d3_3) as d3_3
 from (                               
-	select a.allianceid, a.gameid, (case when (a.gp = '11_1') then c else 0 end) as d11_1,
-								   (case when (a.gp = '11_2') then c else 0 end) as d11_2,
-								   (case when (a.gp = '12_1') then c else 0 end) as d12_1,
-								   (case when (a.gp = '12_2') then c else 0 end) as d12_2,
-								   (case when (a.gp = '1_1') then c else 0 end) as d1_1,
-								   (case when (a.gp = '1_2') then c else 0 end) as d1_2,
-								   (case when (a.gp = '2_1') then c else 0 end) as d2_1,
-								   (case when (a.gp = '2_2') then c else 0 end) as d2_2,
-								   (case when (a.gp = '3_1') then c else 0 end) as d3_1,
-								   (case when (a.gp = '3_2') then c else 0 end) as d3_2,
-								   (case when (a.gp = '3_3') then c else 0 end) as d3_3
-	from (
-		SELECT allianceid, gameid, concat(gametype,'_',predict) as gp, c 
-		FROM plsport_playsport._billboard_ranker_top100_4) as a) as b
+    select a.allianceid, a.gameid, (case when (a.gp = '11_1') then c else 0 end) as d11_1,
+                                   (case when (a.gp = '11_2') then c else 0 end) as d11_2,
+                                   (case when (a.gp = '12_1') then c else 0 end) as d12_1,
+                                   (case when (a.gp = '12_2') then c else 0 end) as d12_2,
+                                   (case when (a.gp = '1_1') then c else 0 end) as d1_1,
+                                   (case when (a.gp = '1_2') then c else 0 end) as d1_2,
+                                   (case when (a.gp = '2_1') then c else 0 end) as d2_1,
+                                   (case when (a.gp = '2_2') then c else 0 end) as d2_2,
+                                   (case when (a.gp = '3_1') then c else 0 end) as d3_1,
+                                   (case when (a.gp = '3_2') then c else 0 end) as d3_2,
+                                   (case when (a.gp = '3_3') then c else 0 end) as d3_3
+    from (
+        SELECT allianceid, gameid, concat(gametype,'_',predict) as gp, c 
+        FROM plsport_playsport._billboard_ranker_top100_4) as a) as b
 group by b.gameid;
 
 drop table if exists plsport_playsport._billboard_ranker_top100_6;
 create table plsport_playsport._billboard_ranker_top100_6 engine = myisam
 SELECT a.gameid, a.gsn, a.allianceid, a.alliancename, a.createon, a.dateon, date(a.dateon) as d, a.hometeam, a.visitteam, 
-	   a.last_update_time, d11_1, d11_2, d12_1, d12_2, d1_1, d1_2, d2_1, d2_2, d3_1, d3_2, d3_3, 
-		(c11_1-d11_1) as e11_1, (c11_2-d11_2) as e11_2, (c12_1-d12_1) as e12_1, 
-		(c12_2-d12_2) as e12_2, (c1_1-d1_1) as e1_1, (c1_2-d1_2) as e1_2, (c2_1-d2_1) as e2_1, 
-		(c2_2-d2_2) as e2_2, (c3_1-d3_1) as e3_1, (c3_2-d3_2) as e3_2, (c3_3-d3_3) as e3_3
+       a.last_update_time, d11_1, d11_2, d12_1, d12_2, d1_1, d1_2, d2_1, d2_2, d3_1, d3_2, d3_3, 
+        (c11_1-d11_1) as e11_1, (c11_2-d11_2) as e11_2, (c12_1-d12_1) as e12_1, 
+        (c12_2-d12_2) as e12_2, (c1_1-d1_1) as e1_1, (c1_2-d1_2) as e1_2, (c2_1-d2_1) as e2_1, 
+        (c2_2-d2_2) as e2_2, (c3_1-d3_1) as e3_1, (c3_2-d3_2) as e3_2, (c3_3-d3_3) as e3_3
 FROM plsport_playsport._games_type3 a left join plsport_playsport._billboard_ranker_top100_5 b on a.gameid = b.gameid
 where d11_1 is not null
 order by a.allianceid, a.gameid;
@@ -22344,17 +22344,17 @@ where p in ('BZ_MF','BZ_SK','BZ_RCT','BZ_RC2','BZ_RC1');
 # 提供他們追蹤會員的數量
 # 
 # 謝謝
-# 帳號	暱稱
-# david30519	JJ胖
-# cs112345	加七安全感
-# polohong	polohong
-# a0981415848	莊家都輸我
-# happylala3388	菜圃
-# FB1420051617	林毛
-# fushengidy	生哥哥
-# jimmy5693	法課喬丹
-# aa6565931	盈盈
-# bowen0925	神柏
+# 帳號    暱稱
+# david30519    JJ胖
+# cs112345  加七安全感
+# polohong  polohong
+# a0981415848   莊家都輸我
+# happylala3388 菜圃
+# FB1420051617  林毛
+# fushengidy    生哥哥
+# jimmy5693 法課喬丹
+# aa6565931 盈盈
+# bowen0925 神柏
 # =================================================================================================
 
 SELECT a.id, a.userid, b.nickname, a.postuser, a.traced, a.create_time, a.modify_time 
@@ -22406,9 +22406,12 @@ group by userid;
 ALTER TABLE actionlog._billboard_1 convert to character set utf8 collate utf8_general_ci;
 
 create table actionlog._billboard_2 engine = myisam
-SELECT a.userid, b.nickname, a.pv 
-FROM actionlog._billboard_1 a left join plsport_playsport.member b on a.userid = b.userid
-order by a.pv desc;
+select *
+from (
+	SELECT (b.id%20)+1 as g, a.userid, b.nickname, a.pv 
+	FROM actionlog._billboard_1 a left join plsport_playsport.member b on a.userid = b.userid) as c
+where c.g in (1,2,3,4,5,6,7,8,9,10)
+order by c.pv desc;
 
 create table actionlog._billboard_3 engine = myisam
 select userid, nickname, pv, round((cnt-rank+1)/cnt,2) as pv_percentile
@@ -22448,21 +22451,20 @@ from actionlog._billboard_4 a left join plsport_playsport._order_data b on a.use
 
 # 匯入questionnaire_201510281609494834_answer
 
-ALTER TABLE plsport_playsport.questionnaire_201510281609494834_answer CHANGE `1446019601` q1 VARCHAR(20);
-ALTER TABLE plsport_playsport.questionnaire_201510281609494834_answer CHANGE `1446048092` q2 VARCHAR(20);
+    ALTER TABLE plsport_playsport.questionnaire_201510281609494834_answer CHANGE `1446019601` q1 VARCHAR(20);
+    ALTER TABLE plsport_playsport.questionnaire_201510281609494834_answer CHANGE `1446048092` q2 VARCHAR(20);
 
-update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '非常需要' where q1 = 1;
-update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '需要'    where q1 = 2;
-update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '沒意見'   where q1 = 3;
-update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '不需要'   where q1 = 4;
-update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '非常不需要' where q1 = 5;
+    update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '非常需要' where q1 = 1;
+    update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '需要'    where q1 = 2;
+    update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '沒意見'   where q1 = 3;
+    update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '不需要'   where q1 = 4;
+    update plsport_playsport.questionnaire_201510281609494834_answer set q1 = '非常不需要' where q1 = 5;
 
-update plsport_playsport.questionnaire_201510281609494834_answer set q2 = '贊成' where q2 = 1;
-update plsport_playsport.questionnaire_201510281609494834_answer set q2 = '反對' where q2 = 2;
-update plsport_playsport.questionnaire_201510281609494834_answer set q2 = '沒意見' where q2 = 3;
+    update plsport_playsport.questionnaire_201510281609494834_answer set q2 = '贊成' where q2 = 1;
+    update plsport_playsport.questionnaire_201510281609494834_answer set q2 = '反對' where q2 = 2;
+    update plsport_playsport.questionnaire_201510281609494834_answer set q2 = '沒意見' where q2 = 3;
 
-ALTER TABLE plsport_playsport.questionnaire_201510281609494834_answer convert to character set utf8 collate utf8_general_ci;
-
+    ALTER TABLE plsport_playsport.questionnaire_201510281609494834_answer convert to character set utf8 collate utf8_general_ci;
 
 create table actionlog._billboard_6 engine = myisam
 select a.userid, a.nickname, a.pv, a.pv_percentile, a.antiBuy, a.redeem, b.q1, b.q2
@@ -22475,10 +22477,10 @@ and q2 = '贊成'
 and (q1 like '%非常需要%' or q1 like '%需要%')
 order by pv desc;
 
-		CREATE TABLE plsport_playsport._last_login engine = myisam
-		SELECT userid, max(signin_time) as signin_time 
-		FROM plsport_playsport.member_signin_log_archive
-		GROUP BY userid;
+        CREATE TABLE plsport_playsport._last_login engine = myisam
+        SELECT userid, max(signin_time) as signin_time 
+        FROM plsport_playsport.member_signin_log_archive
+        GROUP BY userid;
         
 ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
 
@@ -22488,11 +22490,8 @@ from actionlog._billboard_7 a left join plsport_playsport._last_login b on a.use
 order by pv desc;
 
 # 帳號、暱稱、勝率榜/主推榜pv及全站佔比、冥燈榜購買金額、近兩個月儲值金額 *最後一次登入時間
-
 SELECT 'userid', '暱稱', '勝率主推pv', '全站佔比', '冥燈榜購買金額', '近兩個月儲值金額', '第1題', '第2題', '最後登入時間' union (
 SELECT *
 into outfile 'C:/Users/eddy/Desktop/_billboard_8.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._billboard_8);
-
-
