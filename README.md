@@ -42,7 +42,7 @@ COALESCE(valuecolumn, 0)
 ```
 把NA換成N/A
 ```sh
-IFNULL(col3, 'N/A')
+IFNULL(valuecolumn, 'N/A')
 ```
 
 
