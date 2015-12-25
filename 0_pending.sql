@@ -22715,7 +22715,6 @@ FROM actionlog._all_post_all_push_mobile);
 # d. 11、12月點選NBA隔日的次數
 # =================================================================================================
 
-
 create table actionlog._livescore engine = myisam
 SELECT userid, uri, time, platform_type 
 FROM actionlog.action_201512
@@ -22811,9 +22810,8 @@ from (
 	FROM plsport_playsport._qu) as a;
 
 create table actionlog._livescore_9 engine = myisam 
-SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, b.w, b.q1
-FROM actionlog._livescore_8 a left join plsport_playsport._qu_1 b on a.userid = b.userid
-where b.w > 0;
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, b.q1
+FROM actionlog._livescore_8 a left join plsport_playsport._qu_1 b on a.userid = b.userid;
 
         CREATE TABLE plsport_playsport._last_login engine = myisam
         SELECT userid, max(signin_time) as signin_time 
@@ -22821,15 +22819,124 @@ where b.w > 0;
         GROUP BY userid;
 
 create table actionlog._livescore_10 engine = myisam 
-SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, a.w, a.q1, date(b.signin_time) as signin_time
-FROM actionlog._livescore_9 a left join plsport_playsport._last_login b on a.userid = b.userid;
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, a.q1, date(b.signin_time) as signin_time
+FROM actionlog._livescore_9 a left join plsport_playsport._last_login b on a.userid = b.userid
+where a.pv_nextday_percentile > 0.69
+order by a.pv_nextday desc, a.pv desc;
 
-SELECT 'userid', 'nickname', 'pv', 'pv_percentile', 'pv_nextday', 'pv_nextday_percentile', 'w', 'q1', 'signin_time' union (
+SELECT 'userid', 'nickname', 'pv', 'pv_percentile', 'pv_nextday', 'pv_nextday_percentile', 'q1', 'signin_time' union (
 SELECT *
 into outfile 'C:/Users/eddy/Desktop/_livescore_10.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._livescore_10);
 
+
+# =================================================================================================
+# http://redmine.playsport.cc/issues/853
+# 產品專案 #852: [201512-D]明燈改版
+# [201512-D-1]明燈改版-名單提供
+# 是由 郭 靜怡 於 約 23 小時 前加入. 於 約 23 小時 前更新.
+# 狀態:	新建立	開始日期:	2015-12-24
+# 說明
+# 提供電訪名單
+# 
+# 內容
+# - 撈取時間:近一個月
+# - 需求欄位:暱稱、ID、明燈頁PV(前50%)、購買預測金額、總儲值金額、裝置使用比列、最後登入時間
+# =================================================================================================
+
+drop table if exists actionlog._friend;
+create table actionlog._friend engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201512
+where uri like '%visit_member.php?action=friend%'
+and userid <> ''
+and time between subdate(now(),32) AND now();
+insert ignore into actionlog._friend
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201511
+where uri like '%visit_member.php?action=friend%'
+and userid <> ''
+and time between subdate(now(),32) AND now();
+
+update actionlog._friend set platform_type = 1 where platform_type = 3;
+
+drop table if exists actionlog._friend_1;
+create table actionlog._friend_1 engine = myisam
+SELECT userid, platform_type, count(uri) as pv
+FROM actionlog._friend
+group by userid, platform_type;
+
+create table actionlog._friend_2 engine = myisam
+select b.userid, (b.pc+b.mobile) as pv, round((b.pc/(b.pc+b.mobile)),2) as pc, round((b.mobile/(b.pc+b.mobile)),2) as mobile
+from (
+	select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+	from (
+		SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc, 
+					   (case when (platform_type=2) then pv else 0 end) as mobile
+		FROM actionlog._friend_1) as a
+	group by a.userid) as b;
+
+
+create table actionlog._friend_3 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, pc, mobile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, pc, mobile
+      FROM actionlog._friend_2, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._friend_2) as ct;
+
+drop table if exists actionlog._spent;
+create table actionlog._spent engine = myisam
+SELECT userid, sum(amount) as spent 
+FROM plsport_playsport.pcash_log
+where payed = 1
+and date between subdate(now(),32) AND now()
+group by userid;
+
+drop table if exists actionlog._redeem;
+create table actionlog._redeem engine = myisam
+SELECT userid, sum(price) as redeem 
+FROM plsport_playsport.order_data
+where sellconfirm = 1
+group by userid;
+
+drop table if exists plsport_playsport._last_login;
+CREATE TABLE plsport_playsport._last_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+		ALTER TABLE actionlog._friend_3 convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE actionlog._spent convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE actionlog._redeem convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+		ALTER TABLE actionlog._friend_3 ADD INDEX (`userid`);
+		ALTER TABLE actionlog._spent ADD INDEX (`userid`);
+		ALTER TABLE actionlog._redeem ADD INDEX (`userid`);
+		ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
+        
+create table actionlog._friend_4 engine = myisam
+select c.userid, c.pv, c.pv_percentile, c.spent, d.redeem, c.pc, c.mobile 
+from (
+	SELECT a.userid, a.pv, a.pv_percentile, b.spent, a.pc, a.mobile 
+	FROM actionlog._friend_3 a left join actionlog._spent b on a.userid = b.userid) as c left join actionlog._redeem as d on c.userid = d.userid;
+
+create table actionlog._friend_5 engine = myisam
+SELECT a.userid, a.pv, a.pv_percentile, COALESCE(a.spent,0) as spent, COALESCE(a.redeem,0) as redeem, a.pc, a.mobile, date(b.signin_time) as signin_time
+FROM actionlog._friend_4 a left join plsport_playsport._last_login b on a.userid = b.userid;
+
+create table actionlog._friend_6 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.spent, a.redeem, a.pc, a.mobile, a.signin_time
+FROM actionlog._friend_5 a left join plsport_playsport.member b on a.userid = b.userid
+where pv_percentile > 0.49;
+
+
+# - 需求欄位:暱稱、ID、明燈頁PV(前50%)、購買預測金額、總儲值金額、裝置使用比列、最後登入時間
+SELECT 'userid', '暱稱', '明燈頁PV', '級距', '購買預測金額', '總儲值金額', '使用電腦', '使用手機', '最後登入時間' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_friend_6.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._friend_6);
 
 
 
