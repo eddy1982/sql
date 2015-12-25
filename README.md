@@ -25,7 +25,7 @@ ALTER DATABASE plsport_playsport character set utf8 collate utf8_general_ci;
 
 calculate percentile in mysql
 -----------------------------
-```
+```sh
 create table plsport_playsport._xxxxx engine = myisam
 select userid, reply, round((cnt-rank+1)/cnt,2) as reply_percentile
 from (SELECT userid, reply, @curRank := @curRank + 1 AS rank
@@ -33,6 +33,19 @@ from (SELECT userid, reply, @curRank := @curRank + 1 AS rank
 	  order by reply desc) as dt,
 	 (select count(distinct userid) as cnt from plsport_playsport._yyyyy) as ct;
 ```
+
+Making a NULL value in a MySQL field appear as 0 / N/A
+------------------------------------------------------
+把NA換成0
+```sh
+COALESCE(valuecolumn, 0)
+```
+把NA換成N/A
+```sh
+IFNULL(valuecolumn, 'N/A')
+```
+
+
 
 
 PURGE BINARY LOGS Syntax
