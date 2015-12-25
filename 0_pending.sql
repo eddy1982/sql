@@ -21564,6 +21564,13 @@ where (a.subject like '%挑戰%') or (a.subject like '%串關%');
 # - 需求欄位:暱稱、ID、討論區PV(前50%)、個人頁PV(前50%)、購買預測金額、裝置使用比列、最後登入時間
 # =================================================================================================
 
+# TO EDDY (2015-12-24新增)
+# 麻煩重新提供名單，謝謝
+# 
+# - 撈取時間:近一個月
+# - 需求欄位:暱稱、ID、討論區PV(前30%)、個人頁PV(前30%)、購買預測金額、裝置使用比列、最後登入時間，排除問卷選擇為非常不需要與不需要
+
+
 create table actionlog._pv engine = myisam
 SELECT userid, uri, time, platform_type 
 FROM actionlog.action_201511
@@ -21706,21 +21713,29 @@ ALTER TABLE plsport_playsport.questionnaire_201506031444432350_answer CHANGE `14
 create table plsport_playsport._questionnaire_list engine = myisam
 SELECT userid, q1 
 FROM plsport_playsport.questionnaire_201506031444432350_answer
-where q1 in (1,2);
+where q1 in (1,2,3,4,5);
 
 update plsport_playsport._questionnaire_list set q1 = '非常需要' where q1 = 1;
 update plsport_playsport._questionnaire_list set q1 = '需要' where q1 = 2;
+update plsport_playsport._questionnaire_list set q1 = '沒意見' where q1 = 3;
+update plsport_playsport._questionnaire_list set q1 = '不需要' where q1 = 4;
+update plsport_playsport._questionnaire_list set q1 = '非常不需要' where q1 = 5;
 
 create table actionlog._list_11 engine = myisam
-SELECT a.userid, a.nickname, a.fd_pv, a.fd_pv_percentile, a.vm_pv, a.vm_pv_percentile, a.spent, a.p_pc, a.p_mobile, a.d, b.q1 as ans
-FROM actionlog._list_10 a left join plsport_playsport._questionnaire_list b on a.userid = b.userid
-where b.q1 is not null;
+SELECT a.userid, a.nickname, a.fd_pv, a.fd_pv_percentile, a.vm_pv, a.vm_pv_percentile, a.spent, a.p_pc, a.p_mobile, a.d, IFNULL(b.q1, '-沒填過問券-') as ans
+FROM actionlog._list_10 a left join plsport_playsport._questionnaire_list b on a.userid = b.userid;
+
+create table actionlog._list_12 engine = myisam
+SELECT * FROM actionlog._list_11
+where ans not in ('不需要', '非常不需要')
+order by fd_pv desc;
+
 
 SELECT 'userid', '暱稱', '討論區PV', '討論區PV級距', '個人頁PV', '個人頁PV級距', '購買預測金額', '使用pc比例', '使用mobile比例', '最後登入時間', '問券回答' union (
 SELECT *
-into outfile 'C:/Users/eddy/Desktop/_list_11.txt'
+into outfile 'C:/Users/eddy/Desktop/_list_12.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM actionlog._list_11);
+FROM actionlog._list_12);
 
 
 
@@ -22448,7 +22463,6 @@ create table actionlog._billboard_5 engine = myisam
 select a.userid, a.nickname, a.pv, a.pv_percentile, a.antiBuy, b.redeem
 from actionlog._billboard_4 a left join plsport_playsport._order_data b on a.userid = b.userid;
 
-
 # 匯入questionnaire_201510281609494834_answer
 
     ALTER TABLE plsport_playsport.questionnaire_201510281609494834_answer CHANGE `1446019601` q1 VARCHAR(20);
@@ -22495,3 +22509,386 @@ SELECT *
 into outfile 'C:/Users/eddy/Desktop/_billboard_8.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._billboard_8);
+
+
+
+# =================================================================================================
+# http://redmine.playsport.cc/issues/724
+# 促進討論區紅人銷售-ABtesting討論區列表加強推文標籤
+# TO eddy
+# 
+# 需要分組名單，麻煩您了！謝謝(已完成)
+# abtesting時間:12/3-1/3
+# 再麻煩分析此期間的使用者觀看文章的狀況
+# 分析重點:使用者喜歡看推文數高的文章，推數高的文章會跟收益有正相關，分析實驗組推數高的文章瀏覽量有沒有比較高
+# =================================================================================================
+
+create table actionlog._forumdetail engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201512
+where userid <> ''
+and uri like '%/forumdetail.php%';
+
+create table actionlog._forumdetail_1 engine = myisam
+SELECT * FROM actionlog._forumdetail
+where time between '2015-12-03 17:10:00' and now();
+
+ALTER TABLE actionlog._forumdetail_1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._forumdetail_1 ADD INDEX (`userid`);
+
+create table actionlog._forumdetail_2 engine = myisam
+select (case when (c.g < 11) then 'a' else 'b' end) as abtest, c.userid, c.uri, c.time, c.platform_type
+from (
+	SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time, a.platform_type
+	FROM actionlog._forumdetail_1 a left join plsport_playsport.member b on a.userid = b.userid) as c;
+
+
+create table actionlog._forumdetail_3 engine = myisam
+SELECT abtest, userid, uri, time, platform_type, substr(uri,locate('subjectid=',uri)+10,15) as sid, 
+       (case when (locate('push=',uri)>0) then substr(uri,locate('push=',uri)+5,length(uri)) else '' end) as push 
+FROM actionlog._forumdetail_2;
+
+create table actionlog._when_tag_is_applied engine = myisam
+SELECT sid, push, min(time) as stime 
+FROM actionlog._forumdetail_3
+where push >= 30
+group by sid;
+
+create table actionlog._hot_subjectid engine = myisam
+SELECT sid, (case when (sid is not null) then 1 else 0 end) as hot_push
+FROM actionlog._forumdetail_3
+where push <> ''
+group by sid;
+
+ALTER TABLE actionlog._forumdetail_3 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._forumdetail_3 ADD INDEX (`subjectid`);
+ALTER TABLE actionlog._hot_subjectid ADD INDEX (`sid`);
+
+ALTER TABLE actionlog._when_tag_is_applied convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._when_tag_is_applied ADD INDEX (`sid`);
+
+create table actionlog._forumdetail_4 engine = myisam
+SELECT a.abtest, a.userid, a.uri, a.time, a.platform_type, a.sid, a.push, b.push as push2, b.stime
+FROM actionlog._forumdetail_3 a left join actionlog._when_tag_is_applied b on a.sid = b.sid;
+
+create table actionlog._forumdetail_5 engine = myisam
+select *
+from (
+	SELECT abtest, userid, sid, platform_type, push, push2, time, stime, TIMESTAMPDIFF(MINUTE,stime,time) as dif
+	FROM actionlog._forumdetail_4) as a
+where a.dif > -1;
+
+create table actionlog._forumdetail_6 engine = myisam
+SELECT abtest, userid, sid, push2
+FROM actionlog._forumdetail_5
+where push2 > 0
+group by userid, sid;
+
+create table actionlog._forumdetail_7 engine = myisam
+SELECT abtest, userid, count(sid) as c 
+FROM actionlog._forumdetail_6
+group by abtest, userid;
+
+# 不分裝置的使用者
+SELECT 'abtest', 'userid', 'c' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_forum_push.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forumdetail_7);
+
+
+update actionlog._forumdetail_5 set platform_type = 1 where platform_type = 3;
+
+create table actionlog._forumdetail_5_pc engine = myisam
+select a.abtest, a.userid, count(a.sid) as c
+from (
+	SELECT abtest, userid, sid, push2
+	FROM actionlog._forumdetail_5
+	where platform_type = 1
+	group by userid, sid) as a
+group by a.abtest, a.userid;
+
+create table actionlog._forumdetail_5_mobile engine = myisam
+select a.abtest, a.userid, count(a.sid) as c
+from (
+	SELECT abtest, userid, sid, push2
+	FROM actionlog._forumdetail_5
+	where platform_type = 2
+	group by userid, sid) as a
+group by a.abtest, a.userid;
+
+# 電腦的使用者
+SELECT 'abtest', 'userid', 'c' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_forum_push_pc.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forumdetail_5_pc);
+
+# 手機的使用者
+SELECT 'abtest', 'userid', 'c' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_forum_push_mobile.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._forumdetail_5_mobile);
+
+
+
+create table actionlog._all_post engine = myisam
+SELECT abtest, userid, count(sid) as all_post 
+FROM actionlog._forumdetail_3
+group by abtest, userid;
+
+create table actionlog._all_post_all_push engine = myisam
+select c.abtest, c.userid, c.all_post, c.push, round(c.push/c.all_post,3) as ratio
+from (
+	SELECT a.abtest, a.userid, a.all_post, COALESCE(b.c,0) as push 
+	FROM actionlog._all_post a left join actionlog._forumdetail_7 b on a.userid = b.userid) as c;
+
+update actionlog._forumdetail_3 set platform_type = 1 where platform_type = 3;
+
+create table actionlog._all_post_pc engine = myisam
+SELECT abtest, userid, count(sid) as all_post 
+FROM actionlog._forumdetail_3
+where platform_type = 1
+group by abtest, userid;
+
+create table actionlog._all_post_mobile engine = myisam
+SELECT abtest, userid, count(sid) as all_post 
+FROM actionlog._forumdetail_3
+where platform_type = 2
+group by abtest, userid;
+
+create table actionlog._all_post_all_push_pc engine = myisam
+select c.abtest, c.userid, c.all_post, c.push, round(c.push/c.all_post,3) as ratio
+from (
+	SELECT a.abtest, a.userid, a.all_post, COALESCE(b.c,0) as push 
+	FROM actionlog._all_post_pc a left join actionlog._forumdetail_5_pc b on a.userid = b.userid) as c;
+
+create table actionlog._all_post_all_push_mobile engine = myisam
+select c.abtest, c.userid, c.all_post, c.push, round(c.push/c.all_post,3) as ratio
+from (
+	SELECT a.abtest, a.userid, a.all_post, COALESCE(b.c,0) as push 
+	FROM actionlog._all_post_mobile a left join actionlog._forumdetail_5_mobile b on a.userid = b.userid) as c;
+
+
+# 不分裝置的使用者
+SELECT 'abtest', 'userid', 'allpost', 'push', 'ratio' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_all_post_all_push.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._all_post_all_push);
+
+# 電腦的使用者
+SELECT 'abtest', 'userid', 'allpost', 'push', 'ratio' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_all_post_all_push_pc.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._all_post_all_push_pc);
+
+# 手機的使用者
+SELECT 'abtest', 'userid', 'allpost', 'push', 'ratio' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_all_post_all_push_mobile.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._all_post_all_push_mobile);
+
+
+
+
+# =================================================================================================
+# 任務: [201412-F-27] 即時比分顯示隔日賽事數據- NBA優化 MVP測試名單 [新建]
+# http://pm.playsport.cc/index.php/tasksComments?tasksId=4991&projectId=11
+# 提供此任務優化MVP測試名單
+# 負責人：Eddy
+# 時間：12/25(五) 12:00
+# 
+# 內容
+# 1. MVP測試名單
+# 條件：
+# a. NBA即時比分11、12月PV前50%
+# b. NBA即時比分賽事數據問卷第一題勾選傷兵名單或先發球員名單或大小分盤口、過盤率或近十場讓分過盤率
+# 
+# 欄位：
+# a. 帳號
+# b. 暱稱
+# c. 11、12月NBA即時比分pv及全站佔比
+# d. 11、12月點選NBA隔日的次數
+# =================================================================================================
+
+
+create table actionlog._livescore engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201512
+where uri like '%/livescore.php%';
+insert ignore into actionlog._livescore
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201511
+where uri like '%/livescore.php%';
+
+create table actionlog._livescore_1 engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog._livescore
+where userid <> '';
+
+update actionlog._livescore_1 set uri = '/livescore.php?aid=3' where  uri = '/livescore.php';
+
+create table actionlog._livescore_2 engine = myisam
+select a.userid, a.uri, a.time, a.platform_type, (case when (locate('&',a.aid)=0) then a.aid else substr(a.aid,1,locate('&',a.aid)-1) end) as aid
+from (
+	SELECT userid, uri, time, platform_type, substr(uri,locate('aid=',uri)+4,length(uri)) as aid
+	FROM actionlog._livescore_1) as a;
+    
+create table actionlog._livescore_3 engine = myisam  
+SELECT * FROM actionlog._livescore_2
+where aid = '3';
+
+create table actionlog._livescore_4 engine = myisam  
+SELECT userid, uri, time, platform_type, aid, 
+       (case when (locate('gamedate=',uri)=0) then '' else substr(uri,locate('gamedate=',uri)+9,8) end) as gd
+FROM actionlog._livescore_3;
+
+create table actionlog._livescore_5 engine = myisam 
+SELECT userid, uri, time, platform_type, aid, gd, 
+       (case when (gd = '') then '' else STR_TO_DATE(gd, '%Y%m%d') end) as gd_edited, date(time) as t_edited
+FROM actionlog._livescore_4;
+
+create table actionlog._livescore_6 engine = myisam 
+SELECT userid, uri, time, platform_type, aid, gd_edited, t_edited, (case when (DATEDIFF(gd_edited,t_edited)=1) then 1 else 0 end) as hit_next_day
+FROM actionlog._livescore_5;
+
+create table actionlog._livescore_6_pv engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._livescore_6
+group by userid;
+
+create table actionlog._livescore_6_pv_nextday engine = myisam
+SELECT userid, count(uri) as pv_nextday
+FROM actionlog._livescore_6
+where hit_next_day = 1
+group by userid;
+
+create table actionlog._livescore_6_pv_1 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._livescore_6_pv, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._livescore_6_pv) as ct;
+
+create table actionlog._livescore_6_pv_nextday_1 engine = myisam
+select userid, pv_nextday, round((cnt-rank+1)/cnt,2) as pv_nextday_percentile
+from (SELECT userid, pv_nextday, @curRank := @curRank + 1 AS rank
+      FROM actionlog._livescore_6_pv_nextday, (SELECT @curRank := 0) r
+      order by pv_nextday desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._livescore_6_pv_nextday) as ct;
+
+ALTER TABLE actionlog._livescore_6_pv_1 ADD INDEX (`userid`);
+ALTER TABLE actionlog._livescore_6_pv_nextday_1 ADD INDEX (`userid`);
+ALTER TABLE actionlog._livescore_6_pv_1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._livescore_6_pv_nextday_1 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._livescore_7 engine = myisam 
+SELECT a.userid, a.pv, a.pv_percentile, COALESCE(b.pv_nextday,0) as pv_nextday, COALESCE(b.pv_nextday_percentile,0) as pv_nextday_percentile
+FROM actionlog._livescore_6_pv_1 a left join actionlog._livescore_6_pv_nextday_1 b on a.userid = b.userid
+where a.pv_percentile > 0.49;
+
+create table actionlog._livescore_8 engine = myisam 
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile, b.pv_nextday, b.pv_nextday_percentile
+FROM actionlog._livescore_7 a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table plsport_playsport._qu engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201512161125598046_answer;
+
+    ALTER TABLE plsport_playsport._qu CHANGE `1450236180` q1 VARCHAR(20);
+    ALTER TABLE plsport_playsport._qu CHANGE `1450412605` q2 VARCHAR(20);
+
+create table plsport_playsport._qu_1 engine = myisam
+select a.userid, (a.w1+a.w2+a.w3+a.w4) as w, a.q1
+from (
+	SELECT userid, (case when (locate('1',q1)>0) then 1 else 0 end) as w1,
+				   (case when (locate('2',q1)>0) then 1 else 0 end) as w2,
+				   (case when (locate('3',q1)>0) then 1 else 0 end) as w3,
+				   (case when (locate('4',q1)>0) then 1 else 0 end) as w4, q1
+	FROM plsport_playsport._qu) as a;
+
+create table actionlog._livescore_9 engine = myisam 
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, b.w, b.q1
+FROM actionlog._livescore_8 a left join plsport_playsport._qu_1 b on a.userid = b.userid
+where b.w > 0;
+
+        CREATE TABLE plsport_playsport._last_login engine = myisam
+        SELECT userid, max(signin_time) as signin_time 
+        FROM plsport_playsport.member_signin_log_archive
+        GROUP BY userid;
+
+create table actionlog._livescore_10 engine = myisam 
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, a.w, a.q1, date(b.signin_time) as signin_time
+FROM actionlog._livescore_9 a left join plsport_playsport._last_login b on a.userid = b.userid;
+
+SELECT 'userid', 'nickname', 'pv', 'pv_percentile', 'pv_nextday', 'pv_nextday_percentile', 'w', 'q1', 'signin_time' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_livescore_10.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._livescore_10);
+
+
+
+
+
+# =================================================================================================
+# http://redmine.playsport.cc/issues/829
+# [201511-C-6]購牌專區改版-消費者固定購買行為分析
+# 說明
+# 了解何謂熟人殺手，以利熟人殺手購牌區建立
+# 
+# 內容
+# 因在訪談時經常有使用者表示他會固定或跟熟悉的殺手買牌，所以想要了解站上使用者對於固定購買行為的狀況，是否值得新增熟人殺手購牌區功能。
+# 
+# 研究說明:
+# 消費者在購買預測時, 往往會根據多種因素來決定是否要購買, 如:
+# 	殺手的當下戰績
+# 	殺手的版標
+# 	版標的類型(月勝率/連過)
+# 	小叮嚀
+# 	販售說明
+# 	重覆購買以前曾買過的殺手
+# 以前我們曾用過回歸分析發現, 殺手如果有寫小叮嚀或販售說明, 消費者會買更多
+# 即代表小叮嚀或販售說明這2個因子對販售有顯著的影響.
+# 
+# 所以這次我們想:
+# 檢驗重覆購買以前曾買過的殺手, 對購買金額是否有影響, 此因子是否有顯著?
+# 也順便看看以上7點因子的重要順序由高至低為何? (之後可因子重要性的高低來決定強化弱化的項目)
+# =================================================================================================
+
+drop table if exists plsport_playsport._buyer_list;
+create table plsport_playsport._buyer_list engine = myisam
+SELECT a.id, a.buyerid, a.buy_date, a.buy_price, a.buy_allianceid, a.id_bought, b.sellerid, sale_price, b.promotion, b.analysis
+FROM plsport_playsport.predict_buyer a left join plsport_playsport.predict_seller b on a.id_bought = b.id
+where a.buy_date between subdate(now(),550) and now()
+and a.buy_price > 0
+order by a.id desc;
+
+drop table if exists plsport_playsport._buyer_list_1;
+create table plsport_playsport._buyer_list_1 engine = myisam
+SELECT id, buyerid, buy_date, buy_price, buy_allianceid, id_bought, sellerid, sale_price, 
+        (case when (length(promotion)>8) then 1 else 0 end) as sale_description, 
+        (case when (length(analysis)>8) then 1 else 0 end) as sale_reminder
+FROM plsport_playsport._buyer_list;
+
+drop table if exists plsport_playsport._buyer_list_2;
+create table plsport_playsport._buyer_list_2 engine = myisam
+SELECT a.id, a.buyerid, a.buy_date, a.buy_price, a.buy_allianceid, a.id_bought, a.sellerid, a.sale_price, a.sale_description, a.sale_reminder, 
+       b.be_killer_winp, b.is_stable, b.position, b.cons, b.mode, b.type, b.keep_win, b.recent_days, b.win, b.lose, b.winpercentage
+FROM plsport_playsport._buyer_list_1 a left join plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer;
+
+
+
+
+
+
+
+
+
+
+
+
+
