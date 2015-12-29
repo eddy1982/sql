@@ -22985,6 +22985,50 @@ FROM actionlog._friend_6);
 
 
 # =================================================================================================
+# http://redmine.playsport.cc/issues/791
+# 行銷企劃 #26: 促進討論區紅人銷售
+# 促進討論區紅人銷售-新增「最多推文」文章排序，使用分析
+# 是由 黃 雅雅 於 14 天 前加入. 於 12 天 前更新.
+# 被分派者:	黃 Eddy
+# 
+# 根據我們討論的，一個月觀察一次使用結果，
+# 此功能12/17上線， 設定的追蹤碼為 s=p，
+# 麻煩一個月後告知使用結果，感謝!　
+# =================================================================================================
+
+create table actionlog._s_p engine = myisam
+SELECT * FROM actionlog.action_201512
+where uri like '%s=p%' ;
+create table actionlog._s_a engine = myisam
+SELECT * FROM actionlog.action_201512
+where uri like '%s=a%' ;
+create table actionlog._s_r engine = myisam
+SELECT * FROM actionlog.action_201512
+where uri like '%s=r%' ;
+
+create table actionlog._s_p_1 engine = myisam
+SELECT id, userid, date(time) as d 
+FROM actionlog._s_p;
+create table actionlog._s_a_1 engine = myisam
+SELECT id, userid, date(time) as d 
+FROM actionlog._s_a;
+create table actionlog._s_r_1 engine = myisam
+SELECT id, userid, date(time) as d 
+FROM actionlog._s_r;
+
+SELECT d, count(id) as c 
+FROM actionlog._s_p_1
+group by d;
+SELECT d, count(id) as c 
+FROM actionlog._s_a_1
+group by d;
+SELECT d, count(id) as c 
+FROM actionlog._s_r_1
+group by d;
+
+
+
+# =================================================================================================
 # http://redmine.playsport.cc/issues/829
 # [201511-C-6]購牌專區改版-消費者固定購買行為分析
 # 說明
@@ -23029,16 +23073,6 @@ create table plsport_playsport._buyer_list_2 engine = myisam
 SELECT a.id, a.buyerid, a.buy_date, a.buy_price, a.buy_allianceid, a.id_bought, a.sellerid, a.sale_price, a.sale_description, a.sale_reminder, 
        b.be_killer_winp, b.is_stable, b.position, b.cons, b.mode, b.type, b.keep_win, b.recent_days, b.win, b.lose, b.winpercentage
 FROM plsport_playsport._buyer_list_1 a left join plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer;
-
-
-
-
-
-
-
-
-
-
 
 
 
