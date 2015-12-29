@@ -22423,8 +22423,8 @@ ALTER TABLE actionlog._billboard_1 convert to character set utf8 collate utf8_ge
 create table actionlog._billboard_2 engine = myisam
 select *
 from (
-	SELECT (b.id%20)+1 as g, a.userid, b.nickname, a.pv 
-	FROM actionlog._billboard_1 a left join plsport_playsport.member b on a.userid = b.userid) as c
+    SELECT (b.id%20)+1 as g, a.userid, b.nickname, a.pv 
+    FROM actionlog._billboard_1 a left join plsport_playsport.member b on a.userid = b.userid) as c
 where c.g in (1,2,3,4,5,6,7,8,9,10)
 order by c.pv desc;
 
@@ -22539,9 +22539,8 @@ ALTER TABLE actionlog._forumdetail_1 ADD INDEX (`userid`);
 create table actionlog._forumdetail_2 engine = myisam
 select (case when (c.g < 11) then 'a' else 'b' end) as abtest, c.userid, c.uri, c.time, c.platform_type
 from (
-	SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time, a.platform_type
-	FROM actionlog._forumdetail_1 a left join plsport_playsport.member b on a.userid = b.userid) as c;
-
+    SELECT (b.id%20)+1 as g, a.userid, a.uri, a.time, a.platform_type
+    FROM actionlog._forumdetail_1 a left join plsport_playsport.member b on a.userid = b.userid) as c;
 
 create table actionlog._forumdetail_3 engine = myisam
 SELECT abtest, userid, uri, time, platform_type, substr(uri,locate('subjectid=',uri)+10,15) as sid, 
@@ -22561,7 +22560,7 @@ where push <> ''
 group by sid;
 
 ALTER TABLE actionlog._forumdetail_3 convert to character set utf8 collate utf8_general_ci;
-ALTER TABLE actionlog._forumdetail_3 ADD INDEX (`subjectid`);
+ALTER TABLE actionlog._forumdetail_3 ADD INDEX (`sid`);
 ALTER TABLE actionlog._hot_subjectid ADD INDEX (`sid`);
 
 ALTER TABLE actionlog._when_tag_is_applied convert to character set utf8 collate utf8_general_ci;
@@ -22574,8 +22573,8 @@ FROM actionlog._forumdetail_3 a left join actionlog._when_tag_is_applied b on a.
 create table actionlog._forumdetail_5 engine = myisam
 select *
 from (
-	SELECT abtest, userid, sid, platform_type, push, push2, time, stime, TIMESTAMPDIFF(MINUTE,stime,time) as dif
-	FROM actionlog._forumdetail_4) as a
+    SELECT abtest, userid, sid, platform_type, push, push2, time, stime, TIMESTAMPDIFF(MINUTE,stime,time) as dif
+    FROM actionlog._forumdetail_4) as a
 where a.dif > -1;
 
 create table actionlog._forumdetail_6 engine = myisam
@@ -22596,25 +22595,24 @@ into outfile 'C:/Users/eddy/Desktop/_forum_push.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._forumdetail_7);
 
-
 update actionlog._forumdetail_5 set platform_type = 1 where platform_type = 3;
 
 create table actionlog._forumdetail_5_pc engine = myisam
 select a.abtest, a.userid, count(a.sid) as c
 from (
-	SELECT abtest, userid, sid, push2
-	FROM actionlog._forumdetail_5
-	where platform_type = 1
-	group by userid, sid) as a
+    SELECT abtest, userid, sid, push2
+    FROM actionlog._forumdetail_5
+    where platform_type = 1
+    group by userid, sid) as a
 group by a.abtest, a.userid;
 
 create table actionlog._forumdetail_5_mobile engine = myisam
 select a.abtest, a.userid, count(a.sid) as c
 from (
-	SELECT abtest, userid, sid, push2
-	FROM actionlog._forumdetail_5
-	where platform_type = 2
-	group by userid, sid) as a
+    SELECT abtest, userid, sid, push2
+    FROM actionlog._forumdetail_5
+    where platform_type = 2
+    group by userid, sid) as a
 group by a.abtest, a.userid;
 
 # 電腦的使用者
@@ -22632,43 +22630,48 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._forumdetail_5_mobile);
 
 
-
+# 統計使用者總共看的文章數
 create table actionlog._all_post engine = myisam
 SELECT abtest, userid, count(sid) as all_post 
 FROM actionlog._forumdetail_3
 group by abtest, userid;
 
+# 統計使用者總共看的文章數+看的推文數+看推文數的比例
 create table actionlog._all_post_all_push engine = myisam
 select c.abtest, c.userid, c.all_post, c.push, round(c.push/c.all_post,3) as ratio
 from (
-	SELECT a.abtest, a.userid, a.all_post, COALESCE(b.c,0) as push 
-	FROM actionlog._all_post a left join actionlog._forumdetail_7 b on a.userid = b.userid) as c;
+    SELECT a.abtest, a.userid, a.all_post, COALESCE(b.c,0) as push 
+    FROM actionlog._all_post a left join actionlog._forumdetail_7 b on a.userid = b.userid) as c;
 
 update actionlog._forumdetail_3 set platform_type = 1 where platform_type = 3;
 
+# 統計電腦版
 create table actionlog._all_post_pc engine = myisam
 SELECT abtest, userid, count(sid) as all_post 
 FROM actionlog._forumdetail_3
 where platform_type = 1
 group by abtest, userid;
 
+# 統計手機版
 create table actionlog._all_post_mobile engine = myisam
 SELECT abtest, userid, count(sid) as all_post 
 FROM actionlog._forumdetail_3
 where platform_type = 2
 group by abtest, userid;
 
+# 統計使用者總共看的文章數+看的推文數+看推文數的比例 (電腦版)
 create table actionlog._all_post_all_push_pc engine = myisam
 select c.abtest, c.userid, c.all_post, c.push, round(c.push/c.all_post,3) as ratio
 from (
-	SELECT a.abtest, a.userid, a.all_post, COALESCE(b.c,0) as push 
-	FROM actionlog._all_post_pc a left join actionlog._forumdetail_5_pc b on a.userid = b.userid) as c;
+    SELECT a.abtest, a.userid, a.all_post, COALESCE(b.c,0) as push 
+    FROM actionlog._all_post_pc a left join actionlog._forumdetail_5_pc b on a.userid = b.userid) as c;
 
+# 統計使用者總共看的文章數+看的推文數+看推文數的比例 (手機版)
 create table actionlog._all_post_all_push_mobile engine = myisam
 select c.abtest, c.userid, c.all_post, c.push, round(c.push/c.all_post,3) as ratio
 from (
-	SELECT a.abtest, a.userid, a.all_post, COALESCE(b.c,0) as push 
-	FROM actionlog._all_post_mobile a left join actionlog._forumdetail_5_mobile b on a.userid = b.userid) as c;
+    SELECT a.abtest, a.userid, a.all_post, COALESCE(b.c,0) as push 
+    FROM actionlog._all_post_mobile a left join actionlog._forumdetail_5_mobile b on a.userid = b.userid) as c;
 
 
 # 不分裝置的使用者
@@ -22692,6 +22695,48 @@ into outfile 'C:/Users/eddy/Desktop/_all_post_all_push_mobile.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._all_post_all_push_mobile);
 
+
+drop table if exists actionlog._spent;
+create table actionlog._spent engine = myisam
+SELECT userid, sum(amount) as spent 
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date between '2015-12-03 17:10:00' and now()
+group by userid;
+
+create table actionlog._all_post_all_push_1 engine = myisam
+SELECT a.abtest, a.userid, a.all_post, a.push, a.ratio, b.spent
+FROM actionlog._all_post_all_push a left join actionlog._spent b on a.userid = b.userid;
+
+create table actionlog._all_post_all_push_pc_1 engine = myisam
+SELECT a.abtest, a.userid, a.all_post, a.push, a.ratio, b.spent
+FROM actionlog._all_post_all_push_pc a left join actionlog._spent b on a.userid = b.userid;
+
+create table actionlog._all_post_all_push_mobile_1 engine = myisam
+SELECT a.abtest, a.userid, a.all_post, a.push, a.ratio, b.spent
+FROM actionlog._all_post_all_push_mobile a left join actionlog._spent b on a.userid = b.userid;
+
+
+# 不分裝置的使用者
+SELECT 'abtest', 'userid', 'allpost', 'push', 'ratio', 'spent' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_all_post_all_push_1.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._all_post_all_push_1);
+
+# 電腦的使用者
+SELECT 'abtest', 'userid', 'allpost', 'push', 'ratio', 'spent' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_all_post_all_push_pc_1.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._all_post_all_push_pc_1);
+
+# 手機的使用者
+SELECT 'abtest', 'userid', 'allpost', 'push', 'ratio', 'spent' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_all_post_all_push_mobile_1.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._all_post_all_push_mobile_1);
 
 
 
@@ -22734,8 +22779,8 @@ update actionlog._livescore_1 set uri = '/livescore.php?aid=3' where  uri = '/li
 create table actionlog._livescore_2 engine = myisam
 select a.userid, a.uri, a.time, a.platform_type, (case when (locate('&',a.aid)=0) then a.aid else substr(a.aid,1,locate('&',a.aid)-1) end) as aid
 from (
-	SELECT userid, uri, time, platform_type, substr(uri,locate('aid=',uri)+4,length(uri)) as aid
-	FROM actionlog._livescore_1) as a;
+    SELECT userid, uri, time, platform_type, substr(uri,locate('aid=',uri)+4,length(uri)) as aid
+    FROM actionlog._livescore_1) as a;
     
 create table actionlog._livescore_3 engine = myisam  
 SELECT * FROM actionlog._livescore_2
@@ -22803,11 +22848,11 @@ SELECT * FROM plsport_playsport.questionnaire_201512161125598046_answer;
 create table plsport_playsport._qu_1 engine = myisam
 select a.userid, (a.w1+a.w2+a.w3+a.w4) as w, a.q1
 from (
-	SELECT userid, (case when (locate('1',q1)>0) then 1 else 0 end) as w1,
-				   (case when (locate('2',q1)>0) then 1 else 0 end) as w2,
-				   (case when (locate('3',q1)>0) then 1 else 0 end) as w3,
-				   (case when (locate('4',q1)>0) then 1 else 0 end) as w4, q1
-	FROM plsport_playsport._qu) as a;
+    SELECT userid, (case when (locate('1',q1)>0) then 1 else 0 end) as w1,
+                   (case when (locate('2',q1)>0) then 1 else 0 end) as w2,
+                   (case when (locate('3',q1)>0) then 1 else 0 end) as w3,
+                   (case when (locate('4',q1)>0) then 1 else 0 end) as w4, q1
+    FROM plsport_playsport._qu) as a;
 
 create table actionlog._livescore_9 engine = myisam 
 SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, b.q1
@@ -22836,7 +22881,7 @@ FROM actionlog._livescore_10);
 # 產品專案 #852: [201512-D]明燈改版
 # [201512-D-1]明燈改版-名單提供
 # 是由 郭 靜怡 於 約 23 小時 前加入. 於 約 23 小時 前更新.
-# 狀態:	新建立	開始日期:	2015-12-24
+# 狀態:   新建立 開始日期:   2015-12-24
 # 說明
 # 提供電訪名單
 # 
@@ -22870,12 +22915,12 @@ group by userid, platform_type;
 create table actionlog._friend_2 engine = myisam
 select b.userid, (b.pc+b.mobile) as pv, round((b.pc/(b.pc+b.mobile)),2) as pc, round((b.mobile/(b.pc+b.mobile)),2) as mobile
 from (
-	select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
-	from (
-		SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc, 
-					   (case when (platform_type=2) then pv else 0 end) as mobile
-		FROM actionlog._friend_1) as a
-	group by a.userid) as b;
+    select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+    from (
+        SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc, 
+                       (case when (platform_type=2) then pv else 0 end) as mobile
+        FROM actionlog._friend_1) as a
+    group by a.userid) as b;
 
 
 create table actionlog._friend_3 engine = myisam
@@ -22889,7 +22934,7 @@ drop table if exists actionlog._spent;
 create table actionlog._spent engine = myisam
 SELECT userid, sum(amount) as spent 
 FROM plsport_playsport.pcash_log
-where payed = 1
+where payed = 1 and type = 1
 and date between subdate(now(),32) AND now()
 group by userid;
 
@@ -22906,20 +22951,20 @@ SELECT userid, max(signin_time) as signin_time
 FROM plsport_playsport.member_signin_log_archive
 GROUP BY userid;
 
-		ALTER TABLE actionlog._friend_3 convert to character set utf8 collate utf8_general_ci;
-		ALTER TABLE actionlog._spent convert to character set utf8 collate utf8_general_ci;
-		ALTER TABLE actionlog._redeem convert to character set utf8 collate utf8_general_ci;
-		ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
-		ALTER TABLE actionlog._friend_3 ADD INDEX (`userid`);
-		ALTER TABLE actionlog._spent ADD INDEX (`userid`);
-		ALTER TABLE actionlog._redeem ADD INDEX (`userid`);
-		ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
+        ALTER TABLE actionlog._friend_3 convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._spent convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._redeem convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._friend_3 ADD INDEX (`userid`);
+        ALTER TABLE actionlog._spent ADD INDEX (`userid`);
+        ALTER TABLE actionlog._redeem ADD INDEX (`userid`);
+        ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
         
 create table actionlog._friend_4 engine = myisam
 select c.userid, c.pv, c.pv_percentile, c.spent, d.redeem, c.pc, c.mobile 
 from (
-	SELECT a.userid, a.pv, a.pv_percentile, b.spent, a.pc, a.mobile 
-	FROM actionlog._friend_3 a left join actionlog._spent b on a.userid = b.userid) as c left join actionlog._redeem as d on c.userid = d.userid;
+    SELECT a.userid, a.pv, a.pv_percentile, b.spent, a.pc, a.mobile 
+    FROM actionlog._friend_3 a left join actionlog._spent b on a.userid = b.userid) as c left join actionlog._redeem as d on c.userid = d.userid;
 
 create table actionlog._friend_5 engine = myisam
 SELECT a.userid, a.pv, a.pv_percentile, COALESCE(a.spent,0) as spent, COALESCE(a.redeem,0) as redeem, a.pc, a.mobile, date(b.signin_time) as signin_time
@@ -22930,14 +22975,12 @@ SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.spent, a.redeem, a.pc, a.m
 FROM actionlog._friend_5 a left join plsport_playsport.member b on a.userid = b.userid
 where pv_percentile > 0.49;
 
-
 # - 需求欄位:暱稱、ID、明燈頁PV(前50%)、購買預測金額、總儲值金額、裝置使用比列、最後登入時間
 SELECT 'userid', '暱稱', '明燈頁PV', '級距', '購買預測金額', '總儲值金額', '使用電腦', '使用手機', '最後登入時間' union (
 SELECT *
 into outfile 'C:/Users/eddy/Desktop/_friend_6.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._friend_6);
-
 
 
 
@@ -22952,12 +22995,12 @@ FROM actionlog._friend_6);
 # 
 # 研究說明:
 # 消費者在購買預測時, 往往會根據多種因素來決定是否要購買, 如:
-# 	殺手的當下戰績
-# 	殺手的版標
-# 	版標的類型(月勝率/連過)
-# 	小叮嚀
-# 	販售說明
-# 	重覆購買以前曾買過的殺手
+#   殺手的當下戰績
+#   殺手的版標
+#   版標的類型(月勝率/連過)
+#   小叮嚀
+#   販售說明
+#   重覆購買以前曾買過的殺手
 # 以前我們曾用過回歸分析發現, 殺手如果有寫小叮嚀或販售說明, 消費者會買更多
 # 即代表小叮嚀或販售說明這2個因子對販售有顯著的影響.
 # 
