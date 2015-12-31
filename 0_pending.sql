@@ -22998,13 +22998,13 @@ FROM actionlog._friend_6);
 
 create table actionlog._s_p engine = myisam
 SELECT * FROM actionlog.action_201512
-where uri like '%s=p%' ;
+where uri like '%s=p%' ; # 最多推文
 create table actionlog._s_a engine = myisam
 SELECT * FROM actionlog.action_201512
-where uri like '%s=a%' ;
+where uri like '%s=a%' ; # 最新文章
 create table actionlog._s_r engine = myisam
 SELECT * FROM actionlog.action_201512
-where uri like '%s=r%' ;
+where uri like '%s=r%' ; # 最新回覆
 
 create table actionlog._s_p_1 engine = myisam
 SELECT id, userid, date(time) as d 
@@ -23029,8 +23029,107 @@ group by d;
 
 
 # =================================================================================================
+# 產品專案 #533: [201510-B] 進階預測比例
+# [201510-B-8] 進階預測比例 - MVP測試名單
+# http://redmine.playsport.cc/issues/883
+# 內容 1. MVP測試名單
+# 條件：
+# a. 近一個月觀看預測比例pv達前30%
+# b. 排除問卷第三題回答沒意見、不需要、非常不需要的使用者
+# 欄位：帳號、暱稱、預測比例pv及全站佔比、問卷第一/三題答案
+# =================================================================================================
+
+create table actionlog._scale engine = myisam 
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201512
+where uri like '%predictgame.php?action=scale%'
+and time between subdate(now(),31) AND now()
+and userid <> '';
+
+insert ignore into actionlog._scale
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201611
+where uri like '%predictgame.php?action=scale%'
+and time between subdate(now(),31) AND now()
+and userid <> '';
+
+create table actionlog._scale_1 engine = myisam 
+SELECT userid, count(uri) as pv 
+FROM actionlog._scale
+group by userid;
+
+create table actionlog._scale_2 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._scale_1, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._scale_1) as ct;
+
+ALTER TABLE actionlog._scale_2 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._scale_3 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile 
+FROM actionlog._scale_2 a left join plsport_playsport.member b on a.userid = b.userid;
+
+# 匯入plsport_playsport.questionnaire_201511241806111888_answer
+
+create table actionlog._qu engine = myisam 
+SELECT * FROM plsport_playsport.questionnaire_201511241806111888_answer;
+
+    ALTER TABLE actionlog._qu CHANGE `1448359384` q1 VARCHAR(20);
+    ALTER TABLE actionlog._qu CHANGE `1448359545` q2 VARCHAR(20);
+	ALTER TABLE actionlog._qu convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._scale_4 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, b.q1, b.q2
+FROM actionlog._scale_3 a left join actionlog._qu b on a.userid = b.userid
+order by a.pv desc;
+
+update actionlog._scale_4 set q1 = '全站主推預測' where q1 = 1;
+update actionlog._scale_4 set q1 = '預測等級5以上' where q1 = 2;
+update actionlog._scale_4 set q1 = '月勝率60%以上' where q1 = 3;
+update actionlog._scale_4 set q1 = '全站月勝率前100名' where q1 = 4;
+update actionlog._scale_4 set q1 = '全站月勝率後100名' where q1 = 5;
+update actionlog._scale_4 set q1 = '都不需要' where q1 = 6;
+
+update actionlog._scale_4 set q2 = '非常需要' where q2 = 1;
+update actionlog._scale_4 set q2 = '需要' where q2 = 2;
+update actionlog._scale_4 set q2 = '沒意見' where q2 = 3;
+update actionlog._scale_4 set q2 = '不需要' where q2 = 4;
+update actionlog._scale_4 set q2 = '非常不需要' where q2 = 5;
+
+create table actionlog._scale_5 engine = myisam
+SELECT userid, nickname, pv, pv_percentile, IFNULL(q1,'-沒填問券-') as q1, IFNULL(q2,'-沒填問券-') as q2
+FROM actionlog._scale_4;
+
+create table actionlog._scale_6 engine = myisam
+SELECT * FROM actionlog._scale_5
+where q2 in ('非常需要','需要','-沒填問券-')
+and pv_percentile > 0.69;
+
+drop table if exists plsport_playsport._last_login;
+CREATE TABLE plsport_playsport._last_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+	ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._scale_7 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.q1, a.q2, date(b.signin_time) as signin_time
+FROM actionlog._scale_6 a left join plsport_playsport._last_login b on a.userid = b.userid;
+
+SELECT '帳號', '暱稱', '預測比例pv', '全站佔比', '第1題', '第3題', '最後一次登入' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_scale_7.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._scale_7);
+
+
+
+# =================================================================================================
 # http://redmine.playsport.cc/issues/829
-# [201511-C-6]購牌專區改版-消費者固定購買行為分析
+# [201511-C-6]
 # 說明
 # 了解何謂熟人殺手，以利熟人殺手購牌區建立
 # 
@@ -23053,11 +23152,13 @@ group by d;
 # 也順便看看以上7點因子的重要順序由高至低為何? (之後可因子重要性的高低來決定強化弱化的項目)
 # =================================================================================================
 
+# 完成的執行碼寫在research_customers_are_more_likely_to_buy_who_they_bought_before.py
+
 drop table if exists plsport_playsport._buyer_list;
 create table plsport_playsport._buyer_list engine = myisam
 SELECT a.id, a.buyerid, a.buy_date, a.buy_price, a.buy_allianceid, a.id_bought, b.sellerid, sale_price, b.promotion, b.analysis
 FROM plsport_playsport.predict_buyer a left join plsport_playsport.predict_seller b on a.id_bought = b.id
-where a.buy_date between subdate(now(),550) and now()
+where a.buy_date between subdate(now(),90) and now() #原本設定550天, 測試時改用90天
 and a.buy_price > 0
 order by a.id desc;
 
@@ -23073,6 +23174,21 @@ create table plsport_playsport._buyer_list_2 engine = myisam
 SELECT a.id, a.buyerid, a.buy_date, a.buy_price, a.buy_allianceid, a.id_bought, a.sellerid, a.sale_price, a.sale_description, a.sale_reminder, 
        b.be_killer_winp, b.is_stable, b.position, b.cons, b.mode, b.type, b.keep_win, b.recent_days, b.win, b.lose, b.winpercentage
 FROM plsport_playsport._buyer_list_1 a left join plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer;
+
+create table plsport_playsport._purchase_history engine = myisam
+select a.buyerid, a.d, a.sellerid, sum(a.sale_price) as sale_price
+from (
+	SELECT buyerid, date(buy_date) as d, sellerid, sale_price
+	FROM plsport_playsport._buyer_list_2) as a
+group by a.buyerid, a.d, a.sellerid;
+
+create table plsport_playsport._purchase_history_day_cumulatively engine = myisam
+SELECT max(d) as d, buyerid, sellerid, count(sellerid) as buy_count, sum(sale_price) as buy_total
+FROM plsport_playsport._purchase_history
+where d between '2014-06-28' and '2014-06-30'
+group by buyerid, sellerid;
+
+
 
 
 
