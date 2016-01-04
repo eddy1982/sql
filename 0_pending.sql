@@ -22760,7 +22760,36 @@ FROM actionlog._all_post_all_push_mobile_1);
 # d. 11、12月點選NBA隔日的次數
 # =================================================================================================
 
+
+# 2016-01-04 12:00
+# To Eddy：
+# 麻煩再做兩份名單
+# 1. 名單A
+# 條件：
+# 	a. 近兩個月NBA即時比分PV前50%
+# 	b. NBA即時比分賽事數據問卷第一題勾選傷兵名單或先發球員名單
+# 欄位：
+# 	a. 帳號
+# 	b. 暱稱
+# 	c. 近兩個月NBA即時比分pv及全站佔比
+# 	d. 近兩個月點選NBA隔日的次
+# 	c. 問卷第一題答案
+# 2. 名單B
+# 條件：
+# 	a. 近兩個月NBA即時比分PV前50%
+# 	b. 沒有回答NBA即時比分賽事數據問卷
+# 欄位：
+# 	a. 帳號
+# 	b. 暱稱
+# 	c. 近兩個月NBA即時比分pv及全站佔比
+# 	d. 近兩個月點選NBA隔日的次數
+
+
 create table actionlog._livescore engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201601
+where uri like '%/livescore.php%';
+insert ignore into actionlog._livescore
 SELECT userid, uri, time, platform_type 
 FROM actionlog.action_201512
 where uri like '%/livescore.php%';
@@ -22772,7 +22801,8 @@ where uri like '%/livescore.php%';
 create table actionlog._livescore_1 engine = myisam
 SELECT userid, uri, time, platform_type
 FROM actionlog._livescore
-where userid <> '';
+where userid <> ''
+and time between subdate(now(),62) AND now();
 
 update actionlog._livescore_1 set uri = '/livescore.php?aid=3' where  uri = '/livescore.php';
 
@@ -22836,7 +22866,7 @@ FROM actionlog._livescore_6_pv_1 a left join actionlog._livescore_6_pv_nextday_1
 where a.pv_percentile > 0.49;
 
 create table actionlog._livescore_8 engine = myisam 
-SELECT a.userid, b.nickname, a.pv, a.pv_percentile, b.pv_nextday, b.pv_nextday_percentile
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile
 FROM actionlog._livescore_7 a left join plsport_playsport.member b on a.userid = b.userid;
 
 create table plsport_playsport._qu engine = myisam
@@ -22846,34 +22876,65 @@ SELECT * FROM plsport_playsport.questionnaire_201512161125598046_answer;
     ALTER TABLE plsport_playsport._qu CHANGE `1450412605` q2 VARCHAR(20);
 
 create table plsport_playsport._qu_1 engine = myisam
-select a.userid, (a.w1+a.w2+a.w3+a.w4) as w, a.q1
+select a.userid, a.w1, a.w2, a.w3, a.w4, a.q1
 from (
     SELECT userid, (case when (locate('1',q1)>0) then 1 else 0 end) as w1,
                    (case when (locate('2',q1)>0) then 1 else 0 end) as w2,
                    (case when (locate('3',q1)>0) then 1 else 0 end) as w3,
                    (case when (locate('4',q1)>0) then 1 else 0 end) as w4, q1
-    FROM plsport_playsport._qu) as a;
+    FROM plsport_playsport._qu) as a
+where a.w1+a.w2>0;
 
 create table actionlog._livescore_9 engine = myisam 
-SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, b.q1
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, b.w1, b.w2
 FROM actionlog._livescore_8 a left join plsport_playsport._qu_1 b on a.userid = b.userid;
+
+create table actionlog._livescore_9_1 engine = myisam 
+SELECT userid, nickname, pv, pv_percentile, pv_nextday, pv_nextday_percentile, w1, w2, 
+       (case when (w1=1 and w2=0) then '傷兵名單'
+			 when (w1=0 and w2=1) then '先發球員名單'
+             when (w1=1 and w2=1) then '2個都有勾選' else '' end) as w
+FROM actionlog._livescore_9;
+
 
         CREATE TABLE plsport_playsport._last_login engine = myisam
         SELECT userid, max(signin_time) as signin_time 
         FROM plsport_playsport.member_signin_log_archive
         GROUP BY userid;
 
-create table actionlog._livescore_10 engine = myisam 
-SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, a.q1, date(b.signin_time) as signin_time
-FROM actionlog._livescore_9 a left join plsport_playsport._last_login b on a.userid = b.userid
-where a.pv_nextday_percentile > 0.69
-order by a.pv_nextday desc, a.pv desc;
+ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
 
-SELECT 'userid', 'nickname', 'pv', 'pv_percentile', 'pv_nextday', 'pv_nextday_percentile', 'q1', 'signin_time' union (
+create table actionlog._livescore_9_1_a engine = myisam 
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, a.w, date(b.signin_time) as signin_time
+FROM actionlog._livescore_9_1 a left join plsport_playsport._last_login b on a.userid = b.userid
+where w <> ''
+order by pv_nextday desc, pv desc;
+
+create table actionlog._livescore_9_1_b engine = myisam 
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, a.w, date(b.signin_time) as signin_time
+FROM actionlog._livescore_9_1 a left join plsport_playsport._last_login b on a.userid = b.userid
+where w = ''
+order by pv_nextday desc, pv desc;
+
+# create table actionlog._livescore_10 engine = myisam 
+# SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.pv_nextday, a.pv_nextday_percentile, a.q1, date(b.signin_time) as signin_time
+# FROM actionlog._livescore_9 a left join plsport_playsport._last_login b on a.userid = b.userid
+# where a.pv_nextday_percentile > 0.69
+# order by a.pv_nextday desc, a.pv desc;
+
+
+SELECT 'userid', '暱稱', 'NBA即時比分pv', '全站佔比', '點選NBA隔日的次數', '全站佔比', '問券選項至少要有1或2', '最後登入' union (
 SELECT *
-into outfile 'C:/Users/eddy/Desktop/_livescore_10.txt'
+into outfile 'C:/Users/eddy/Desktop/_livescore_9_1_a.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM actionlog._livescore_10);
+FROM actionlog._livescore_9_1_a);
+
+SELECT 'userid', '暱稱', 'NBA即時比分pv', '全站佔比', '點選NBA隔日的次數', '全站佔比', '沒填過問券', '最後登入' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_livescore_9_1_b.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._livescore_9_1_b);
 
 
 # =================================================================================================
@@ -23029,7 +23090,6 @@ group by d;
 
 
 # =================================================================================================
-# 產品專案 #533: [201510-B] 進階預測比例
 # [201510-B-8] 進階預測比例 - MVP測試名單
 # http://redmine.playsport.cc/issues/883
 # 內容 1. MVP測試名單
@@ -23048,7 +23108,7 @@ and userid <> '';
 
 insert ignore into actionlog._scale
 SELECT userid, uri, time, platform_type
-FROM actionlog.action_201611
+FROM actionlog.action_201601
 where uri like '%predictgame.php?action=scale%'
 and time between subdate(now(),31) AND now()
 and userid <> '';
@@ -23117,7 +23177,8 @@ GROUP BY userid;
 
 create table actionlog._scale_7 engine = myisam
 SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.q1, a.q2, date(b.signin_time) as signin_time
-FROM actionlog._scale_6 a left join plsport_playsport._last_login b on a.userid = b.userid;
+FROM actionlog._scale_6 a left join plsport_playsport._last_login b on a.userid = b.userid
+order by a.pv desc;
 
 SELECT '帳號', '暱稱', '預測比例pv', '全站佔比', '第1題', '第3題', '最後一次登入' union (
 SELECT *

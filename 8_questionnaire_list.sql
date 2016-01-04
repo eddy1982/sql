@@ -289,7 +289,7 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2015-11-01' and '2015-11-30') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2015-12-01' and '2015-12-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
 
         ALTER TABLE _signin_list ADD INDEX (`userid`); 
@@ -338,7 +338,7 @@ ALTER TABLE questionnaire._list2 CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARAC
 
 create table questionnaire._list_full engine = myisam 
 SELECT b.userid # 完成的名單, 使用member資料表的userid, 要不然問卷系統不能判斷大小寫的差異, 此為問券的bug
-FROM questionnaire._list1 a left join plsport_playsport.member b on a.userid = b.userid;
+FROM questionnaire._list2 a left join plsport_playsport.member b on a.userid = b.userid;
 
 # 先排除掉工友(有在定期做滿意度問券的工友們)
 delete from questionnaire._list_full where userid = 'ydasam';
