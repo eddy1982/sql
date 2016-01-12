@@ -21570,10 +21570,14 @@ where (a.subject like '%挑戰%') or (a.subject like '%串關%');
 # - 撈取時間:近一個月
 # - 需求欄位:暱稱、ID、討論區PV(前30%)、個人頁PV(前30%)、購買預測金額、裝置使用比列、最後登入時間，排除問卷選擇為非常不需要與不需要
 
+# TO EDDY
+# 麻煩重新提供名單，1/12再跑資料​，謝謝
+# - 撈取時間:近一個月
+# - 需求欄位:暱稱、ID、討論區PV(前30%)、個人頁PV(前30%)、購買預測金額、裝置使用比列、最後登入時間，排除問卷選擇為非常不需要與不需要
 
 create table actionlog._pv engine = myisam
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201511
+FROM actionlog.action_201601
 where time between subdate(now(),32) AND now()
 and ((uri like '%forumdetail.php%') or (uri like '%visit_member.php%'))
 and userid <> '';
@@ -22528,6 +22532,11 @@ SELECT userid, uri, time, platform_type
 FROM actionlog.action_201512
 where userid <> ''
 and uri like '%/forumdetail.php%';
+insert ignore into actionlog._forumdetail
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201601
+where userid <> ''
+and uri like '%/forumdetail.php%';
 
 create table actionlog._forumdetail_1 engine = myisam
 SELECT * FROM actionlog._forumdetail
@@ -22766,23 +22775,23 @@ FROM actionlog._all_post_all_push_mobile_1);
 # 麻煩再做兩份名單
 # 1. 名單A
 # 條件：
-# 	a. 近兩個月NBA即時比分PV前50%
-# 	b. NBA即時比分賽事數據問卷第一題勾選傷兵名單或先發球員名單
+#   a. 近兩個月NBA即時比分PV前50%
+#   b. NBA即時比分賽事數據問卷第一題勾選傷兵名單或先發球員名單
 # 欄位：
-# 	a. 帳號
-# 	b. 暱稱
-# 	c. 近兩個月NBA即時比分pv及全站佔比
-# 	d. 近兩個月點選NBA隔日的次
-# 	c. 問卷第一題答案
+#   a. 帳號
+#   b. 暱稱
+#   c. 近兩個月NBA即時比分pv及全站佔比
+#   d. 近兩個月點選NBA隔日的次
+#   c. 問卷第一題答案
 # 2. 名單B
 # 條件：
-# 	a. 近兩個月NBA即時比分PV前50%
-# 	b. 沒有回答NBA即時比分賽事數據問卷
+#   a. 近兩個月NBA即時比分PV前50%
+#   b. 沒有回答NBA即時比分賽事數據問卷
 # 欄位：
-# 	a. 帳號
-# 	b. 暱稱
-# 	c. 近兩個月NBA即時比分pv及全站佔比
-# 	d. 近兩個月點選NBA隔日的次數
+#   a. 帳號
+#   b. 暱稱
+#   c. 近兩個月NBA即時比分pv及全站佔比
+#   d. 近兩個月點選NBA隔日的次數
 
 
 create table actionlog._livescore engine = myisam
@@ -22892,7 +22901,7 @@ FROM actionlog._livescore_8 a left join plsport_playsport._qu_1 b on a.userid = 
 create table actionlog._livescore_9_1 engine = myisam 
 SELECT userid, nickname, pv, pv_percentile, pv_nextday, pv_nextday_percentile, w1, w2, 
        (case when (w1=1 and w2=0) then '傷兵名單'
-			 when (w1=0 and w2=1) then '先發球員名單'
+             when (w1=0 and w2=1) then '先發球員名單'
              when (w1=1 and w2=1) then '2個都有勾選' else '' end) as w
 FROM actionlog._livescore_9;
 
@@ -22922,7 +22931,6 @@ order by pv_nextday desc, pv desc;
 # FROM actionlog._livescore_9 a left join plsport_playsport._last_login b on a.userid = b.userid
 # where a.pv_nextday_percentile > 0.69
 # order by a.pv_nextday desc, a.pv desc;
-
 
 SELECT 'userid', '暱稱', 'NBA即時比分pv', '全站佔比', '點選NBA隔日的次數', '全站佔比', '問券選項至少要有1或2', '最後登入' union (
 SELECT *
@@ -23050,7 +23058,7 @@ FROM actionlog._friend_6);
 # 行銷企劃 #26: 促進討論區紅人銷售
 # 促進討論區紅人銷售-新增「最多推文」文章排序，使用分析
 # 是由 黃 雅雅 於 14 天 前加入. 於 12 天 前更新.
-# 被分派者:	黃 Eddy
+# 被分派者: 黃 Eddy
 # 
 # 根據我們討論的，一個月觀察一次使用結果，
 # 此功能12/17上線， 設定的追蹤碼為 s=p，
@@ -23138,7 +23146,7 @@ SELECT * FROM plsport_playsport.questionnaire_201511241806111888_answer;
 
     ALTER TABLE actionlog._qu CHANGE `1448359384` q1 VARCHAR(20);
     ALTER TABLE actionlog._qu CHANGE `1448359545` q2 VARCHAR(20);
-	ALTER TABLE actionlog._qu convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE actionlog._qu convert to character set utf8 collate utf8_general_ci;
 
 create table actionlog._scale_4 engine = myisam
 SELECT a.userid, a.nickname, a.pv, a.pv_percentile, b.q1, b.q2
@@ -23173,7 +23181,7 @@ SELECT userid, max(signin_time) as signin_time
 FROM plsport_playsport.member_signin_log_archive
 GROUP BY userid;
 
-	ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
 
 create table actionlog._scale_7 engine = myisam
 SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.q1, a.q2, date(b.signin_time) as signin_time
@@ -23239,8 +23247,8 @@ FROM plsport_playsport._buyer_list_1 a left join plsport_playsport.predict_buyer
 create table plsport_playsport._purchase_history engine = myisam
 select a.buyerid, a.d, a.sellerid, sum(a.sale_price) as sale_price
 from (
-	SELECT buyerid, date(buy_date) as d, sellerid, sale_price
-	FROM plsport_playsport._buyer_list_2) as a
+    SELECT buyerid, date(buy_date) as d, sellerid, sale_price
+    FROM plsport_playsport._buyer_list_2) as a
 group by a.buyerid, a.d, a.sellerid;
 
 create table plsport_playsport._purchase_history_day_cumulatively engine = myisam
@@ -23249,7 +23257,64 @@ FROM plsport_playsport._purchase_history
 where d between '2014-06-28' and '2014-06-30'
 group by buyerid, sellerid;
 
+drop table if exists plsport_playsport._buyer_list_3;
+create table plsport_playsport._buyer_list_3 engine = myisam
+SELECT a.id, a.buyerid, a.buy_date, date(a.buy_date) as buy_d, a.buy_price, a.buy_allianceid, a.id_bought, a.sellerid, a.sale_price, a.sale_description, 
+       a.sale_reminder, a.be_killer_winp, a.is_stable, a.position, a.cons, a.mode, a.type, a.keep_win, a.recent_days, a.win, a.lose, a.winpercentage
+FROM plsport_playsport._buyer_list_2 as a;
 
+ALTER TABLE plsport_playsport._buyer_list_3 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._buyer_list_3 ADD INDEX (`buyerid`,`buy_d`,`sellerid`);
+ALTER TABLE plsport_playsport._purchase_history_day_cumulatively_1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._purchase_history_day_cumulatively_1 ADD INDEX (`buyerid`,`d`,`sellerid`);
+
+drop table if exists plsport_playsport._buyer_list_4;
+create table plsport_playsport._buyer_list_4 engine = myisam
+SELECT a.id, a.buyerid, a.buy_date, a.buy_d, a.buy_price, a.buy_allianceid, a.id_bought, a.sellerid, a.sale_price, a.sale_description, 
+       a.sale_reminder, a.be_killer_winp, a.is_stable, a.position, a.cons, a.mode, a.type, a.keep_win, a.recent_days, a.win, a.lose, a.winpercentage,
+       b.buy_count, b.buy_total
+FROM plsport_playsport._buyer_list_3 as a left join plsport_playsport._purchase_history_day_cumulatively_1 as b 
+on a.buyerid = b.buyerid and a.buy_d = b.d and a.sellerid = b.sellerid;
+
+SELECT id, buy_date, buy_d, buyerid, sellerid, price, alli, sale_desc, sale_notify, is_stable, be_killer_winp, 
+       hist_buycount, hist_buytotal, position, type, keep_win, betcount, winp,
+       (case when (betcount<=5) then 'v5' 
+             when (betcount>4 and betcount<=10) then 'v10' 
+             when (betcount>10 and betcount<=15) then 'v15'
+             when (betcount>15 and betcount<=20) then 'v20'
+             when (betcount>20 and betcount<=25) then 'v25'
+             when (betcount>25 and betcount<=30) then 'v30'
+             when (betcount>30 and betcount<=40) then 'v40'
+             when (betcount>30 and betcount<=50) then 'v50' else 'v50up' end) as new_betcount,
+       (case when (winp<=65) then 'w65'
+             when (winp>65 and winp<=70) then 'w70'
+             when (winp>70 and winp<=75) then 'w70'
+             when (winp>75 and winp<=80) then 'w70'
+             when (winp>80 and winp<=85) then 'w70'
+             when (winp>85 and winp<=90) then 'w70' else 'w09up' end) as new_winp
+FROM plsport_playsport._buyer_list_5;
+
+create table plsport_playsport._buyer_list_7_1 engine = myisam
+select a.buyerid, sum(isbuy1sttime) as isbuy1sttime, sum(a.sale_desc) as sale_desc, sum(a.sale_notify) as sale_notify,
+                  sum(a.is_stable) as is_stable, sum(a.t1) as t1, sum(a.t2) as t2, sum(a.t3) as t3, sum(a.t4) as t4, sum(a.t5) as t5,
+                  sum(a.t6) as t6, sum(a.t7) as t7, sum(a.t8) as t8, sum(a.t9) as t9,
+                  sum(a.winp70) as winp70, sum(a.winp75) as winp75, sum(a.winp80) as winp80
+from (
+    SELECT buyerid, (case when (hist_buycount>1) then 1 else 0 end) as isbuy1sttime, sale_desc, sale_notify, is_stable,
+                    (case when (type = 1 ) then 1 else 0 end) as t1,
+                    (case when (type = 2 ) then 1 else 0 end) as t2,
+                    (case when (type = 3 ) then 1 else 0 end) as t3,
+                    (case when (type = 4 ) then 1 else 0 end) as t4,
+                    (case when (type = 5 ) then 1 else 0 end) as t5,
+                    (case when (type = 6 ) then 1 else 0 end) as t6,
+                    (case when (type = 7 ) then 1 else 0 end) as t7,
+                    (case when (type = 8 ) then 1 else 0 end) as t8,
+                    (case when (type = 9 ) then 1 else 0 end) as t9,
+                    (case when (be_killer_winp >= 70) then 1 else 0 end) as winp70,
+                    (case when (be_killer_winp >= 75) then 1 else 0 end) as winp75,
+                    (case when (be_killer_winp >= 80) then 1 else 0 end) as winp80
+    FROM plsport_playsport._buyer_list_7) as a
+group by a.buyerid;
 
 
 
