@@ -12667,13 +12667,14 @@ FROM plsport_playsport._order_data_check_2_for_r);
 # 第三批上線時間 2015/4/10~6/1
 # =================================================================================================
 # 先匯入forumcontent
+
+#  是由 文 文工友 於 約 2 個月 前更新
+# 下次要麻煩您撈取11/13-1/13的貼圖使用狀況
            
 CREATE TABLE plsport_playsport._forumcontent engine = myisam
 SELECT * 
 FROM plsport_playsport.forumcontent
-WHERE postdate between '2015-09-03 00:00:00' AND '2015-11-03 23:59:59';
-# WHERE postdate between '2015-02-03 00:00:00' AND now();
-# WHERE postdate between '2014-10-28 00:00:00' AND now();
+WHERE postdate between '2015-11-13 00:00:00' AND '2016-01-13 23:59:59';
 
 CREATE TABLE plsport_playsport._forumcontent_1 engine = myisam
 SELECT subjectid, userid, content, postdate 
@@ -12714,14 +12715,18 @@ SELECT subjectid, userid, content, postdate,
        (case when (locate('/includes/images/smiley/playsport31.png',content)>0) then 1 else 0 end) as p31,
        (case when (locate('/includes/images/smiley/playsport32.png',content)>0) then 1 else 0 end) as p32,
        (case when (locate('/includes/images/smiley/playsport33.png',content)>0) then 1 else 0 end) as p33,
-       (case when (locate('/includes/images/smiley/playsport34.png',content)>0) then 1 else 0 end) as p34
+       (case when (locate('/includes/images/smiley/playsport34.png',content)>0) then 1 else 0 end) as p34,
+       (case when (locate('/includes/images/smiley/playsport35.png',content)>0) then 1 else 0 end) as p35, #獲利之王
+	   (case when (locate('/includes/images/smiley/playsport36.png',content)>0) then 1 else 0 end) as p36,
+       (case when (locate('/includes/images/smiley/playsport37.png',content)>0) then 1 else 0 end) as p37,
+       (case when (locate('/includes/images/smiley/playsport38.png',content)>0) then 1 else 0 end) as p38  #預測達人
 FROM plsport_playsport._forumcontent_1;
 
 CREATE TABLE plsport_playsport._forumcontent_2_all_icon_stat engine = myisam
 SELECT sum(p01), sum(p02), sum(p03), sum(p04), sum(p05), sum(p06), sum(p07), sum(p08), sum(p09), sum(p10), 
        sum(p11), sum(p12), sum(p13), sum(p14), sum(p15), sum(p16), sum(p17), sum(p18), sum(p19), sum(p20), 
        sum(p21), sum(p22), sum(p23), sum(p24), sum(p25), sum(p26), sum(p27), sum(p28), sum(p29), sum(p30),
-       sum(p31), sum(p32), sum(p33), sum(p34)
+       sum(p31), sum(p32), sum(p33), sum(p34), sum(p35), sum(p36), sum(p37), sum(p38)
 FROM plsport_playsport._forumcontent_2;
 
 CREATE TABLE plsport_playsport._forumcontent_1_1 engine = myisam
@@ -21106,7 +21111,7 @@ where sellconfirm = 1
 and createon between '2015-10-29 12:00:00' and '2015-10-30 12:00:00';
 
 
-# ＴＯ eddy:
+# to eddy:
 # 
 # 麻煩撈取以下更細的資料，以利我們做後續檢討改進。
 # 
@@ -21559,7 +21564,7 @@ where (a.subject like '%挑戰%') or (a.subject like '%串關%');
 # 狀態:   新建立 開始日期:   2015-11-26
 # 
 # 說明 提供MVP測試名單
-# 內容  
+# 內容
 # - 撈取時間:近三個月
 # - 需求欄位:暱稱、ID、討論區PV(前50%)、個人頁PV(前50%)、購買預測金額、裝置使用比列、最後登入時間
 # =================================================================================================
@@ -23075,25 +23080,35 @@ create table actionlog._s_r engine = myisam
 SELECT * FROM actionlog.action_201512
 where uri like '%s=r%' ; # 最新回覆
 
+insert ignore into actionlog._s_p
+SELECT * FROM actionlog.action_201601
+where uri like '%s=p%' ; # 最多推文
+insert ignore into actionlog._s_a
+SELECT * FROM actionlog.action_201601
+where uri like '%s=a%' ; # 最新文章
+insert ignore into actionlog._s_r
+SELECT * FROM actionlog.action_201601
+where uri like '%s=r%' ; # 最新回覆
+
 create table actionlog._s_p_1 engine = myisam
-SELECT id, userid, date(time) as d 
+SELECT id, userid, date(time) as d
 FROM actionlog._s_p;
 create table actionlog._s_a_1 engine = myisam
-SELECT id, userid, date(time) as d 
+SELECT id, userid, date(time) as d
 FROM actionlog._s_a;
 create table actionlog._s_r_1 engine = myisam
-SELECT id, userid, date(time) as d 
+SELECT id, userid, date(time) as d
 FROM actionlog._s_r;
 
 SELECT d, count(id) as c 
 FROM actionlog._s_p_1
-group by d;
+group by d;# 最多推文
 SELECT d, count(id) as c 
 FROM actionlog._s_a_1
-group by d;
+group by d;# 最新文章
 SELECT d, count(id) as c 
 FROM actionlog._s_r_1
-group by d;
+group by d;# 最新回覆
 
 
 
