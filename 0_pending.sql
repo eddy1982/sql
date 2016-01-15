@@ -12717,7 +12717,7 @@ SELECT subjectid, userid, content, postdate,
        (case when (locate('/includes/images/smiley/playsport33.png',content)>0) then 1 else 0 end) as p33,
        (case when (locate('/includes/images/smiley/playsport34.png',content)>0) then 1 else 0 end) as p34,
        (case when (locate('/includes/images/smiley/playsport35.png',content)>0) then 1 else 0 end) as p35, #獲利之王
-	   (case when (locate('/includes/images/smiley/playsport36.png',content)>0) then 1 else 0 end) as p36,
+       (case when (locate('/includes/images/smiley/playsport36.png',content)>0) then 1 else 0 end) as p36,
        (case when (locate('/includes/images/smiley/playsport37.png',content)>0) then 1 else 0 end) as p37,
        (case when (locate('/includes/images/smiley/playsport38.png',content)>0) then 1 else 0 end) as p38  #預測達人
 FROM plsport_playsport._forumcontent_1;
@@ -12857,7 +12857,6 @@ SELECT userid, uri, time, (case when (platform_type = 1) then 'PC' else 'mobile'
 FROM actionlog._livescore
 WHERE time between subdate(now(),62) AND now();
 
-
 CREATE TABLE actionlog._livescore_2 engine = myisam
 SELECT userid, uri, (case when (locate('aid=',uri))=0 then 0 else substr(uri,locate('aid=',uri)+4,length(uri)) end) as m, time, platform 
 FROM actionlog._livescore_1;
@@ -12942,7 +12941,6 @@ FROM (
               ORDER BY nextday_pv DESC) as dt,
              (SELECT count(distinct userid) as cnt FROM actionlog._livescore_nextday_4) as ct;
 
-
 ALTER TABLE plsport_playsport._livescore_nextday_list convert to character SET utf8 collate utf8_general_ci;
 ALTER TABLE plsport_playsport._device_usage_1 convert to character SET utf8 collate utf8_general_ci;
 ALTER TABLE plsport_playsport._last_signin convert to character SET utf8 collate utf8_general_ci;
@@ -12987,7 +12985,6 @@ SELECT *
 INTO outfile 'C:/Users/1-7_ASUS/Desktop/_list_6.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._list_6);
-
 
 
 # =================================================================================================
@@ -23331,5 +23328,144 @@ from (
     FROM plsport_playsport._buyer_list_7) as a
 group by a.buyerid;
 
+
+# =================================================================================================
+# http://redmine.playsport.cc/issues/986
+# 產品專案 #852: [201512-D]明燈改版
+# [201512-D-3]明燈改版-站上明燈使用狀況
+# 是由 郭 靜怡 於 1 分鐘 前加入.
+# 開始日期: 2016-01-15
+# 了解目前站上明燈的使用狀況
+# - 全站明燈使用比例
+# - 消費會員使用比例
+# - 時間區間：近三個月
+# =================================================================================================
+
+create table actionlog._friend engine = myisam
+SELECT * FROM actionlog.action_201601
+where uri like '%visit_member.php?action=friend%'
+and time between subdate(now(),90) and now();
+insert ignore into actionlog._friend
+SELECT * FROM actionlog.action_201512
+where uri like '%visit_member.php?action=friend%'
+and time between subdate(now(),90) and now();
+insert ignore into actionlog._friend
+SELECT * FROM actionlog.action_201511
+where uri like '%visit_member.php?action=friend%'
+and time between subdate(now(),90) and now();
+insert ignore into actionlog._friend
+SELECT * FROM actionlog.action_201510
+where uri like '%visit_member.php?action=friend%'
+and time between subdate(now(),90) and now();
+
+create table actionlog._friend_1 engine = myisam
+SELECT userid, uri, date(time) as d, platform_type 
+FROM actionlog._friend
+where userid <> '';
+
+update actionlog._friend_1 set platform_type = 1 where platform_type = 3;
+
+create table actionlog._signin engine = myisam
+SELECT userid, date(signin_time) as signin 
+FROM plsport_playsport.member_signin_log_archive
+where signin_time between subdate(now(),90) and now();
+
+# 每天登入人數
+select a.signin, count(a.userid) as c
+from (
+    SELECT userid, signin 
+    FROM actionlog._signin
+    group by userid, signin) as a
+group by a.signin;
+
+# 每天使用明燈的人數
+select a.d, count(a.userid) as c
+from (
+    SELECT userid, d 
+    FROM actionlog._friend_1
+    where platform_type in (1,2)
+    group by userid, d) as a
+group by a.d;
+
+create table actionlog._who_has_spent engine = myisam
+select a.userid, sum(a.amount) as spent
+from (
+    SELECT userid, amount 
+    FROM plsport_playsport.pcash_log
+    where payed = 1 and type = 1
+    and date between subdate(now(),90) and now()) as a
+group by a.userid;
+
+        ALTER TABLE actionlog._who_has_spent convert to character set utf8 collate utf8_general_ci;
+        ALTER TABLE actionlog._who_has_spent ADD INDEX (`userid`);
+        ALTER TABLE actionlog._friend_1 convert to character set utf8 collate utf8_general_ci;
+        
+# 每天使用明燈的人數, 而且也有買牌
+select c.d, count(c.userid) as c
+from (
+    SELECT a.userid, a.d 
+    FROM actionlog._friend_1 a inner join actionlog._who_has_spent b on a.userid = b.userid
+    where platform_type in (1,2)
+    group by userid, d) as c
+group by c.d;
+
+# 近3個月內有多少人使用明燈, 而且也有買牌 
+select count(b.userid) as c
+from (
+    SELECT a.userid 
+    FROM actionlog._friend_1 a inner join actionlog._who_has_spent b on a.userid = b.userid
+    group by a.userid) as b;
+
+create table actionlog._who_has_spent_everyday engine = myisam
+select a.userid, a.d, sum(a.amount) as spent
+from (
+    SELECT userid, amount, date(date) as d
+    FROM plsport_playsport.pcash_log
+    where payed = 1 and type = 1
+    and date between subdate(now(),90) and now()) as a
+group by a.userid, a.d;
+
+# 每天消費人數
+SELECT d, count(userid) as c 
+FROM actionlog._who_has_spent_everyday
+group by d;
+
+# 全站有多少人登入
+select count(a.userid)
+from (
+    SELECT userid  
+    FROM actionlog._signin
+    group by userid) as a;
+
+# 近3個月內有多少人使用明燈    
+select count(a.userid) as c
+from (
+    SELECT userid 
+    FROM actionlog._friend_1
+    group by userid) as a;
+
+# 近3個月內有多少人消費
+SELECT count(userid) as c 
+FROM actionlog._who_has_spent;
+
+# 近3個月內有多少人使用明燈    
+select count(c.userid) as c
+from (
+    SELECT a.userid 
+    FROM actionlog._friend_1 a inner join actionlog._who_has_spent b on a.userid = b.userid
+    group by a.userid) as c;
+
+
+
+
+
+
+
+
+
+
+create table actionlog._refund engine = myisam
+SELECT * FROM actionlog.action_201601
+where uri like '%visit_member_refund%' or uri like '%shopping_list_dropdown_menu%';
 
 
