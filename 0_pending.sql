@@ -23099,13 +23099,13 @@ FROM actionlog._s_r;
 
 SELECT d, count(id) as c 
 FROM actionlog._s_p_1
-group by d;# 最多推文
+group by d; # 最多推文
 SELECT d, count(id) as c 
 FROM actionlog._s_a_1
-group by d;# 最新文章
+group by d; # 最新文章
 SELECT d, count(id) as c 
 FROM actionlog._s_r_1
-group by d;# 最新回覆
+group by d; # 最新回覆
 
 
 
@@ -23457,15 +23457,138 @@ from (
 
 
 
+# =================================================================================================
+# TO Eddy 
+# http://redmine.playsport.cc/issues/983
+# 麻煩您分析加強補卷說明的使用情況
+# 主要有五個地方可以點擊
+# 1.個人頁預測表格下方，購買後補券前的提醒，這邊為常見問題的連結
+# 2.個人頁預測表格下方，補券/退卷/退幣後的提醒，這邊為購牌清單頁的連結
+# 3.購牌清單按鈕下方的通知
+# 3-1購牌清單的這個按鈕(符合補券/退券/退幣的條件下,使用者去click購牌清單的話,就記錄)
+# 4.購牌清單按鈕下的看更多清單
+# 5.購牌清單中的殺手要埋關於購買的連結
+# 
+# 目的是想要知道這個功能大家使用的狀況
+# 時間：每一個月分析一次，共三個月後做總結論
+# =================================================================================================
 
 
-
-
-
-
-
+# link的點擊狀況
 create table actionlog._refund engine = myisam
 SELECT * FROM actionlog.action_201601
 where uri like '%visit_member_refund%' or uri like '%shopping_list_dropdown_menu%';
+
+SELECT uri, count(id)  
+FROM actionlog._refund
+group by uri;
+
+# userAction的記錄情況
+SELECT * FROM userActions.events
+where name like '%ShoppingListDropdownMenuBTN%'
+order by id desc;
+
+# 購牌記錄
+create table actionlog._rp_SPL engine = myisam
+SELECT * FROM actionlog.action_201601
+where uri like '%rp=SPL%';
+
+
+
+# =================================================================================================
+# http://redmine.playsport.cc/issues/784#change-3584
+# 殺手販售期間勝率未達標準禁售影響研究
+# TO eddy:
+# 麻煩協助分析:
+# 殺手販售期間勝率未達50% or 40%時，給予禁售，直到勝率回到 40% or 50%，才可繼續販售，
+# 統計這段時間內的損失，對業績的影響是多少。
+# 
+# 聯盟:
+# 1.MLB 、日棒、韓棒:撈取期間 2015/4~11(完整賽季)
+# 2.NBA、韓籃、NHL、歐籃:撈取期間 2014/9~2015 5(完整賽季)
+# 麻煩再回覆何時可以完成，感謝。
+# =================================================================================================
+
+# plsport_playsport.medal_fire 莊殺
+# plsport_playsport.medal_fire_vols 莊殺期數
+# plsport_playsport.single_killer 單殺
+# plsport_playsport.single_killer_vols 單殺期數
+# plsport_playsport.prediction 預測內容
+# plsport_playsport.predict_seller 殺手販售計錄
+
+create table prediction._candy16849_data engine = myisam
+SELECT userid, nickname, allianceid, gametype, mode, d, count(d) as c
+FROM prediction._prediction_all_2015_2016_edited_2
+where userid = 'candy16849' and allianceid = 92 and mode = 2
+group by userid, allianceid, gametype, mode, d;
+
+ALTER TABLE prediction._candy16849_data ADD id INT PRIMARY KEY AUTO_INCREMENT;
+
+select c.userid, c.nickname, c.allianceid, c.gametype, c.mode, c.d, c.d1, c.c, COALESCE(d.c,0) as win_c
+from (
+	SELECT a.userid, a.nickname, a.allianceid, a.gametype, a.mode, a.d, b.d as d1, a.c 
+	FROM prediction._candy16849_data a left join 
+	(SELECT userid, nickname, allianceid, gametype, mode, d, c, id, id-1 as id1 
+	 FROM prediction._candy16849_data) b on a.id = b.id1) as c left join 
+		(SELECT userid, nickname, allianceid, gametype, mode, d, count(d) as c
+		 FROM prediction._prediction_all_2015_2016_edited_2
+		 where userid = 'candy16849' and allianceid = 92 and mode = 2 and winner = 1
+		 group by userid, allianceid, gametype, mode, d) as d on c.d = d.d;
+ 
+SELECT userid, nickname, allianceid, gametype, mode, d, count(d) as c
+FROM prediction._prediction_all_2015_2016_edited_2
+where userid = 'candy16849' and allianceid = 92 and mode = 2 and winner = 1
+group by userid, allianceid, gametype, mode, d;
+
+SELECT userid, nickname, allianceid, gametype, winner, mode, d
+FROM prediction._prediction_all_2015_2016_edited_2
+where userid = 'candy16849' and allianceid = 92 and mode = 2 
+order by d desc;
+
+# 莊殺販售當天, 的販售資格是那一期
+SELECT max(vol) as vol, userid, nickname, allianceid, alliancename, mode, sell_day
+FROM plsport_playsport._medal_fire_temp_all
+where userid = 'm0604588'
+group by userid, allianceid, mode, sell_day
+order by sell_day;
+
+
+
+# =================================================================================================
+# 產品專案 #852: [201512-D]明燈改版
+# http://redmine.playsport.cc/issues/1019
+# [201512-D-4]明燈改版-各頁PV了解
+# 
+# 了解帳戶、明燈、設定等頁的PV狀況
+# 
+# - 提供帳戶、明燈、設定等頁的PV
+# - 時間區間：近一個月
+# =================================================================================================
+
+
+create table actionlog._temp_log engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201601
+where userid <> ''
+and uri like '%member_avatar%' or uri like '%mailbox_pcash%' or uri like '%visit_member.php?action=friend%'
+and time between subdate(now(),32) and now();
+
+insert ignore into actionlog._temp_log
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201512
+where userid <> ''
+and uri like '%member_avatar%' or uri like '%mailbox_pcash%' or uri like '%visit_member.php?action=friend%'
+and time between subdate(now(),32) and now();
+
+update actionlog._temp_log set platform_type = 1 where platform_type = 3;
+
+select a.pg, a.platform_type, count(a.userid) as c
+from (
+	SELECT userid, substr(uri,1,17) as pg, time, platform_type 
+	FROM actionlog._temp_log) as a
+group by a.pg, a.platform_type;
+
+
+
 
 
