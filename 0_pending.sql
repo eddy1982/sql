@@ -23565,7 +23565,6 @@ order by sell_day;
 # - 時間區間：近一個月
 # =================================================================================================
 
-
 create table actionlog._temp_log engine = myisam
 SELECT userid, uri, time, platform_type 
 FROM actionlog.action_201601
@@ -23588,6 +23587,208 @@ from (
 	FROM actionlog._temp_log) as a
 group by a.pg, a.platform_type;
 
+
+
+# =================================================================================================
+# 產品專案 #533: [201510-B] 進階預測比例
+# [201510-B-9] 進階預測比例 - A/B testing名單與分析
+# http://redmine.playsport.cc/issues/979
+# 2. 報告1 ( 1/27完成)
+# - 實驗組與對照組業績差異
+# - 各分類點選次數
+# - 問卷分析 ( 剃除沒有用其他分類的使用者)
+# 
+# 3. 報告2 ( 2/16完成)
+# - 實驗組與對照組業績差異
+# - 各分類點選次數
+# =================================================================================================
+
+# 需匯入最新的問券內容:
+# plsport_playsport.questionnaire_201601211437534180_answer
+
+create table plsport_playsport._qu engine = myisam
+SELECT * 
+FROM plsport_playsport.questionnaire_201601211437534180_answer;
+
+ALTER TABLE plsport_playsport._qu CHANGE `1453358142` q1 VARCHAR(20);
+ALTER TABLE plsport_playsport._qu CHANGE `1453358261` q2 VARCHAR(1000);
+
+create table actionlog._predictgame_scale engine = myisam
+SELECT userid, uri, time, platform_type as p
+FROM actionlog.action_201601
+where uri like '%predictgame.php?action=scale%'
+and userid <> '';
+
+create table actionlog._predictgame_scale_1 engine = myisam
+SELECT userid, uri, time, p, (case when (locate('sid=',uri)>0) then 1 else 0 end) as tab 
+FROM actionlog._predictgame_scale
+where date(time) between '2016-01-15' and now();
+
+ALTER TABLE actionlog._predictgame_scale_1 convert to character set utf8 collate utf8_general_ci;
+
+		create table plsport_playsport._qu_1 engine = myisam
+		SELECT a.userid, a.q1, a.q2, b.pv
+		FROM plsport_playsport._qu a left join (SELECT userid, count(uri) as pv 
+												FROM actionlog._predictgame_scale_1
+												group by userid) b on a.userid = b.userid
+		where b.pv >= 8
+		order by b.pv;
+
+        # 問券結果(原始版本)
+		SELECT q1, count(userid) as c 
+		FROM plsport_playsport._qu
+		group by q1;
+
+		# 問券結果(排除pv小於8的問券 436 > 385)
+		SELECT q1, count(userid) as c 
+		FROM plsport_playsport._qu_1
+		group by q1;
+        
+		SELECT q1, count(userid) as c 
+		FROM plsport_playsport._qu_1
+	    where pv >= 200
+		group by q1;
+
+
+create table actionlog._predictgame_scale_2 engine = myisam
+SELECT (case when ((b.id%20)+1)>10 then 'a' else 'b' end) as abtest, a.userid, a.uri, a.time, a.p, a.tab,
+       (case when (locate('sid=',uri)>0) then substr(uri, locate('sid=',uri)+4, length(uri)) else '' end) as tab_c
+FROM actionlog._predictgame_scale_1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+create table actionlog._predictgame_scale_2_users engine = myisam
+SELECT abtest, userid, count(uri) as pv 
+FROM actionlog._predictgame_scale_2
+group by abtest, userid;
+
+create table actionlog._predictgame_scale_2_users_with_p engine = myisam
+SELECT abtest, userid, p, count(uri) as pv 
+FROM actionlog._predictgame_scale_2
+group by abtest, userid, p;
+
+update actionlog._predictgame_scale_2_users_with_p set p = 1 where p = 3;
+
+SELECT 'abtest', 'userid', 'pv' union (
+SELECT *
+into outfile 'C:/proc/r/abtest/_predictgame_scale_2_users.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._predictgame_scale_2_users);
+
+# 有區分裝置的版本
+SELECT 'abtest', 'userid', 'p', 'pv' union (
+SELECT *
+into outfile 'C:/proc/r/abtest/_predictgame_scale_2_users_with_p.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._predictgame_scale_2_users_with_p);
+
+
+create table plsport_playsport._user_spent engine = myisam
+SELECT userid, sum(amount) as spent
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date between '2016-01-15 00:00:00' and now()
+group by userid;
+
+create table actionlog._predictgame_scale_2_users_with_spent engine = myisam
+SELECT a.abtest, a.userid, a.pv, COALESCE(b.spent, 0) as spent
+FROM actionlog._predictgame_scale_2_users a left join plsport_playsport._user_spent b on a.userid = b.userid;
+
+SELECT 'abtest', 'userid', 'pv', 'spent' union (
+SELECT *
+into outfile 'C:/proc/r/abtest/_predictgame_scale_2_users_with_spent.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._predictgame_scale_2_users_with_spent);
+
+SELECT tab_c, count(uri) as c 
+FROM actionlog._predictgame_scale_2
+where abtest = 'a'
+and tab_c in ('0','1','2','3','')
+group by tab_c;
+
+# 	71596 尚未點擊
+# 0	84342 點擊[所有會員]
+# 1	15280 點擊[月勝率60%以上會員]
+# 2	7999  點擊[所有會員主推]
+# 3	17243 點擊[月勝率前100名會員]
+
+
+
+# =================================================================================================
+# [201512-B-3]優化手機版預測比列-介面票選電訪名單
+# http://redmine.playsport.cc/issues/1055
+# 提供電訪名單
+# 
+# 內容
+# 條件：
+# 	近一個月預測比例頁pv前50% 
+# 	手機使用比例60%以上
+# 欄位：
+# 	帳號、暱稱、預測比例頁pv及全站佔比、手機/電腦使用比例、最後登入時間
+# =================================================================================================
+
+create table actionlog._predict_scale engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201512
+where time between subdate(now(),31) AND now()
+and uri like '%predictgame.php?action=scale%';
+
+insert ignore into actionlog._predict_scale
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201601
+where time between subdate(now(),31) AND now()
+and uri like '%predictgame.php?action=scale%';
+
+create table actionlog._predict_scale_1 engine = myisam
+SELECT * FROM actionlog._predict_scale
+where userid <> '';
+
+update actionlog._predict_scale_1 set platform_type = 1 where platform_type = 3;
+
+create table actionlog._predict_scale_2 engine = myisam
+select c.userid, (c.pc+c.mobile) as pv, round((c.pc/(c.pc+c.mobile)),3) as p_pc, round((c.mobile/(c.pc+c.mobile)),3) as p_mobile
+from (
+	select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
+	from (
+		select a.userid, (case when (a.platform_type = 1) then pv else 0 end) as pc,
+						 (case when (a.platform_type = 2) then pv else 0 end) as mobile
+		from (
+			SELECT userid, platform_type, count(uri) as pv
+			FROM actionlog._predict_scale_1
+			group by userid, platform_type) as a) as b
+	group by b.userid) as c;
+
+create table actionlog._predict_scale_3 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, p_pc, p_mobile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, p_pc, p_mobile
+      FROM actionlog._predict_scale_2, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._predict_scale_2) as ct;
+
+	ALTER TABLE actionlog._predict_scale_3 convert to character set utf8 collate utf8_general_ci;
+	ALTER TABLE actionlog._predict_scale_3 ADD INDEX (`userid`);
+
+create table actionlog._predict_scale_4 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.p_pc, a.p_mobile
+FROM actionlog._predict_scale_3 a left join plsport_playsport.member b on a.userid = b.userid
+where pv_percentile >= 0.80 and p_mobile >= 0.6;
+
+drop table if exists plsport_playsport._last_login;
+CREATE TABLE plsport_playsport._last_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+    ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._predict_scale_5 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.p_pc, a.p_mobile, date(b.signin_time) as signin_time
+FROM actionlog._predict_scale_4 a left join plsport_playsport._last_login b on a.userid = b.userid
+order by a.pv desc;
+
+SELECT '帳號', '暱稱', '預測比例頁pv', '全站佔比', '電腦使用比例', '手機使用比例', '最後登入時間' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_predict_scale_5.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._predict_scale_5);
 
 
 
