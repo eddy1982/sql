@@ -21022,8 +21022,6 @@ FROM actionlog._buy_predict_9);
 
 
 
-
-
 # =================================================================================================
 # 2015/10月儲值優惠活動-成效分析
 # http://redmine.playsport.cc/issues/289
@@ -21218,11 +21216,7 @@ SELECT ym_last_login, count(userid) as c
 FROM plsport_playsport._who_join_last_campaign_but_not_thistime_2
 group by ym_last_login;
 
-
-
-
 # 補充:
-
 # 在還有在登入
 create table plsport_playsport._who_join_last_campaign_still_login_now engine = myisam
 SELECT userid 
@@ -21230,19 +21224,16 @@ FROM plsport_playsport._who_join_last_campaign_but_not_thistime_1
 where ym_last_login in ('2015-10','2015-11')
 group by userid;
 
-
 create table plsport_playsport._who_join_last_campaign_still_login_now_1 engine = myisam
 SELECT a.userid, a.signin_time 
 FROM plsport_playsport.member_signin_log_archive a inner join plsport_playsport._who_join_last_campaign_still_login_now b on a.userid = b.userid
 where a.signin_time between '2015-10-28 18:00:00' and '2015-10-30 12:00:00';
-
 
 # 在活動期間還有在登入的使用者
 create table _who_join_last_campaign_still_login_now_2 engine = myisam
 SELECT userid 
 FROM plsport_playsport._who_join_last_campaign_still_login_now_1
 group by userid;
-
 
 SELECT a.userid, a.price, date(max(a.createon)) as last_redeem, a.create_from
 FROM plsport_playsport.order_data a inner join _who_join_last_campaign_still_login_now_2 b on a.userid = b.userid
@@ -21256,10 +21247,8 @@ from (
     where a.sellconfirm = 1
     group by a.userid) as c;
 
-
 SELECT a.userid, date(b.signin_time)
 FROM plsport_playsport._who_join_last_campaign_still_login_now_2 a inner join plsport_playsport._last_time_login b on a.userid = b.userid;
-
 
 create table plsport_playsport._remind_pcash engine = myisam
 SELECT userid, pcash_after, max(date) as date
@@ -21267,9 +21256,76 @@ FROM plsport_playsport.pcash_log
 where payed = 1 and type = 1
 group by userid;
 
-
 SELECT a.userid, b.pcash_after, date(b.date)
 FROM plsport_playsport._who_join_last_campaign_still_login_now_2 a inner join plsport_playsport._remind_pcash b on a.userid = b.userid;
+
+
+# 2016-01-28 補充 http://redmine.playsport.cc/issues/289
+# 是由 黃 雅雅 於 9 天 前更新
+# Comment EditTO eddy:
+# 最後一項arpu分析，要麻煩你2月初提供囉! 過完一月就滿三個月了，麻煩囉!　
+# 6.三個月後，分析有使用儲值優惠的消費者的arpu，是否較沒有得到優惠的使用者高
+# 儲值優惠10/29 12:00~10/30 12:00
+
+
+# (a)有在優惠期間儲值的人
+create table plsport_playsport._who_receive_offer engine = myisam
+SELECT userid, sum(amount) as redeem
+FROM plsport_playsport.pcash_log
+WHERE payed = 1 AND type in (3,4)
+AND date between '2015-10-29 12:00:00' AND '2015-10-30 11:59:59'
+AND amount > 998
+group by userid;
+
+# (b)在優惠期間儲值前後儲值的人
+create table plsport_playsport._who_dont_receive_offer engine = myisam
+SELECT userid, sum(amount) as redeem
+FROM plsport_playsport.pcash_log
+WHERE payed = 1 AND type in (3,4)
+AND date between '2015-10-24 12:00:00' AND '2015-11-04 11:59:59'
+AND amount > 998
+group by userid;
+
+# (b)名單排除掉(a)名單中的人
+create table plsport_playsport._who_dont_receive_offer_1 engine = myisam
+SELECT a.userid, a.redeem
+FROM plsport_playsport._who_dont_receive_offer a left join plsport_playsport._who_receive_offer b on a.userid = b.userid
+where b.userid is null;
+
+# 製作主要名單
+create table plsport_playsport._list_1 engine = myisam
+SELECT userid, (case when (redeem is not null) then 'received_offer' else '' end) as g 
+FROM plsport_playsport._who_receive_offer;
+insert ignore into plsport_playsport._list_1
+SELECT userid, (case when (redeem is not null) then 'not_received_offer' else '' end) as g 
+FROM plsport_playsport._who_dont_receive_offer_1;
+
+
+create table plsport_playsport._spent engine = myisam
+SELECT userid, sum(amount) as redeem, count(amount) as redeem_count
+FROM plsport_playsport.pcash_log
+WHERE payed = 1 AND type in (3,4)
+AND date between '2015-11-05 12:00:00' AND now()
+group by userid;
+
+create table plsport_playsport._list_2 engine = myisam
+SELECT a.userid, a.g, b.redeem, b.redeem_count
+FROM plsport_playsport._list_1 a left join plsport_playsport._spent b on a.userid = b.userid
+where b.redeem is not null
+and b.redeem >= 199;
+
+SELECT 'userid', 'g', 'redeem', 'redeem_count' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/redeem_comparsion_after_receive_discount.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list_2);
+
+SELECT g, sum(redeem) as total_redeem, count(userid) as redeem_count, round((sum(redeem)/count(userid)),3) as avg_redeem
+FROM plsport_playsport._list_2
+group by g;
+
+# not_received_o	2090779	298	7016.037
+# received_offer	1374886	182	7554.319
 
 
 
@@ -23709,8 +23765,6 @@ group by tab_c;
 # 1	15280 點擊[月勝率60%以上會員]
 # 2	7999  點擊[所有會員主推]
 # 3	17243 點擊[月勝率前100名會員]
-
-
 
 # =================================================================================================
 # [201512-B-3]優化手機版預測比列-介面票選電訪名單
