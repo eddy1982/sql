@@ -23853,4 +23853,228 @@ FROM actionlog._predict_scale_5);
 
 
 
+# =================================================================================================
+# [201512-D-5]明燈改版-點擊狀況追蹤設定
+# http://redmine.playsport.cc/issues/1098
+# 說明 明燈內容點擊狀況追蹤設定
+#  
+# 內容
+# 追蹤位置：國際盤與運彩盤名單、誰加我為明燈按鍵、未分類按鍵
+# 代碼由EDDY提供
+# 
+# to 韋銘:
+# 
+# 追蹤碼設定如下:
+# 
+# 1. 國際盤與運彩盤名單:
+#       我的名燈:    rp=FRND_2(國際) 或 rp=FRND_1(運彩)
+#       誰加我為名燈: 不需更動
+# 2. 誰加我為明燈按鍵: 不需加追蹤碼
+# 3. 未分類按鍵:      不需加追蹤碼
+# =================================================================================================
+
+create table actionlog._action_friend engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201602
+where uri like '%rp=FRND_1%' or uri like '%rp=FRND_2%';
+
+select a.rp, count(a.userid) as c
+from (
+	SELECT userid, substr(uri, locate('rp=FRND',uri), length(uri)) as rp, time, platform_type 
+	FROM actionlog._action_friend) as a
+group by a.rp;
+
+
+
+# =================================================================================================
+# [201512-D-6]明燈改版-加入明燈數量統計
+# http://redmine.playsport.cc/issues/1099
+# 
+# 說明
+# 了解站上每人加入明燈的數量
+#  
+# 內容
+# 統計平均每人加入多少明燈
+# 統計加入100以上明燈數有多少人
+# =================================================================================================
+
+create table plsport_playsport._member_signin engine = myisam
+SELECT * FROM plsport_playsport.member_signin_log_archive
+where signin_time between subdate(now(),93) AND now();
+
+create table plsport_playsport._member_signin_1 engine = myisam
+SELECT userid 
+FROM plsport_playsport._member_signin
+group by userid;
+
+ALTER TABLE plsport_playsport._member_signin_1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._member_signin_1 ADD INDEX (`userid`);
+
+create table plsport_playsport._friends_adv engine = myisam
+SELECT a.userid, a.mode, count(friendid) as friend_count
+FROM plsport_playsport.friends_adv a inner join plsport_playsport._member_signin_1 b on a.userid = b.userid
+group by a.userid, a.mode;
+
+create table plsport_playsport._friends_adv_mode_1 engine = myisam
+SELECT * FROM plsport_playsport._friends_adv where mode = 1;
+
+create table plsport_playsport._friends_adv_mode_2 engine = myisam
+SELECT * FROM plsport_playsport._friends_adv where mode = 2;
+
+create table plsport_playsport._friends_adv_mode_1_p engine = myisam
+select userid, friend_count, round((cnt-rank+1)/cnt,2) as friend_count_p
+from (SELECT userid, friend_count, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._friends_adv_mode_1, (SELECT @curRank := 0) r
+      order by friend_count desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._friends_adv_mode_1) as ct;
+
+create table plsport_playsport._friends_adv_mode_2_p engine = myisam
+select userid, friend_count, round((cnt-rank+1)/cnt,2) as friend_count_p
+from (SELECT userid, friend_count, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._friends_adv_mode_2, (SELECT @curRank := 0) r
+      order by friend_count desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._friends_adv_mode_2) as ct;
+
+# 運彩盤
+SELECT friend_count_p, max(friend_count) as friend_count , count(userid) as user_count
+FROM plsport_playsport._friends_adv_mode_1_p
+group by friend_count_p
+order by friend_count_p desc;
+
+# 國際盤
+SELECT friend_count_p, max(friend_count) as friend_count , count(userid) as user_count
+FROM plsport_playsport._friends_adv_mode_2_p
+group by friend_count_p
+order by friend_count_p desc;
+
+
+
+# =================================================================================================
+# 產品專案 #529: [201510-A]開發討論區黑名單功能 2016-02-15
+# http://redmine.playsport.cc/issues/967#change-4551
+# [201510-A-4]開發討論區黑名單功能-使用狀況分析
+# 概述
+# 說明
+# 了解黑名單上線後，檢舉文章是否減少
+# 內容
+# - 觀察指標
+#     檢舉文章數量比較
+#     黑名單功能使用率
+# 
+# - 觀察時間
+#     上線時間：1/12
+#     每月提供報告一次，共三個月
+# =================================================================================================
+
+
+# 記得匯入 (1) forum (2) forumcontent
+
+create table plsport_playsport._gobucket engine = myisam 
+SELECT id, reporter_id, reporter_nickname, userid, nickname, allianceid, subjectid, articleid, content, process, rule_number, moderator, reason
+FROM plsport_playsport.gobucket
+order by id desc;
+
+
+create table plsport_playsport._forumcontent engine = myisam
+SELECT * FROM plsport_playsport.forumcontent
+where year(postdate) in (2015,2016)
+order by postdate desc;
+
+
+ALTER TABLE plsport_playsport._forumcontent ADD INDEX (`articleid`);
+ALTER TABLE plsport_playsport._forumcontent convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._gobucket ADD INDEX (`articleid`);
+ALTER TABLE plsport_playsport._gobucket convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._gobucket_1 engine = myisam 
+SELECT a.id, a.reporter_id, a.reporter_nickname, a.userid, a.nickname, a.allianceid, a.subjectid, a.articleid, 
+       b.postdate, a.content, a.process, a.rule_number, a.moderator, a.reason
+FROM plsport_playsport.gobucket a left join plsport_playsport._forumcontent b on a.articleid = b.articleid
+where b.postdate is not null;
+
+
+# 常在檢舉的名單
+create table plsport_playsport._report_list engine = myisam
+select *
+from (
+	SELECT reporter_id, reporter_nickname, count(id) as report_c 
+	FROM plsport_playsport._gobucket_1
+	group by reporter_id) as a
+order by a.report_c desc;
+
+# 常在檢舉的名單+ percentile  
+create table plsport_playsport._report_list_1 engine = myisam
+select reporter_id, reporter_nickname, report_c, round((cnt-rank+1)/cnt,2) as report_p
+from (SELECT reporter_id, reporter_nickname, report_c, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._report_list, (SELECT @curRank := 0) r
+      order by report_c desc) as dt,
+     (select count(distinct reporter_id) as cnt from plsport_playsport._report_list) as ct;
+
+# 常在檢舉的名單 挑出前2%的人
+create table plsport_playsport._report_list_2
+SELECT * FROM plsport_playsport._report_list_1
+where report_p >= 0.99;
+
+# 再重新製作檢舉名單, 並排除掉檢舉魔人
+create table plsport_playsport._gobucket_2 engine = myisam 
+SELECT a.id, a.reporter_id, a.reporter_nickname, a.userid, a.nickname, a.allianceid, a.subjectid, a.articleid, 
+       a.postdate, a.content, a.process, a.rule_number, a.moderator, a.reason
+FROM plsport_playsport._gobucket_1 a left join plsport_playsport._report_list_2 b on a.reporter_id = b.reporter_id
+where b.report_p is null;
+
+create table plsport_playsport._gobucket_3 engine = myisam 
+SELECT id, reporter_id, reporter_nickname, userid, nickname, allianceid, subjectid, articleid, postdate, date(postdate) as d, substr(postdate,1,7) as ym,
+       content, process, rule_number, moderator, reason
+FROM plsport_playsport._gobucket_2;
+
+# 統計每日檢舉的次數
+SELECT d, count(id) as c 
+FROM plsport_playsport._gobucket_3
+group by d;
+
+# 統計每日檢舉的次數(不重覆)
+select a.d, count(a.reporter_id) as c
+from (
+	SELECT reporter_id, d 
+	FROM plsport_playsport._gobucket_3
+	where reporter_id <> ''
+	group by reporter_id, d) as a
+group by a.d;
+
+# 統計每月檢舉的次數
+SELECT ym, count(id) as c 
+FROM plsport_playsport._gobucket_3
+group by ym;
+
+# 統計每月檢舉的次數(不重覆)
+select a.ym, count(a.reporter_id) as c
+from (
+	SELECT reporter_id, ym 
+	FROM plsport_playsport._gobucket_3
+	where reporter_id <> ''
+	group by reporter_id, ym) as a
+group by a.ym;
+
+
+ALTER TABLE plsport_playsport.forum ADD INDEX (`subjectid`);
+ALTER TABLE plsport_playsport.forum convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._forum_blacklist engine = myisam
+SELECT a.id, a.post_user, a.blacklisted_user, a.subjectid, b.posttime, date(b.posttime) as d, substr(b.posttime,1,7) as ym
+FROM plsport_playsport.forum_blacklist a left join plsport_playsport.forum b on a.subjectid = b.subjectid;
+
+# 每天使用禁文的人
+SELECT d, count(id) as c 
+FROM plsport_playsport._forum_blacklist
+group by d;
+
+# 每天使用禁文的人(不重覆)
+select a.d, count(a.post_user) as c
+from (
+	SELECT d, post_user 
+	FROM plsport_playsport._forum_blacklist
+	group by d, post_user) as a 
+group by a.d
+order by a.d;
+
 
