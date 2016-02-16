@@ -22434,6 +22434,8 @@ where p in ('BZ_MF','BZ_SK','BZ_RCT','BZ_RC2','BZ_RC1');
 # bowen0925 神柏
 # =================================================================================================
 
+# 記得先匯入(1)forum_tracing_notify和(2)forum_tracing_postUser
+
 SELECT a.id, a.userid, b.nickname, a.postuser, a.traced, a.create_time, a.modify_time 
 FROM plsport_playsport.forum_tracing_postUser a left join plsport_playsport.member b on a.userid = b.userid
 where a.userid in ('david30519','cs112345','polohong','a0981415848','happylala3388','FB1420051617','fushengidy','jimmy5693','aa6565931','bowen0925')
@@ -22443,6 +22445,33 @@ SELECT userid, postuser, count(subjectid) as subjectid_count
 FROM plsport_playsport.forum_tracing_notify
 where userid in ('david30519','cs112345','polohong','a0981415848','happylala3388','FB1420051617','fushengidy','jimmy5693','aa6565931','bowen0925')
 group by userid, postuser;
+
+# 2016-2-16 追加任務
+# http://redmine.playsport.cc/issues/1142#change-5395
+# [201507-A-7]開發討論區會員追蹤功能-MVP使用狀況了解
+# 說明
+# 了解MVP使用討論區會員追蹤功能狀況
+#  
+# 內容
+# - MVP否有使用追蹤會員功能
+# - MVP追蹤會員的數量
+
+SELECT a.id, a.userid, b.nickname, a.postuser, a.traced, a.create_time, a.modify_time 
+FROM plsport_playsport.forum_tracing_postUser a left join plsport_playsport.member b on a.userid = b.userid
+where a.userid in ('b001002','FB1442996396','Love888999','asn562072a','FB1339264829','minimi0410','k760531','n211308','a7909287',
+'xxxxxxxx0111','asdzxc888','askino1988','scottcott','a23715887','FB1349602649','newyork40','shady1769','baker19801225','AA5859','love03240116')
+order by a.userid;
+
+SELECT a.userid, b.nickname, a.postuser, count(a.subjectid) as subjectid_count
+FROM plsport_playsport.forum_tracing_notify a left join plsport_playsport.member b on a.userid = b.userid
+where a.userid in ('b001002','FB1442996396','Love888999','asn562072a','FB1339264829','minimi0410','k760531','n211308','a7909287',
+'xxxxxxxx0111','asdzxc888','askino1988','scottcott','a23715887','FB1349602649','newyork40','shady1769','baker19801225','AA5859','love03240116')
+group by a.userid, a.postuser;
+
+
+
+
+
 
 
 
@@ -23674,13 +23703,24 @@ SELECT userid, uri, time, platform_type as p
 FROM actionlog.action_201601
 where uri like '%predictgame.php?action=scale%'
 and userid <> '';
+insert ignore into actionlog._predictgame_scale
+SELECT userid, uri, time, platform_type as p
+FROM actionlog.action_201602
+where uri like '%predictgame.php?action=scale%'
+and userid <> '';
 
 create table actionlog._predictgame_scale_1 engine = myisam
 SELECT userid, uri, time, p, (case when (locate('sid=',uri)>0) then 1 else 0 end) as tab 
 FROM actionlog._predictgame_scale
 where date(time) between '2016-01-15' and now();
 
-ALTER TABLE actionlog._predictgame_scale_1 convert to character set utf8 collate utf8_general_ci;
+		# [201510-B-9] 進階預測比例 - A/B testing名單與分析 - 請於2/16再做一次報告，報告內容不包含第一週數據
+		create table actionlog._predictgame_scale_1 engine = myisam
+		SELECT userid, uri, time, p, (case when (locate('sid=',uri)>0) then 1 else 0 end) as tab 
+		FROM actionlog._predictgame_scale
+		where date(time) between '2016-02-01' and now();
+
+        ALTER TABLE actionlog._predictgame_scale_1 convert to character set utf8 collate utf8_general_ci;
 
 		create table plsport_playsport._qu_1 engine = myisam
 		SELECT a.userid, a.q1, a.q2, b.pv
@@ -23741,7 +23781,7 @@ create table plsport_playsport._user_spent engine = myisam
 SELECT userid, sum(amount) as spent
 FROM plsport_playsport.pcash_log
 where payed = 1 and type = 1
-and date between '2016-01-15 00:00:00' and now()
+and date between '2016-02-01 00:00:00' and now()
 group by userid;
 
 create table actionlog._predictgame_scale_2_users_with_spent engine = myisam
@@ -24077,4 +24117,99 @@ from (
 group by a.d
 order by a.d;
 
+
+
+# =================================================================================================
+# 加強補卷說明使用情況分析
+# http://redmine.playsport.cc/issues/983#change-4625
+# 是由 文 文工友 於 約 1 個月 前加入. 於 約 1 個月 前更新.
+# 
+# 麻煩您分析加強補卷說明的使用情況
+# 
+# 1.個人頁中預測表格的下方(購牌後、補卷前)會顯示"若殺手戰績不理想（這裡帶常見問題連結），我們將於00/00下午贈送退換卷給您"，如頁面
+#     http://www.playsport.cc/qa.php?from=visit_member_refund_link
+# 2.個人頁中預測表格的下方(補卷後)會顯示"兌換卷已贈送完成"（這裡帶購牌清單連杰），如頁面
+#     http://www.playsport.cc/shopping_list.php?from=visit_member_refund_btn
+# 3.購牌清單按鈕下的列表通知，如頁面，點下購牌清單按鈕即會看到
+#     http://www.playsport.cc/shopping_list.php?from=shopping_list_dropdown_menu_btn
+# 3.1 在符合補券/退券/退幣的條件下,使用者去click購牌清單的話,就記錄event至userActions.events資料表中
+#     放入的event名稱請設為ShoppingListDropdownMenuBTN
+#
+# 4.購牌清單按鈕下的看更多清單，如頁面，點下購牌清單按鈕即會看到在右下方
+#     http://www.playsport.cc/shopping_list.php?from=shopping_list_dropdown_menu_more
+# 5.購牌清單中的殺手要埋關於購買的連結，如頁面
+#     殺手購牌位置的追蹤,代碼文件請參考https://docs.google.com/spreadsheets/d/19z3rQs5OCjgN_FJLH18OyaiB5tdsE5zb7d0Wd3fLyWY/edit
+#     詳細套用殺手購牌位置追蹤的方式請問壯兔
+#     代碼請設定為SPL
+# =================================================================================================
+
+create table actionlog._c_temp engine = myisam 
+SELECT userid, uri, time, platform_type as p 
+FROM actionlog.action_201601
+where uri like '%qa.php%' or uri like '%shopping_list.php%'
+and userid <> '';
+insert ignore into actionlog._c_temp 
+SELECT userid, uri, time, platform_type as p 
+FROM actionlog.action_201602
+where uri like '%qa.php%' or uri like '%shopping_list.php%'
+and userid <> '';
+
+# "若殺手戰績不理想（這裡帶常見問題連結），我們將於00/00下午贈送退換卷給您"
+create table actionlog._click_refund_btn engine = myisam
+select b.d, count(b.userid) as buyer_count, c.c
+from (
+	select a.d, a.userid, sum(a.amount) as spent
+	from (
+		SELECT userid, date(date) as d, amount
+		FROM plsport_playsport.pcash_log
+		where payed = 1 and type = 1
+		and substr(date,1,7) in ('2016-01','2016-02')) as a
+	group by a.d, a.userid) as b left join (select a.d, count(a.userid) as c
+											from (
+												SELECT userid, date(time) as d FROM actionlog._c_temp
+												where uri like '%visit_member_refund_link%') as a
+											group by a.d) as c on b.d = c.d
+group by b.d;
+
+# "兌換卷已贈送完成"（這裡帶購牌清單連杰）
+select b.d, count(b.userid) as buyer_count, c.c
+from (
+	select a.d, a.userid, sum(a.amount) as spent
+	from (
+		SELECT userid, date(date) as d, amount
+		FROM plsport_playsport.pcash_log
+		where payed = 1 and type = 1
+		and substr(date,1,7) in ('2016-01','2016-02')) as a
+	group by a.d, a.userid) as b left join (select a.d, count(a.userid) as c
+											from (
+												SELECT userid, date(time) as d FROM actionlog._c_temp
+												where uri like '%visit_member_refund_btn%') as a
+											group by a.d) as c on b.d = c.d
+group by b.d;
+
+# 點擊下拉式選單的轉換率
+	# 符合出現提示條件的event
+	create table actionlog._c_temp_events engine = myisam
+	SELECT *
+	FROM plsport_playsport.events
+	where name = 'ShoppingListDropdownMenuBTN';
+	# 分母
+	select b.d, count(b.userid) as c
+	from (
+		select a.d, a.userid
+		from (
+			SELECT userid, date(time) as d 
+			FROM actionlog._c_temp_events) as a
+		group by a.d, a.userid) as b
+	group by b.d;
+	# 分子
+	select b.d, count(b.userid) as c
+	from (
+		select a.userid, a.d
+		from (
+			SELECT userid, date(time) as d 
+			FROM actionlog._c_temp
+			where uri like '%shopping_list_dropdown_menu_btn%') as a
+		group by a.userid, a.d) as b
+	group by b.d;
 
