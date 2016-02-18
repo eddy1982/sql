@@ -23951,15 +23951,38 @@ ALTER TABLE plsport_playsport._member_signin_1 convert to character set utf8 col
 ALTER TABLE plsport_playsport._member_signin_1 ADD INDEX (`userid`);
 
 create table plsport_playsport._friends_adv engine = myisam
-SELECT a.userid, a.mode, count(friendid) as friend_count
+SELECT a.userid, a.mode, a.friendid
 FROM plsport_playsport.friends_adv a inner join plsport_playsport._member_signin_1 b on a.userid = b.userid
-group by a.userid, a.mode;
+where a.userid <> ''
+group by a.userid, a.mode, a.friendid;
+
+create table plsport_playsport._friends_adv_mode_0 engine = myisam
+select a.userid, count(a.friendid) as friend_count
+from (
+	SELECT userid, friendid
+	FROM plsport_playsport._friends_adv
+	group by userid, friendid) as a
+group by a.userid;
 
 create table plsport_playsport._friends_adv_mode_1 engine = myisam
-SELECT * FROM plsport_playsport._friends_adv where mode = 1;
+SELECT userid, count(friendid) as friend_count 
+FROM plsport_playsport._friends_adv
+where mode = 1
+group by userid;
 
 create table plsport_playsport._friends_adv_mode_2 engine = myisam
-SELECT * FROM plsport_playsport._friends_adv where mode = 2;
+SELECT userid, count(friendid) as friend_count 
+FROM plsport_playsport._friends_adv
+where mode = 2
+group by userid;
+
+
+create table plsport_playsport._friends_adv_mode_0_p engine = myisam
+select userid, friend_count, round((cnt-rank+1)/cnt,2) as friend_count_p
+from (SELECT userid, friend_count, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._friends_adv_mode_0, (SELECT @curRank := 0) r
+      order by friend_count desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._friends_adv_mode_0) as ct;
 
 create table plsport_playsport._friends_adv_mode_1_p engine = myisam
 select userid, friend_count, round((cnt-rank+1)/cnt,2) as friend_count_p
@@ -23984,6 +24007,12 @@ order by friend_count_p desc;
 # 國際盤
 SELECT friend_count_p, max(friend_count) as friend_count , count(userid) as user_count
 FROM plsport_playsport._friends_adv_mode_2_p
+group by friend_count_p
+order by friend_count_p desc;
+
+# 不分盤口
+SELECT friend_count_p, max(friend_count) as friend_count , count(userid) as user_count
+FROM plsport_playsport._friends_adv_mode_0_p
 group by friend_count_p
 order by friend_count_p desc;
 
@@ -24208,6 +24237,23 @@ group by b.d;
 			where uri like '%shopping_list_dropdown_menu_btn%') as a
 		group by a.userid, a.d) as b
 	group by b.d;
+
+
+# 補充一天有多少人收到退券通知(2016-02-17)
+# 記得先匯入資料表coupon_dispatched 
+# http://redmine.playsport.cc/issues/983
+
+
+select b.d, count(b.userid) as dispatched_user_count
+from (
+	select a.userid, a.d, a.reason
+	from (
+		SELECT userid, date(date) as d, reason
+		FROM coupon_dispatched 
+		WHERE reason in (2,21)
+		and date(date) between '2016-01-14' and now()) as a
+	group by a.userid, a.d) as b
+group by b.d;
 
 
 
