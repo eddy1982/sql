@@ -22441,10 +22441,10 @@ FROM plsport_playsport.forum_tracing_postUser a left join plsport_playsport.memb
 where a.userid in ('david30519','cs112345','polohong','a0981415848','happylala3388','FB1420051617','fushengidy','jimmy5693','aa6565931','bowen0925')
 order by a.userid;
 
-SELECT userid, postuser, count(subjectid) as subjectid_count
-FROM plsport_playsport.forum_tracing_notify
-where userid in ('david30519','cs112345','polohong','a0981415848','happylala3388','FB1420051617','fushengidy','jimmy5693','aa6565931','bowen0925')
-group by userid, postuser;
+SELECT a.userid, b.nickname, a.postuser, count(a.subjectid) as subjectid_count
+FROM plsport_playsport.forum_tracing_notify a left join plsport_playsport.member b on a.userid = b.userid
+where a.userid in ('david30519','cs112345','polohong','a0981415848','happylala3388','FB1420051617','fushengidy','jimmy5693','aa6565931','bowen0925')
+group by a.userid, a.postuser;
 
 # 2016-2-16 追加任務
 # http://redmine.playsport.cc/issues/1142#change-5395
@@ -24014,12 +24014,10 @@ SELECT id, reporter_id, reporter_nickname, userid, nickname, allianceid, subject
 FROM plsport_playsport.gobucket
 order by id desc;
 
-
 create table plsport_playsport._forumcontent engine = myisam
 SELECT * FROM plsport_playsport.forumcontent
 where year(postdate) in (2015,2016)
 order by postdate desc;
-
 
 ALTER TABLE plsport_playsport._forumcontent ADD INDEX (`articleid`);
 ALTER TABLE plsport_playsport._forumcontent convert to character set utf8 collate utf8_general_ci;
@@ -24031,7 +24029,6 @@ SELECT a.id, a.reporter_id, a.reporter_nickname, a.userid, a.nickname, a.allianc
        b.postdate, a.content, a.process, a.rule_number, a.moderator, a.reason
 FROM plsport_playsport.gobucket a left join plsport_playsport._forumcontent b on a.articleid = b.articleid
 where b.postdate is not null;
-
 
 # 常在檢舉的名單
 create table plsport_playsport._report_list engine = myisam
@@ -24094,7 +24091,6 @@ from (
 	where reporter_id <> ''
 	group by reporter_id, ym) as a
 group by a.ym;
-
 
 ALTER TABLE plsport_playsport.forum ADD INDEX (`subjectid`);
 ALTER TABLE plsport_playsport.forum convert to character set utf8 collate utf8_general_ci;
@@ -24212,4 +24208,123 @@ group by b.d;
 			where uri like '%shopping_list_dropdown_menu_btn%') as a
 		group by a.userid, a.d) as b
 	group by b.d;
+
+
+
+# =================================================================================================
+# [201512-D-5]明燈改版-點擊狀況追蹤設定
+# http://redmine.playsport.cc/issues/1098#change-5218
+# 概述
+# 說明 明燈內容點擊狀況追蹤設定
+# 內容
+# 追蹤位置：(1)國際盤與運彩盤名單、(2)誰加我為明燈按鍵、(3)未分類按鍵
+# 代碼由EDDY提供
+# 追蹤碼設定如下:
+#     1. 國際盤與運彩盤名單:
+#        我的名燈: rp=FRND_2(國際) 或 rp=FRND_1(運彩)
+#        誰加我為名燈: 不需更動
+#     2. 誰加我為明燈按鍵: 不需加追蹤碼
+#     3. 未分類按鍵: 不需加追蹤碼
+# =================================================================================================
+
+# 進入名燈
+drop table if exists actionlog._friend_list;
+create table actionlog._friend_list engine = myisam
+SELECT userid, uri, date(time) as d, platform_type as p  
+FROM actionlog.action_201602
+where uri like '%visit_member.php?action=friend%'
+and userid <> '';
+insert ignore into actionlog._friend_list
+SELECT userid, uri, date(time) as d, platform_type as p  
+FROM actionlog.action_201601
+where uri like '%visit_member.php?action=friend%'
+and userid <> '';
+insert ignore into actionlog._friend_list
+SELECT userid, uri, date(time) as d, platform_type as p  
+FROM actionlog.action_201512
+where uri like '%visit_member.php?action=friend%'
+and userid <> '';
+
+# 點擊名燈中的殺手
+drop table if exists actionlog._friend_list_click_rp;
+create table actionlog._friend_list_click_rp engine = myisam
+SELECT userid, uri, date(time) as d, platform_type as p  
+FROM actionlog.action_201602
+where uri like '%rp=FRND_%'
+and userid <> '';
+insert ignore into actionlog._friend_list_click_rp
+SELECT userid, uri, date(time) as d, platform_type as p  
+FROM actionlog.action_201601
+where uri like '%rp=FRND_%'
+and userid <> '';
+insert ignore into actionlog._friend_list_click_rp
+SELECT userid, uri, date(time) as d, platform_type as p  
+FROM actionlog.action_201512
+where uri like '%rp=FRND_%'
+and userid <> '';
+
+
+
+
+
+
+
+# 每天有使用名燈的人數
+select a.d, count(a.userid) as user_count
+from (
+	SELECT userid, d 
+	FROM actionlog._friend_list
+	group by userid, d) as a
+group by a.d;
+
+# 每天點擊未分類的人數
+select a.d, count(a.userid) as user_count
+from (
+	SELECT userid, d 
+	FROM actionlog._friend_list
+	where uri like '%adv=0%' and userid <> 'yenhsun1982'
+	group by userid, d) as a
+group by a.d
+order by a.d;
+
+# 每天點擊誰加我明燈的人數
+select a.d, count(a.userid) as user_count
+from (
+	SELECT userid, d 
+	FROM actionlog._friend_list
+	where uri like '%type=asf%' and userid <> 'yenhsun1982'
+	group by userid, d) as a
+group by a.d
+order by a.d;
+
+
+create table actionlog._friend_list_click_rp_1 engine = myisam
+select d.userid, (mode1+mode2) as total_c, mode1, mode2, round((mode1/(mode1+mode2)),2) as mode1_p, round((mode2/(mode1+mode2)),2) as mode2_p
+from (
+	select c.userid, sum(c.mode2) as mode2, sum(c.mode1) as mode1
+	from (
+		select b.userid, (case when (b.f=2) then c else 0 end) as mode2, (case when (b.f=1) then c else 0 end) as mode1
+		from (
+			select a.userid, a.f, count(a.userid) as c
+			from (
+				SELECT userid, uri, d, p, substr(uri, locate('rp=FRND_',uri)+8,length(uri)) as f
+				FROM actionlog._friend_list_click_rp) as a
+			where a.f in (1,2)
+			group by a.userid, a.f) as b) as c
+	group by c.userid) as d;
+
+create table actionlog._friend_list_click_rp_2 engine = myisam
+select userid, total_c, round((cnt-rank+1)/cnt,2) as total_c_p, mode1_p, mode2_p
+from (SELECT userid, total_c, @curRank := @curRank + 1 AS rank, mode1, mode2, mode1_p, mode2_p
+      FROM actionlog._friend_list_click_rp_1, (SELECT @curRank := 0) r
+      order by total_c desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._friend_list_click_rp_1) as ct;
+
+
+# 輸出給R製圖
+SELECT 'userid', 'total_c', 'total_c_p', 'mode1_p', 'mode2_p' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_friend_list_click_rp_2.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._friend_list_click_rp_2);
 
