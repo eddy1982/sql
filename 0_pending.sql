@@ -24374,3 +24374,57 @@ into outfile 'C:/Users/eddy/Desktop/_friend_list_click_rp_2.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._friend_list_click_rp_2);
 
+
+
+
+# =================================================================================================
+# 2015MLB、NBA開季時網站流量、消費狀況
+# http://redmine.playsport.cc/issues/1144
+# TO  Eddy
+# 因為儲值優惠活動宣傳的關係，我們想知道mlb  nba 開季時，在哪個時間網站流量會比較多，以及消費的狀況，以利我們往後可能在活動日期或宣傳日期上可以做調整
+# 想請您撈2015MLB、NBA開季前後七天,逐日的網站流量、逐日的購買預測金額
+# 撈取區間如下
+# 
+# 1.MLB開季(2015/4/6)：2015/3/30~2015/4/13　　　　　該次儲值優惠活動時間：4月1日 中午12點 - 4月2日 中午12點
+# 2.NBA開季(2015/10/28)：2015/10/21~2015/11/4　　　該次儲值優惠活動時間：10月29日 中午12點 - 10月30日 中午12點
+# 
+# 撈取以下資料
+# 1.逐日的網站流量
+# 2.逐日的購買預測金額（購買MLB、NBA聯盟的就可以）
+# 這個任務希望盡快，再麻煩您押個時間，謝謝！
+# =================================================================================================
+
+
+
+# MLB
+select a.y, a.d, sum(a.buy_price) as spent, a.buy_allianceid
+from (
+	SELECT buyerid, buy_price, substr(buy_date,6,5) as d, year(buy_date) as y, buy_allianceid
+	FROM plsport_playsport.predict_buyer
+	where substr(buy_date,6,5) between '03-15' and '04-15'
+    and buy_allianceid =1) as a
+where a.y > 2012
+group by a.y, a.d;
+
+# NBA
+select a.y, a.d, sum(a.buy_price) as spent, a.buy_allianceid
+from (
+	SELECT buyerid, buy_price, substr(buy_date,6,5) as d, year(buy_date) as y, buy_allianceid
+	FROM plsport_playsport.predict_buyer
+	where substr(buy_date,6,5) between '10-15' and '11-15'
+    and buy_allianceid =3) as a
+where a.y > 2012
+group by a.y, a.d;
+
+
+
+
+
+
+
+
+
+
+
+
+
