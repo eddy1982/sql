@@ -5,19 +5,60 @@
 use actionlog;
 
 /*(1)簡化table*/
+create table actionlog._action_201506 engine = myisam select userid, uri, time from actionlog.action_201506;
+create table actionlog._action_201507 engine = myisam select userid, uri, time from actionlog.action_201507;
+create table actionlog._action_201508 engine = myisam select userid, uri, time from actionlog.action_201508;
+create table actionlog._action_201509 engine = myisam select userid, uri, time from actionlog.action_201509;
+create table actionlog._action_201510 engine = myisam select userid, uri, time from actionlog.action_201510;
+create table actionlog._action_201511 engine = myisam select userid, uri, time from actionlog.action_201511;
+create table actionlog._action_201512 engine = myisam select userid, uri, time from actionlog.action_201512;
 create table actionlog._action_201601 engine = myisam select userid, uri, time from actionlog.action_201601;
+create table actionlog._action_201602 engine = myisam select userid, uri, time from actionlog.action_201602;
 
 /*(2)計算每個月的登入人數, 排除重覆的人*/
+create table actionlog.__action_201506_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from actionlog._action_201506 group by userid;
+create table actionlog.__action_201507_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from actionlog._action_201507 group by userid;
+create table actionlog.__action_201508_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from actionlog._action_201508 group by userid;
+create table actionlog.__action_201509_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from actionlog._action_201509 group by userid;
+create table actionlog.__action_201510_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from actionlog._action_201510 group by userid;
+create table actionlog.__action_201511_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from actionlog._action_201511 group by userid;
+create table actionlog.__action_201512_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from actionlog._action_201512 group by userid;
 create table actionlog.__action_201601_usercount engine = myisam
-select userid, count(uri) as log_count, month(time) as log_month from actionlog. _action_201601 group by userid;
+select userid, count(uri) as log_count, month(time) as log_month from actionlog._action_201601 group by userid;
+create table actionlog.__action_201602_usercount engine = myisam
+select userid, count(uri) as log_count, month(time) as log_month from actionlog._action_201602 group by userid;
 
 -- 2014/1/2新增, 排除異常名單, 機器人
 -- 先執行 8_user_find_the robot_register
 
+        ALTER TABLE  actionlog.__action_201506_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE  actionlog.__action_201507_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE  actionlog.__action_201508_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE  actionlog.__action_201509_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE  actionlog.__action_201510_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE  actionlog.__action_201511_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE  actionlog.__action_201512_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
         ALTER TABLE  actionlog.__action_201601_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        ALTER TABLE  actionlog.__action_201602_usercount CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+        
         ALTER TABLE  plsport_playsport._problem_members CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 
+select count(a.userid) from actionlog.__action_201506_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+select count(a.userid) from actionlog.__action_201507_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+select count(a.userid) from actionlog.__action_201508_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+select count(a.userid) from actionlog.__action_201509_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+select count(a.userid) from actionlog.__action_201510_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+select count(a.userid) from actionlog.__action_201511_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+select count(a.userid) from actionlog.__action_201512_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 select count(a.userid) from actionlog.__action_201601_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
+select count(a.userid) from actionlog.__action_201602_usercount a left join plsport_playsport._problem_members b on a.userid = b.userid where b.userid is null;
 -- ======================================================================================
 --  準備其它資料表
 --  (1)forum

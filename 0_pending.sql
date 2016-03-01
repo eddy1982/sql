@@ -21324,8 +21324,8 @@ SELECT g, sum(redeem) as total_redeem, count(userid) as redeem_count, round((sum
 FROM plsport_playsport._list_2
 group by g;
 
-# not_received_o	2090779	298	7016.037
-# received_offer	1374886	182	7554.319
+# not_received_o    2090779 298 7016.037
+# received_offer    1374886 182 7554.319
 
 
 
@@ -23153,23 +23153,23 @@ FROM actionlog._friend_6);
 # =================================================================================================
 
 create table actionlog._s_p engine = myisam
-SELECT * FROM actionlog.action_201512
+SELECT * FROM actionlog.action_201601
 where uri like '%s=p%' ; # 最多推文
 create table actionlog._s_a engine = myisam
-SELECT * FROM actionlog.action_201512
+SELECT * FROM actionlog.action_201601
 where uri like '%s=a%' ; # 最新文章
 create table actionlog._s_r engine = myisam
-SELECT * FROM actionlog.action_201512
+SELECT * FROM actionlog.action_201601
 where uri like '%s=r%' ; # 最新回覆
 
 insert ignore into actionlog._s_p
-SELECT * FROM actionlog.action_201601
+SELECT * FROM actionlog.action_201602
 where uri like '%s=p%' ; # 最多推文
 insert ignore into actionlog._s_a
-SELECT * FROM actionlog.action_201601
+SELECT * FROM actionlog.action_201602
 where uri like '%s=a%' ; # 最新文章
 insert ignore into actionlog._s_r
-SELECT * FROM actionlog.action_201601
+SELECT * FROM actionlog.action_201602
 where uri like '%s=r%' ; # 最新回覆
 
 create table actionlog._s_p_1 engine = myisam
@@ -23541,7 +23541,6 @@ from (
     group by a.userid) as c;
 
 
-
 # =================================================================================================
 # TO Eddy 
 # http://redmine.playsport.cc/issues/983
@@ -23611,14 +23610,14 @@ ALTER TABLE prediction._candy16849_data ADD id INT PRIMARY KEY AUTO_INCREMENT;
 
 select c.userid, c.nickname, c.allianceid, c.gametype, c.mode, c.d, c.d1, c.c, COALESCE(d.c,0) as win_c
 from (
-	SELECT a.userid, a.nickname, a.allianceid, a.gametype, a.mode, a.d, b.d as d1, a.c 
-	FROM prediction._candy16849_data a left join 
-	(SELECT userid, nickname, allianceid, gametype, mode, d, c, id, id-1 as id1 
-	 FROM prediction._candy16849_data) b on a.id = b.id1) as c left join 
-		(SELECT userid, nickname, allianceid, gametype, mode, d, count(d) as c
-		 FROM prediction._prediction_all_2015_2016_edited_2
-		 where userid = 'candy16849' and allianceid = 92 and mode = 2 and winner = 1
-		 group by userid, allianceid, gametype, mode, d) as d on c.d = d.d;
+    SELECT a.userid, a.nickname, a.allianceid, a.gametype, a.mode, a.d, b.d as d1, a.c 
+    FROM prediction._candy16849_data a left join 
+    (SELECT userid, nickname, allianceid, gametype, mode, d, c, id, id-1 as id1 
+     FROM prediction._candy16849_data) b on a.id = b.id1) as c left join 
+        (SELECT userid, nickname, allianceid, gametype, mode, d, count(d) as c
+         FROM prediction._prediction_all_2015_2016_edited_2
+         where userid = 'candy16849' and allianceid = 92 and mode = 2 and winner = 1
+         group by userid, allianceid, gametype, mode, d) as d on c.d = d.d;
  
 SELECT userid, nickname, allianceid, gametype, mode, d, count(d) as c
 FROM prediction._prediction_all_2015_2016_edited_2
@@ -23668,8 +23667,8 @@ update actionlog._temp_log set platform_type = 1 where platform_type = 3;
 
 select a.pg, a.platform_type, count(a.userid) as c
 from (
-	SELECT userid, substr(uri,1,17) as pg, time, platform_type 
-	FROM actionlog._temp_log) as a
+    SELECT userid, substr(uri,1,17) as pg, time, platform_type 
+    FROM actionlog._temp_log) as a
 group by a.pg, a.platform_type;
 
 
@@ -23714,36 +23713,36 @@ SELECT userid, uri, time, p, (case when (locate('sid=',uri)>0) then 1 else 0 end
 FROM actionlog._predictgame_scale
 where date(time) between '2016-01-15' and now();
 
-		# [201510-B-9] 進階預測比例 - A/B testing名單與分析 - 請於2/16再做一次報告，報告內容不包含第一週數據
-		create table actionlog._predictgame_scale_1 engine = myisam
-		SELECT userid, uri, time, p, (case when (locate('sid=',uri)>0) then 1 else 0 end) as tab 
-		FROM actionlog._predictgame_scale
-		where date(time) between '2016-02-01' and now();
+        # [201510-B-9] 進階預測比例 - A/B testing名單與分析 - 請於2/16再做一次報告，報告內容不包含第一週數據
+        create table actionlog._predictgame_scale_1 engine = myisam
+        SELECT userid, uri, time, p, (case when (locate('sid=',uri)>0) then 1 else 0 end) as tab 
+        FROM actionlog._predictgame_scale
+        where date(time) between '2016-02-01' and now();
 
         ALTER TABLE actionlog._predictgame_scale_1 convert to character set utf8 collate utf8_general_ci;
 
-		create table plsport_playsport._qu_1 engine = myisam
-		SELECT a.userid, a.q1, a.q2, b.pv
-		FROM plsport_playsport._qu a left join (SELECT userid, count(uri) as pv 
-												FROM actionlog._predictgame_scale_1
-												group by userid) b on a.userid = b.userid
-		where b.pv >= 8
-		order by b.pv;
+        create table plsport_playsport._qu_1 engine = myisam
+        SELECT a.userid, a.q1, a.q2, b.pv
+        FROM plsport_playsport._qu a left join (SELECT userid, count(uri) as pv 
+                                                FROM actionlog._predictgame_scale_1
+                                                group by userid) b on a.userid = b.userid
+        where b.pv >= 8
+        order by b.pv;
 
         # 問券結果(原始版本)
-		SELECT q1, count(userid) as c 
-		FROM plsport_playsport._qu
-		group by q1;
+        SELECT q1, count(userid) as c 
+        FROM plsport_playsport._qu
+        group by q1;
 
-		# 問券結果(排除pv小於8的問券 436 > 385)
-		SELECT q1, count(userid) as c 
-		FROM plsport_playsport._qu_1
-		group by q1;
+        # 問券結果(排除pv小於8的問券 436 > 385)
+        SELECT q1, count(userid) as c 
+        FROM plsport_playsport._qu_1
+        group by q1;
         
-		SELECT q1, count(userid) as c 
-		FROM plsport_playsport._qu_1
-	    where pv >= 200
-		group by q1;
+        SELECT q1, count(userid) as c 
+        FROM plsport_playsport._qu_1
+        where pv >= 200
+        group by q1;
 
 
 create table actionlog._predictgame_scale_2 engine = myisam
@@ -23800,17 +23799,17 @@ where abtest = 'a'
 and tab_c in ('0','1','2','3','')
 group by tab_c;
 
-# 	71596 尚未點擊
-# 0	84342 點擊[所有會員]
-# 1	15280 點擊[月勝率60%以上會員]
-# 2	7999  點擊[所有會員主推]
-# 3	17243 點擊[月勝率前100名會員]
+#   71596 尚未點擊
+# 0 84342 點擊[所有會員]
+# 1 15280 點擊[月勝率60%以上會員]
+# 2 7999  點擊[所有會員主推]
+# 3 17243 點擊[月勝率前100名會員]
 
-# 	108671
-# 0	123709
-# 1	21065
-# 2	10607
-# 3	24360
+#   108671
+# 0 123709
+# 1 21065
+# 2 10607
+# 3 24360
 
 
 # =================================================================================================
@@ -23820,10 +23819,10 @@ group by tab_c;
 # 
 # 內容
 # 條件：
-# 	近一個月預測比例頁pv前50% 
-# 	手機使用比例60%以上
+#   近一個月預測比例頁pv前50% 
+#   手機使用比例60%以上
 # 欄位：
-# 	帳號、暱稱、預測比例頁pv及全站佔比、手機/電腦使用比例、最後登入時間
+#   帳號、暱稱、預測比例頁pv及全站佔比、手機/電腦使用比例、最後登入時間
 # =================================================================================================
 
 create table actionlog._predict_scale engine = myisam
@@ -23847,15 +23846,15 @@ update actionlog._predict_scale_1 set platform_type = 1 where platform_type = 3;
 create table actionlog._predict_scale_2 engine = myisam
 select c.userid, (c.pc+c.mobile) as pv, round((c.pc/(c.pc+c.mobile)),3) as p_pc, round((c.mobile/(c.pc+c.mobile)),3) as p_mobile
 from (
-	select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
-	from (
-		select a.userid, (case when (a.platform_type = 1) then pv else 0 end) as pc,
-						 (case when (a.platform_type = 2) then pv else 0 end) as mobile
-		from (
-			SELECT userid, platform_type, count(uri) as pv
-			FROM actionlog._predict_scale_1
-			group by userid, platform_type) as a) as b
-	group by b.userid) as c;
+    select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
+    from (
+        select a.userid, (case when (a.platform_type = 1) then pv else 0 end) as pc,
+                         (case when (a.platform_type = 2) then pv else 0 end) as mobile
+        from (
+            SELECT userid, platform_type, count(uri) as pv
+            FROM actionlog._predict_scale_1
+            group by userid, platform_type) as a) as b
+    group by b.userid) as c;
 
 create table actionlog._predict_scale_3 engine = myisam
 select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, p_pc, p_mobile
@@ -23864,8 +23863,8 @@ from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, p_pc, p_mobile
       order by pv desc) as dt,
      (select count(distinct userid) as cnt from actionlog._predict_scale_2) as ct;
 
-	ALTER TABLE actionlog._predict_scale_3 convert to character set utf8 collate utf8_general_ci;
-	ALTER TABLE actionlog._predict_scale_3 ADD INDEX (`userid`);
+    ALTER TABLE actionlog._predict_scale_3 convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE actionlog._predict_scale_3 ADD INDEX (`userid`);
 
 create table actionlog._predict_scale_4 engine = myisam
 SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.p_pc, a.p_mobile
@@ -23920,8 +23919,8 @@ where uri like '%rp=FRND_1%' or uri like '%rp=FRND_2%';
 
 select a.rp, count(a.userid) as c
 from (
-	SELECT userid, substr(uri, locate('rp=FRND',uri), length(uri)) as rp, time, platform_type 
-	FROM actionlog._action_friend) as a
+    SELECT userid, substr(uri, locate('rp=FRND',uri), length(uri)) as rp, time, platform_type 
+    FROM actionlog._action_friend) as a
 group by a.rp;
 
 
@@ -23959,9 +23958,9 @@ group by a.userid, a.mode, a.friendid;
 create table plsport_playsport._friends_adv_mode_0 engine = myisam
 select a.userid, count(a.friendid) as friend_count
 from (
-	SELECT userid, friendid
-	FROM plsport_playsport._friends_adv
-	group by userid, friendid) as a
+    SELECT userid, friendid
+    FROM plsport_playsport._friends_adv
+    group by userid, friendid) as a
 group by a.userid;
 
 create table plsport_playsport._friends_adv_mode_1 engine = myisam
@@ -24063,9 +24062,9 @@ where b.postdate is not null;
 create table plsport_playsport._report_list engine = myisam
 select *
 from (
-	SELECT reporter_id, reporter_nickname, count(id) as report_c 
-	FROM plsport_playsport._gobucket_1
-	group by reporter_id) as a
+    SELECT reporter_id, reporter_nickname, count(id) as report_c 
+    FROM plsport_playsport._gobucket_1
+    group by reporter_id) as a
 order by a.report_c desc;
 
 # 常在檢舉的名單+ percentile  
@@ -24101,10 +24100,10 @@ group by d;
 # 統計每日檢舉的次數(不重覆)
 select a.d, count(a.reporter_id) as c
 from (
-	SELECT reporter_id, d 
-	FROM plsport_playsport._gobucket_3
-	where reporter_id <> ''
-	group by reporter_id, d) as a
+    SELECT reporter_id, d 
+    FROM plsport_playsport._gobucket_3
+    where reporter_id <> ''
+    group by reporter_id, d) as a
 group by a.d;
 
 # 統計每月檢舉的次數
@@ -24115,10 +24114,10 @@ group by ym;
 # 統計每月檢舉的次數(不重覆)
 select a.ym, count(a.reporter_id) as c
 from (
-	SELECT reporter_id, ym 
-	FROM plsport_playsport._gobucket_3
-	where reporter_id <> ''
-	group by reporter_id, ym) as a
+    SELECT reporter_id, ym 
+    FROM plsport_playsport._gobucket_3
+    where reporter_id <> ''
+    group by reporter_id, ym) as a
 group by a.ym;
 
 ALTER TABLE plsport_playsport.forum ADD INDEX (`subjectid`);
@@ -24136,9 +24135,9 @@ group by d;
 # 每天使用禁文的人(不重覆)
 select a.d, count(a.post_user) as c
 from (
-	SELECT d, post_user 
-	FROM plsport_playsport._forum_blacklist
-	group by d, post_user) as a 
+    SELECT d, post_user 
+    FROM plsport_playsport._forum_blacklist
+    group by d, post_user) as a 
 group by a.d
 order by a.d;
 
@@ -24183,60 +24182,60 @@ and userid <> '';
 create table actionlog._click_refund_btn engine = myisam
 select b.d, count(b.userid) as buyer_count, c.c
 from (
-	select a.d, a.userid, sum(a.amount) as spent
-	from (
-		SELECT userid, date(date) as d, amount
-		FROM plsport_playsport.pcash_log
-		where payed = 1 and type = 1
-		and substr(date,1,7) in ('2016-01','2016-02')) as a
-	group by a.d, a.userid) as b left join (select a.d, count(a.userid) as c
-											from (
-												SELECT userid, date(time) as d FROM actionlog._c_temp
-												where uri like '%visit_member_refund_link%') as a
-											group by a.d) as c on b.d = c.d
+    select a.d, a.userid, sum(a.amount) as spent
+    from (
+        SELECT userid, date(date) as d, amount
+        FROM plsport_playsport.pcash_log
+        where payed = 1 and type = 1
+        and substr(date,1,7) in ('2016-01','2016-02')) as a
+    group by a.d, a.userid) as b left join (select a.d, count(a.userid) as c
+                                            from (
+                                                SELECT userid, date(time) as d FROM actionlog._c_temp
+                                                where uri like '%visit_member_refund_link%') as a
+                                            group by a.d) as c on b.d = c.d
 group by b.d;
 
 # "兌換卷已贈送完成"（這裡帶購牌清單連杰）
 select b.d, count(b.userid) as buyer_count, c.c
 from (
-	select a.d, a.userid, sum(a.amount) as spent
-	from (
-		SELECT userid, date(date) as d, amount
-		FROM plsport_playsport.pcash_log
-		where payed = 1 and type = 1
-		and substr(date,1,7) in ('2016-01','2016-02')) as a
-	group by a.d, a.userid) as b left join (select a.d, count(a.userid) as c
-											from (
-												SELECT userid, date(time) as d FROM actionlog._c_temp
-												where uri like '%visit_member_refund_btn%') as a
-											group by a.d) as c on b.d = c.d
+    select a.d, a.userid, sum(a.amount) as spent
+    from (
+        SELECT userid, date(date) as d, amount
+        FROM plsport_playsport.pcash_log
+        where payed = 1 and type = 1
+        and substr(date,1,7) in ('2016-01','2016-02')) as a
+    group by a.d, a.userid) as b left join (select a.d, count(a.userid) as c
+                                            from (
+                                                SELECT userid, date(time) as d FROM actionlog._c_temp
+                                                where uri like '%visit_member_refund_btn%') as a
+                                            group by a.d) as c on b.d = c.d
 group by b.d;
 
 # 點擊下拉式選單的轉換率
-	# 符合出現提示條件的event
-	create table actionlog._c_temp_events engine = myisam
-	SELECT *
-	FROM plsport_playsport.events
-	where name = 'ShoppingListDropdownMenuBTN';
-	# 分母
-	select b.d, count(b.userid) as c
-	from (
-		select a.d, a.userid
-		from (
-			SELECT userid, date(time) as d 
-			FROM actionlog._c_temp_events) as a
-		group by a.d, a.userid) as b
-	group by b.d;
-	# 分子
-	select b.d, count(b.userid) as c
-	from (
-		select a.userid, a.d
-		from (
-			SELECT userid, date(time) as d 
-			FROM actionlog._c_temp
-			where uri like '%shopping_list_dropdown_menu_btn%') as a
-		group by a.userid, a.d) as b
-	group by b.d;
+    # 符合出現提示條件的event
+    create table actionlog._c_temp_events engine = myisam
+    SELECT *
+    FROM plsport_playsport.events
+    where name = 'ShoppingListDropdownMenuBTN';
+    # 分母
+    select b.d, count(b.userid) as c
+    from (
+        select a.d, a.userid
+        from (
+            SELECT userid, date(time) as d 
+            FROM actionlog._c_temp_events) as a
+        group by a.d, a.userid) as b
+    group by b.d;
+    # 分子
+    select b.d, count(b.userid) as c
+    from (
+        select a.userid, a.d
+        from (
+            SELECT userid, date(time) as d 
+            FROM actionlog._c_temp
+            where uri like '%shopping_list_dropdown_menu_btn%') as a
+        group by a.userid, a.d) as b
+    group by b.d;
 
 
 # 補充一天有多少人收到退券通知(2016-02-17)
@@ -24246,13 +24245,13 @@ group by b.d;
 
 select b.d, count(b.userid) as dispatched_user_count
 from (
-	select a.userid, a.d, a.reason
-	from (
-		SELECT userid, date(date) as d, reason
-		FROM coupon_dispatched 
-		WHERE reason in (2,21)
-		and date(date) between '2016-01-14' and now()) as a
-	group by a.userid, a.d) as b
+    select a.userid, a.d, a.reason
+    from (
+        SELECT userid, date(date) as d, reason
+        FROM coupon_dispatched 
+        WHERE reason in (2,21)
+        and date(date) between '2016-01-14' and now()) as a
+    group by a.userid, a.d) as b
 group by b.d;
 
 
@@ -24318,28 +24317,28 @@ and userid <> '';
 # 每天有使用名燈的人數
 select a.d, count(a.userid) as user_count
 from (
-	SELECT userid, d 
-	FROM actionlog._friend_list
-	group by userid, d) as a
+    SELECT userid, d 
+    FROM actionlog._friend_list
+    group by userid, d) as a
 group by a.d;
 
 # 每天點擊未分類的人數
 select a.d, count(a.userid) as user_count
 from (
-	SELECT userid, d 
-	FROM actionlog._friend_list
-	where uri like '%adv=0%' and userid <> 'yenhsun1982'
-	group by userid, d) as a
+    SELECT userid, d 
+    FROM actionlog._friend_list
+    where uri like '%adv=0%' and userid <> 'yenhsun1982'
+    group by userid, d) as a
 group by a.d
 order by a.d;
 
 # 每天點擊誰加我明燈的人數
 select a.d, count(a.userid) as user_count
 from (
-	SELECT userid, d 
-	FROM actionlog._friend_list
-	where uri like '%type=asf%' and userid <> 'yenhsun1982'
-	group by userid, d) as a
+    SELECT userid, d 
+    FROM actionlog._friend_list
+    where uri like '%type=asf%' and userid <> 'yenhsun1982'
+    group by userid, d) as a
 group by a.d
 order by a.d;
 
@@ -24347,17 +24346,17 @@ order by a.d;
 create table actionlog._friend_list_click_rp_1 engine = myisam
 select d.userid, (mode1+mode2) as total_c, mode1, mode2, round((mode1/(mode1+mode2)),2) as mode1_p, round((mode2/(mode1+mode2)),2) as mode2_p
 from (
-	select c.userid, sum(c.mode2) as mode2, sum(c.mode1) as mode1
-	from (
-		select b.userid, (case when (b.f=2) then c else 0 end) as mode2, (case when (b.f=1) then c else 0 end) as mode1
-		from (
-			select a.userid, a.f, count(a.userid) as c
-			from (
-				SELECT userid, uri, d, p, substr(uri, locate('rp=FRND_',uri)+8,length(uri)) as f
-				FROM actionlog._friend_list_click_rp) as a
-			where a.f in (1,2)
-			group by a.userid, a.f) as b) as c
-	group by c.userid) as d;
+    select c.userid, sum(c.mode2) as mode2, sum(c.mode1) as mode1
+    from (
+        select b.userid, (case when (b.f=2) then c else 0 end) as mode2, (case when (b.f=1) then c else 0 end) as mode1
+        from (
+            select a.userid, a.f, count(a.userid) as c
+            from (
+                SELECT userid, uri, d, p, substr(uri, locate('rp=FRND_',uri)+8,length(uri)) as f
+                FROM actionlog._friend_list_click_rp) as a
+            where a.f in (1,2)
+            group by a.userid, a.f) as b) as c
+    group by c.userid) as d;
 
 create table actionlog._friend_list_click_rp_2 engine = myisam
 select userid, total_c, round((cnt-rank+1)/cnt,2) as total_c_p, mode1_p, mode2_p
@@ -24376,7 +24375,6 @@ FROM actionlog._friend_list_click_rp_2);
 
 
 
-
 # =================================================================================================
 # 2015MLB、NBA開季時網站流量、消費狀況
 # http://redmine.playsport.cc/issues/1144
@@ -24385,46 +24383,143 @@ FROM actionlog._friend_list_click_rp_2);
 # 想請您撈2015MLB、NBA開季前後七天,逐日的網站流量、逐日的購買預測金額
 # 撈取區間如下
 # 
-# 1.MLB開季(2015/4/6)：2015/3/30~2015/4/13　　　　　該次儲值優惠活動時間：4月1日 中午12點 - 4月2日 中午12點
-# 2.NBA開季(2015/10/28)：2015/10/21~2015/11/4　　　該次儲值優惠活動時間：10月29日 中午12點 - 10月30日 中午12點
+#     1.MLB開季(2015/4/6)：2015/3/30~2015/4/13　　　　　該次儲值優惠活動時間：4月1日 中午12點 - 4月2日 中午12點
+#     2.NBA開季(2015/10/28)：2015/10/21~2015/11/4　　　該次儲值優惠活動時間：10月29日 中午12點 - 10月30日 中午12點
 # 
 # 撈取以下資料
-# 1.逐日的網站流量
-# 2.逐日的購買預測金額（購買MLB、NBA聯盟的就可以）
+#     1.逐日的網站流量
+#     2.逐日的購買預測金額（購買MLB、NBA聯盟的就可以）
 # 這個任務希望盡快，再麻煩您押個時間，謝謝！
 # =================================================================================================
 
+# 2.逐日的購買預測金額（購買MLB、NBA聯盟的就可以）
+    # MLB
+    select a.y, a.d, sum(a.buy_price) as spent, a.buy_allianceid
+    from (
+        SELECT buyerid, buy_price, substr(buy_date,6,5) as d, year(buy_date) as y, buy_allianceid
+        FROM plsport_playsport.predict_buyer
+        where substr(buy_date,6,5) between '03-15' and '04-15'
+        and buy_allianceid =1) as a
+    where a.y > 2012
+    group by a.y, a.d;
+
+    # NBA
+    select a.y, a.d, sum(a.buy_price) as spent, a.buy_allianceid
+    from (
+        SELECT buyerid, buy_price, substr(buy_date,6,5) as d, year(buy_date) as y, buy_allianceid
+        FROM plsport_playsport.predict_buyer
+        where substr(buy_date,6,5) between '10-15' and '11-15'
+        and buy_allianceid =3) as a
+    where a.y > 2012
+    group by a.y, a.d;
 
 
-# MLB
-select a.y, a.d, sum(a.buy_price) as spent, a.buy_allianceid
+
+# =================================================================================================   
+# http://redmine.playsport.cc/issues/1189
+#  [201511-C-9]購牌專區改版-MVP名單提供    是由 郭 靜怡 於 28 分鐘 前加入.
+# 說明 提供購牌專區MVP名單
+# 內容 
+# - 條件：近三個月使用購牌專區買牌前50%
+# - 欄位：帳號、暱稱、購牌專區pv、購牌專區消費金額、總購買預測金額，手機電腦使用比例  
+# =================================================================================================  
+
+create table actionlog._buy_predict engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201602
+where uri like '%buy_predict.php%' 
+and userid <> ''
+and time between subdate(now(),93) AND now();
+insert ignore into actionlog._buy_predict
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201601
+where uri like '%buy_predict.php%' 
+and userid <> ''
+and time between subdate(now(),93) AND now();
+insert ignore into actionlog._buy_predict
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201512
+where uri like '%buy_predict.php%' 
+and userid <> ''
+and time between subdate(now(),93) AND now();
+insert ignore into actionlog._buy_predict
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201511
+where uri like '%buy_predict.php%' 
+and userid <> ''
+and time between subdate(now(),93) AND now();
+
+create table actionlog._buy_predict_1 engine = myisam
+SELECT userid, platform_type, count(uri) as pv 
+FROM actionlog._buy_predict
+group by userid, platform_type;
+
+update actionlog._buy_predict_1 set platform_type = 1 where platform_type = 3;
+
+create table actionlog._buy_predict_2 engine = myisam
+select b.userid, (b.pc+b.mobile) as pv, round((b.pc/(b.pc+b.mobile)),3) as pc_p, round((b.mobile/(b.pc+b.mobile)),3) as mobile_p
 from (
-	SELECT buyerid, buy_price, substr(buy_date,6,5) as d, year(buy_date) as y, buy_allianceid
-	FROM plsport_playsport.predict_buyer
-	where substr(buy_date,6,5) between '03-15' and '04-15'
-    and buy_allianceid =1) as a
-where a.y > 2012
-group by a.y, a.d;
+	select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+	from (
+		SELECT userid, (case when (platform_type = 1) then pv else 0 end) as pc, 
+					   (case when (platform_type = 2) then pv else 0 end) as mobile
+		FROM actionlog._buy_predict_1) as a
+	group by a.userid) as b;
 
-# NBA
-select a.y, a.d, sum(a.buy_price) as spent, a.buy_allianceid
+create table actionlog._buy_predict_3 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, pc_p, mobile_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, pc_p, mobile_p
+      FROM actionlog._buy_predict_2, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._buy_predict_2) as ct;
+
+create table plsport_playsport._predict_buyer engine = myisam
+SELECT * 
+FROM plsport_playsport.predict_buyer
+where buy_date between subdate(now(),93) and now();
+
+ALTER TABLE plsport_playsport._predict_buyer ADD INDEX (`id`);
+ALTER TABLE plsport_playsport.predict_buyer_cons_split ADD INDEX (`id_predict_buyer`);
+
+create table plsport_playsport._predict_buyer_1 engine = myisam
+SELECT a.id, a.buyerid, a.buy_date, a.id_bought, a.buy_price, b.position, b.cons
+FROM plsport_playsport._predict_buyer a left join plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer;
+
+create table plsport_playsport._predict_buyer_1_total_spent engine = myisam
+SELECT buyerid, sum(buy_price) as total_spent 
+FROM plsport_playsport._predict_buyer_1
+where buy_price > 0
+group by buyerid;
+
+create table plsport_playsport._predict_buyer_1_BZ_spent engine = myisam
+SELECT buyerid, sum(buy_price) as bz_spent 
+FROM plsport_playsport._predict_buyer_1
+where buy_price > 0 and position like 'BZ%'
+group by buyerid;
+
+ALTER TABLE plsport_playsport._predict_buyer_1_total_spent ADD INDEX (`buyerid`);
+ALTER TABLE plsport_playsport._predict_buyer_1_BZ_spent ADD INDEX (`buyerid`);
+ALTER TABLE plsport_playsport._predict_buyer_1_total_spent convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._predict_buyer_1_BZ_spent convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._buy_predict_3 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._buy_predict_4 engine = myisam
+select c.userid, c.pv, c.pv_percentile, c.bz_spent, d.total_spent, c.pc_p, c.mobile_p
 from (
-	SELECT buyerid, buy_price, substr(buy_date,6,5) as d, year(buy_date) as y, buy_allianceid
-	FROM plsport_playsport.predict_buyer
-	where substr(buy_date,6,5) between '10-15' and '11-15'
-    and buy_allianceid =3) as a
-where a.y > 2012
-group by a.y, a.d;
+	SELECT a.userid, a.pv, b.bz_spent, a.pv_percentile, a.pc_p, a.mobile_p 
+	FROM actionlog._buy_predict_3 a left join plsport_playsport._predict_buyer_1_BZ_spent b on a.userid = b.buyerid) as c
+    left join plsport_playsport._predict_buyer_1_total_spent d on c.userid = d.buyerid
+where c.pv_percentile >= 0.85;
 
+create table actionlog._buy_predict_5 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile, COALESCE(a.bz_spent,0) as bz_spent, COALESCE(a.total_spent,0) as total_spent, 
+       a.pc_p, a.mobile_p 
+FROM actionlog._buy_predict_4 a left join plsport_playsport.member b on a.userid = b.userid;
 
-
-
-
-
-
-
-
-
-
+SELECT '帳號', '暱稱', '購牌專區pv', '購牌專區pv級距%', '購牌專區消費金額', '總購買預測金額', '電腦使用比例', '手機使用比例'union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_buy_predict_5.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._buy_predict_5);
 
 
