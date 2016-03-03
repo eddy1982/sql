@@ -24516,10 +24516,77 @@ SELECT a.userid, b.nickname, a.pv, a.pv_percentile, COALESCE(a.bz_spent,0) as bz
        a.pc_p, a.mobile_p 
 FROM actionlog._buy_predict_4 a left join plsport_playsport.member b on a.userid = b.userid;
 
-SELECT '帳號', '暱稱', '購牌專區pv', '購牌專區pv級距%', '購牌專區消費金額', '總購買預測金額', '電腦使用比例', '手機使用比例'union (
+	create table plsport_playsport._spent_in_10_days engine = myisam
+	SELECT buyerid, sum(buy_price) as spent_in_10_days, count(buy_price) as spent_count_in_10_days
+	FROM plsport_playsport._predict_buyer_1
+	where buy_date between subdate(now(),10) and now()
+	group by buyerid;
+
+	create table plsport_playsport._latest_spent engine = myisam
+	SELECT buyerid, date(max(buy_date)) as latest_spent 
+	FROM plsport_playsport._predict_buyer_1
+	group by buyerid;
+
+create table actionlog._buy_predict_6 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.bz_spent, a.total_spent, b.spent_in_10_days, b.spent_count_in_10_days,
+       a.pc_p, a.mobile_p 
+FROM actionlog._buy_predict_5 a left join plsport_playsport._spent_in_10_days b on a.userid = b.buyerid;
+
+create table actionlog._buy_predict_7 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.bz_spent, a.total_spent, a.spent_in_10_days, a.spent_count_in_10_days,
+       a.pc_p, a.mobile_p, b.latest_spent
+FROM actionlog._buy_predict_6 a left join plsport_playsport._latest_spent b on a.userid = b.buyerid;
+
+SELECT '帳號', '暱稱', '購牌專區pv', '購牌專區pv級距%', '購牌專區消費金額', '總購買預測金額', '近10天買的金額','近10天買的次數', '電腦使用比例', '手機使用比例', '最後一次購買' union (
 SELECT *
-into outfile 'C:/Users/eddy/Desktop/_buy_predict_5.txt'
+into outfile 'C:/Users/eddy/Desktop/_buy_predict_7.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM actionlog._buy_predict_5);
+FROM actionlog._buy_predict_7);
+
+
+# =================================================================================================  
+# 檢查為什麼2015年的回文數量特別多
+# =================================================================================================  
+
+create table plsport_playsport._forumcontent_jan engine = myisam
+SELECT articleid, subjectid, userid, content, postdate 
+FROM plsport_playsport.forumcontent
+where year(postdate) >= 2014 and month(postdate) = 1;
+
+
+ALTER TABLE plsport_playsport._forumcontent_jan ADD INDEX (`subjectid`);
+ALTER TABLE plsport_playsport.forum ADD INDEX (`subjectid`);
+
+create table plsport_playsport._forumcontent_jan_1  engine = myisam
+SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, b.allianceid 
+FROM plsport_playsport._forumcontent_jan a left join plsport_playsport.forum b on a.subjectid = b.subjectid
+order by a.postdate desc;
+
+create table plsport_playsport._forumcontent_jan_2  engine = myisam
+SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, substr(a.postdate,1,7) as ym, a.allianceid, b.alliancename 
+FROM plsport_playsport._forumcontent_jan_1 a left join plsport_playsport.alliance b on a.allianceid = b.allianceid;
+
+# 回文數比較
+SELECT ym, alliancename, count(articleid) as c 
+FROM plsport_playsport._forumcontent_jan_2
+where alliancename is not null
+group by ym, alliancename;
+
+create table plsport_playsport._forum_jan engine = myisam
+SELECT a.allianceid, b.alliancename, a.subjectid, a.posttime, substr(a.posttime,1,7) as ym, a.replyCount
+FROM plsport_playsport.forum a left join plsport_playsport.alliance b on a.allianceid = b.allianceid
+where year(a.posttime) >= 2014 and month(a.posttime) = 1;
+
+SELECT ym, alliancename, count(subjectid) as c 
+FROM plsport_playsport._forum_jan
+where alliancename is not null
+group by ym, alliancename;
+
+select a.ym, a.alliancename, a.subject_count, a.reply_count, round((a.reply_count/a.subject_count),2) as ratio
+from (
+	SELECT ym, alliancename, count(subjectid) as subject_count, sum(replycount) as reply_count 
+	FROM plsport_playsport._forum_jan
+	where alliancename is not null
+	group by ym, alliancename) as a;
 
 
