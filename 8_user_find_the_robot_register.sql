@@ -9,6 +9,9 @@
 -- 		3. 密碼都一樣
 -- ======================================================================================
 
+
+
+
 use plsport_playsport;
 create table plsport_playsport._problem_members_1 engine = myisam
 SELECT userid FROM plsport_playsport.member
@@ -26,8 +29,8 @@ and date(createon) between '2013-01-01' and '2018-12-31'      /*2013~2018*/
 order by nickname desc;
 
 # 新的篩選機制, 記得先執行slice06_member_signin_log_archive.py 
-create table plsport_playsport._problem_members_3 engine = myisam
-SELECT userid FROM plsport_playsport._each_month_login_1;
+#create table plsport_playsport._problem_members_3 engine = myisam
+#SELECT userid FROM plsport_playsport._each_month_login_1;
 
 /*新手買牌路徑的測試帳號*/
 create table plsport_playsport._problem_members_4 engine = myisam
@@ -50,12 +53,12 @@ where userid like '%xiaojita%';
 
 /*註冊機器人1 + 註冊機器人2 + 活死人 + 新手買牌路徑的測試帳號*/
 insert ignore into plsport_playsport._problem_members_1 select * from plsport_playsport._problem_members_2;
-insert ignore into plsport_playsport._problem_members_1 select * from plsport_playsport._problem_members_3;
+#insert ignore into plsport_playsport._problem_members_1 select * from plsport_playsport._problem_members_3;
 insert ignore into plsport_playsport._problem_members_1 select * from plsport_playsport._problem_members_4;
 insert ignore into plsport_playsport._problem_members_1 select * from plsport_playsport._problem_members_5;
 insert ignore into plsport_playsport._problem_members_1 select * from plsport_playsport._problem_members_6;
 
-drop table plsport_playsport._problem_members_2, plsport_playsport._problem_members_3, 
+drop table plsport_playsport._problem_members_2, 
            plsport_playsport._problem_members_4, plsport_playsport._problem_members_5,
            plsport_playsport._problem_members_6;
 
