@@ -24590,3 +24590,84 @@ from (
 	group by ym, alliancename) as a;
 
 
+
+# ================================================================================================= 
+# [201512-B-6]優化手機版預測比列-MVP名單
+# http://redmine.playsport.cc/issues/1220#change-5904
+# 說明 提供MVP名單
+# 
+# 內容 條件：
+# 近一個月預測比例頁pv前80% 
+# 手機使用比例60%以上
+# 
+# 欄位：
+# 帳號、暱稱、預測比例頁pv及全站佔比、手機/電腦使用比例、最後登入時間
+# ================================================================================================= 
+
+drop table if exists actionlog._predict_scale;
+
+create table actionlog._predict_scale engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201603
+where uri regexp '^/predictgame.*php.*action=scale.*'    
+and userid <> ''
+and time between subdate(now(),31) and now();
+
+insert ignore into actionlog._predict_scale
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201602
+where uri regexp '^/predictgame.*php.*action=scale.*'   
+and userid <> ''
+and time between subdate(now(),31) and now();
+
+update actionlog._predict_scale set platform_type = 1 where platform_type = 3;
+
+create table actionlog._predict_scale_1 engine = myisam
+select c.userid, (c.pc+c.mobile) as pv, round((c.pc/(c.pc+c.mobile)),3) as p_pc, round((c.mobile/(c.pc+c.mobile)),3) as p_mobile
+from (
+	select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
+	from (
+		select a.userid, (case when (a.platform_type = 1) then c else 0 end) as pc,
+						 (case when (a.platform_type = 2) then c else 0 end) as mobile
+		from (
+			SELECT userid, platform_type, count(uri) as c
+			FROM actionlog._predict_scale
+			group by userid, platform_type) as a) as b
+	group by b.userid) as c;
+
+create table actionlog._predict_scale_2 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, p_pc, p_mobile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, p_pc, p_mobile
+      FROM actionlog._predict_scale_1, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._predict_scale_1) as ct;
+     
+drop table if exists plsport_playsport._last_login;
+CREATE TABLE plsport_playsport._last_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+    ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+	ALTER TABLE plsport_playsport.member convert to character set utf8 collate utf8_general_ci;
+	ALTER TABLE actionlog._predict_scale_2 convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
+    
+create table actionlog._predict_scale_3 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.p_pc, a.p_mobile 
+FROM actionlog._predict_scale_2 a left join plsport_playsport.member b on a.userid = b.userid
+where a.pv_percentile >= 0.8 and a.p_mobile >= 0.6;
+
+create table actionlog._predict_scale_4 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.p_pc, a.p_mobile, date(b.signin_time) as signin
+FROM actionlog._predict_scale_3 a left join plsport_playsport._last_login b on a.userid = b.userid;
+
+SELECT '帳號', '暱稱', '預測比例頁pv', '全站佔比', '電腦使用比例', '手機使用比例', '最後登入時間' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_predict_scale_4.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._predict_scale_4);
+
+
+
+
