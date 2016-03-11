@@ -24017,6 +24017,53 @@ order by friend_count_p desc;
 
 
 
+# TO EDDY 2016-3-10
+# 麻煩提供前1%明燈數的使用數量，謝謝
+
+create table plsport_playsport._friends_advance engine = myisam
+select *
+from (
+	select a.userid, count(a.friendid) as c
+	from (
+		SELECT userid, friendid
+		FROM plsport_playsport.friends_advance
+		where userid <> ''
+		group by userid, friendid) as a
+	group by a.userid) as b
+order by b.c desc;
+
+create table plsport_playsport._friends_advance_1 engine = myisam
+select userid, c, round((cnt-rank+1)/cnt,2) as c_percentile
+from (SELECT userid, c, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._friends_advance, (SELECT @curRank := 0) r
+      order by c desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._friends_advance) as ct;
+
+
+create table plsport_playsport._friends_advance_2 engine = myisam
+SELECT a.userid, b.nickname, a.c as friend_count, a.c_percentile 
+FROM plsport_playsport._friends_advance_1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists plsport_playsport._last_login;
+CREATE TABLE plsport_playsport._last_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+
+    ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
+    ALTER TABLE plsport_playsport._friends_advance_2 ADD INDEX (`userid`);
+	ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+	ALTER TABLE plsport_playsport._friends_advance_2 convert to character set utf8 collate utf8_general_ci;
+    
+create table plsport_playsport._friends_advance_3 engine = myisam
+SELECT a.userid, a.nickname, a.friend_count, a.c_percentile, date(b.signin_time) as d
+FROM plsport_playsport._friends_advance_2 a left join plsport_playsport._last_login b on a.userid = b.userid
+where a.c_percentile >= 0.98;
+
+
+
+
 # =================================================================================================
 # 產品專案 #529: [201510-A]開發討論區黑名單功能 2016-02-15
 # http://redmine.playsport.cc/issues/967#change-4551
@@ -24035,7 +24082,7 @@ order by friend_count_p desc;
 # =================================================================================================
 
 
-# 記得匯入 (1) forum (2) forumcontent
+# 記得匯入 (1) forum (2) forumcontent (3) forum_blacklist
 
 create table plsport_playsport._gobucket engine = myisam 
 SELECT id, reporter_id, reporter_nickname, userid, nickname, allianceid, subjectid, articleid, content, process, rule_number, moderator, reason
@@ -24095,6 +24142,7 @@ FROM plsport_playsport._gobucket_2;
 # 統計每日檢舉的次數
 SELECT d, count(id) as c 
 FROM plsport_playsport._gobucket_3
+where year(d) = 2016
 group by d;
 
 # 統計每日檢舉的次數(不重覆)
@@ -24102,7 +24150,7 @@ select a.d, count(a.reporter_id) as c
 from (
     SELECT reporter_id, d 
     FROM plsport_playsport._gobucket_3
-    where reporter_id <> ''
+    where reporter_id <> '' and year(d) = 2016
     group by reporter_id, d) as a
 group by a.d;
 
@@ -24544,6 +24592,71 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._buy_predict_7);
 
 
+# update:2016-03-08
+# EDDY：
+# 麻煩提供下列購牌專區改版-MVP使用狀況
+# 時間：3/4~3/7
+# 欄位：購牌區PV、購牌區購買次數
+
+drop table if exists actionlog._buy_predict;
+create table actionlog._buy_predict engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201603
+where uri like '%buy_predict.php%' 
+and userid in ('FB1451844148','kennyhou888','ececec','king_695888','ice3345678','0937722310','J6254','zncyoyo',
+               'aa6565931','FB100000216144535','670620','Ja0918211','zg1169','M9566888')
+and time between '2016-03-04%' and '2016-03-07%';
+
+update actionlog._buy_predict set platform_type = 1 where platform_type = 3;
+
+create table actionlog._buy_predict_1 engine = myisam
+select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
+from (
+	select a.userid, (case when(a.platform_type = 1) then c else 0 end) as pc,
+					 (case when(a.platform_type = 2) then c else 0 end) as mobile
+	from (
+		SELECT userid, platform_type, count(uri) as c 
+		FROM actionlog._buy_predict
+		group by userid, platform_type) as a) as b
+group by b.userid;
+
+    ALTER TABLE actionlog._buy_predict_1 convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._buy_predict_2 engine = myisam
+SELECT a.userid, b.nickname, a.pc, a.mobile 
+FROM actionlog._buy_predict_1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists actionlog._buy_tota_bz;
+create table actionlog._buy_total_bz engine = myisam
+select a.buyerid, count(buy_price) as buy_count_bz, sum(buy_price) as buy_total_bz
+from (
+	SELECT buyerid, buy_date, buy_price 
+	FROM plsport_playsport.predict_buyer
+	where buy_date between '2016-03-04%' and '2016-03-07%'
+    and position like 'BZ%'
+	and buyerid in ('FB1451844148','kennyhou888','ececec','king_695888','ice3345678','0937722310','J6254','zncyoyo',
+					'aa6565931','FB100000216144535','670620','Ja0918211','zg1169','M9566888')) as a
+group by a.buyerid;
+
+drop table if exists actionlog._buy_total;
+create table actionlog._buy_total engine = myisam
+select a.buyerid, count(buy_price) as buy_count, sum(buy_price) as buy_total
+from (
+	SELECT buyerid, buy_date, buy_price 
+	FROM plsport_playsport.predict_buyer
+	where buy_date between '2016-03-04%' and '2016-03-07%'
+	and buyerid in ('FB1451844148','kennyhou888','ececec','king_695888','ice3345678','0937722310','J6254','zncyoyo',
+					'aa6565931','FB100000216144535','670620','Ja0918211','zg1169','M9566888')) as a
+group by a.buyerid;
+
+create table actionlog._buy_predict_3 engine = myisam
+select c.userid, c.nickname, c.pc, c.mobile, c.buy_count_bz, c.buy_total_bz, d.buy_count, d.buy_total
+from (
+	SELECT a.userid, a.nickname, a.pc, a.mobile, b.buy_count_bz, b.buy_total_bz
+	FROM actionlog._buy_predict_2 a left join actionlog._buy_total_bz b on a.userid = b.buyerid) as c
+    left join actionlog._buy_total d on c.userid = d.buyerid;
+
+
 # =================================================================================================  
 # 檢查為什麼2015年的回文數量特別多
 # =================================================================================================  
@@ -24552,7 +24665,6 @@ create table plsport_playsport._forumcontent_jan engine = myisam
 SELECT articleid, subjectid, userid, content, postdate 
 FROM plsport_playsport.forumcontent
 where year(postdate) >= 2014 and month(postdate) = 1;
-
 
 ALTER TABLE plsport_playsport._forumcontent_jan ADD INDEX (`subjectid`);
 ALTER TABLE plsport_playsport.forum ADD INDEX (`subjectid`);
