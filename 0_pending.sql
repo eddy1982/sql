@@ -22470,11 +22470,6 @@ group by a.userid, a.postuser;
 
 
 
-
-
-
-
-
 # =================================================================================================
 # http://redmine.playsport.cc/issues/838
 # 說明 提供MVP測試名單
@@ -22507,7 +22502,6 @@ create table actionlog._billboard_1 engine = myisam
 SELECT userid, count(uri) as pv
 FROM actionlog._billboard
 group by userid;
-
 
 ALTER TABLE actionlog._billboard_1 convert to character set utf8 collate utf8_general_ci;
 
@@ -22856,7 +22850,6 @@ FROM actionlog._all_post_all_push_mobile_1);
 # d. 11、12月點選NBA隔日的次數
 # =================================================================================================
 
-
 # 2016-01-04 12:00
 # To Eddy：
 # 麻煩再做兩份名單
@@ -23032,6 +23025,7 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._livescore_9_1_b);
 
 
+
 # =================================================================================================
 # http://redmine.playsport.cc/issues/853
 # 產品專案 #852: [201512-D]明燈改版
@@ -23077,7 +23071,6 @@ from (
                        (case when (platform_type=2) then pv else 0 end) as mobile
         FROM actionlog._friend_1) as a
     group by a.userid) as b;
-
 
 create table actionlog._friend_3 engine = myisam
 select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, pc, mobile
@@ -23414,6 +23407,7 @@ from (
 group by a.buyerid;
 
 
+
 # =================================================================================================
 # http://redmine.playsport.cc/issues/986
 # 產品專案 #852: [201512-D]明燈改版
@@ -23541,6 +23535,7 @@ from (
     group by a.userid) as c;
 
 
+
 # =================================================================================================
 # TO Eddy 
 # http://redmine.playsport.cc/issues/983
@@ -23556,7 +23551,6 @@ from (
 # 目的是想要知道這個功能大家使用的狀況
 # 時間：每一個月分析一次，共三個月後做總結論
 # =================================================================================================
-
 
 # link的點擊狀況
 create table actionlog._refund engine = myisam
@@ -23975,7 +23969,6 @@ FROM plsport_playsport._friends_adv
 where mode = 2
 group by userid;
 
-
 create table plsport_playsport._friends_adv_mode_0_p engine = myisam
 select userid, friend_count, round((cnt-rank+1)/cnt,2) as friend_count_p
 from (SELECT userid, friend_count, @curRank := @curRank + 1 AS rank
@@ -24015,8 +24008,6 @@ FROM plsport_playsport._friends_adv_mode_0_p
 group by friend_count_p
 order by friend_count_p desc;
 
-
-
 # TO EDDY 2016-3-10
 # 麻煩提供前1%明燈數的使用數量，謝謝
 
@@ -24039,7 +24030,6 @@ from (SELECT userid, c, @curRank := @curRank + 1 AS rank
       order by c desc) as dt,
      (select count(distinct userid) as cnt from plsport_playsport._friends_advance) as ct;
 
-
 create table plsport_playsport._friends_advance_2 engine = myisam
 SELECT a.userid, b.nickname, a.c as friend_count, a.c_percentile 
 FROM plsport_playsport._friends_advance_1 a left join plsport_playsport.member b on a.userid = b.userid;
@@ -24050,7 +24040,6 @@ SELECT userid, max(signin_time) as signin_time
 FROM plsport_playsport.member_signin_log_archive
 GROUP BY userid;
 
-
     ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
     ALTER TABLE plsport_playsport._friends_advance_2 ADD INDEX (`userid`);
 	ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
@@ -24060,7 +24049,6 @@ create table plsport_playsport._friends_advance_3 engine = myisam
 SELECT a.userid, a.nickname, a.friend_count, a.c_percentile, date(b.signin_time) as d
 FROM plsport_playsport._friends_advance_2 a left join plsport_playsport._last_login b on a.userid = b.userid
 where a.c_percentile >= 0.98;
-
 
 
 
@@ -24225,6 +24213,11 @@ SELECT userid, uri, time, platform_type as p
 FROM actionlog.action_201602
 where uri like '%qa.php%' or uri like '%shopping_list.php%'
 and userid <> '';
+insert ignore into actionlog._c_temp 
+SELECT userid, uri, time, platform_type as p 
+FROM actionlog.action_201603
+where uri like '%qa.php%' or uri like '%shopping_list.php%'
+and userid <> '';
 
 # "若殺手戰績不理想（這裡帶常見問題連結），我們將於00/00下午贈送退換卷給您"
 create table actionlog._click_refund_btn engine = myisam
@@ -24235,7 +24228,7 @@ from (
         SELECT userid, date(date) as d, amount
         FROM plsport_playsport.pcash_log
         where payed = 1 and type = 1
-        and substr(date,1,7) in ('2016-01','2016-02')) as a
+        and substr(date,1,7) in ('2016-01','2016-02','2016-03')) as a
     group by a.d, a.userid) as b left join (select a.d, count(a.userid) as c
                                             from (
                                                 SELECT userid, date(time) as d FROM actionlog._c_temp
@@ -24251,13 +24244,15 @@ from (
         SELECT userid, date(date) as d, amount
         FROM plsport_playsport.pcash_log
         where payed = 1 and type = 1
-        and substr(date,1,7) in ('2016-01','2016-02')) as a
+        and substr(date,1,7) in ('2016-01','2016-02','2016-03')) as a
     group by a.d, a.userid) as b left join (select a.d, count(a.userid) as c
                                             from (
                                                 SELECT userid, date(time) as d FROM actionlog._c_temp
                                                 where uri like '%visit_member_refund_btn%') as a
                                             group by a.d) as c on b.d = c.d
 group by b.d;
+
+# 這裡要記得匯入events
 
 # 點擊下拉式選單的轉換率
     # 符合出現提示條件的event
@@ -24356,12 +24351,6 @@ FROM actionlog.action_201512
 where uri like '%rp=FRND_%'
 and userid <> '';
 
-
-
-
-
-
-
 # 每天有使用名燈的人數
 select a.d, count(a.userid) as user_count
 from (
@@ -24390,7 +24379,6 @@ from (
 group by a.d
 order by a.d;
 
-
 create table actionlog._friend_list_click_rp_1 engine = myisam
 select d.userid, (mode1+mode2) as total_c, mode1, mode2, round((mode1/(mode1+mode2)),2) as mode1_p, round((mode2/(mode1+mode2)),2) as mode2_p
 from (
@@ -24412,7 +24400,6 @@ from (SELECT userid, total_c, @curRank := @curRank + 1 AS rank, mode1, mode2, mo
       FROM actionlog._friend_list_click_rp_1, (SELECT @curRank := 0) r
       order by total_c desc) as dt,
      (select count(distinct userid) as cnt from actionlog._friend_list_click_rp_1) as ct;
-
 
 # 輸出給R製圖
 SELECT 'userid', 'total_c', 'total_c_p', 'mode1_p', 'mode2_p' union (
@@ -24753,7 +24740,7 @@ from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, p_pc, p_mobile
       FROM actionlog._predict_scale_1, (SELECT @curRank := 0) r
       order by pv desc) as dt,
      (select count(distinct userid) as cnt from actionlog._predict_scale_1) as ct;
-     
+
 drop table if exists plsport_playsport._last_login;
 CREATE TABLE plsport_playsport._last_login engine = myisam
 SELECT userid, max(signin_time) as signin_time 
