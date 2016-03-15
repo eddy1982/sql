@@ -24751,7 +24751,7 @@ GROUP BY userid;
 	ALTER TABLE plsport_playsport.member convert to character set utf8 collate utf8_general_ci;
 	ALTER TABLE actionlog._predict_scale_2 convert to character set utf8 collate utf8_general_ci;
     ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
-    
+
 create table actionlog._predict_scale_3 engine = myisam
 SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.p_pc, a.p_mobile 
 FROM actionlog._predict_scale_2 a left join plsport_playsport.member b on a.userid = b.userid
@@ -24769,4 +24769,39 @@ FROM actionlog._predict_scale_4);
 
 
 
+# TO EDDY
+# 麻煩幫我查詢優化手機版預測比列MVP的使用狀況
+# 提供預測比例頁的手機PV即可
+# 時間是3/10~3/15，謝謝
+
+
+drop table if exists actionlog._predict_scale;
+create table actionlog._predict_scale engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201603
+where uri regexp '^/predictgame.*php.*action=scale.*'    
+and userid in ('coldberg','max9907200','yabating','hhh850702','neolonglife','FB1447061334',
+               'win16666','FB100000210271676','kunkun770','worker824@yahoo.com.tw')
+and time between '2016-03-10%' and '2016-03-15%';
+
+update actionlog._predict_scale set platform_type = 1 where platform_type = 3;
+
+create table actionlog._predict_scale_1 engine = myisam
+select c.userid, (c.pc+c.mobile) as pv, c.pc, c.mobile
+from (
+	select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
+	from (
+		select a.userid, (case when (a.platform_type = 1) then c else 0 end) as pc,
+						 (case when (a.platform_type = 2) then c else 0 end) as mobile
+		from (
+			SELECT userid, platform_type, count(uri) as c
+			FROM actionlog._predict_scale
+			group by userid, platform_type) as a) as b
+	group by b.userid) as c;
+
+ALTER TABLE actionlog._predict_scale_1 convert to character set utf8 collate utf8_general_ci;
+
+# 結果
+SELECT a.userid, b.nickname, a.pv, a.pc, a.mobile
+FROM actionlog._predict_scale_1 a left join plsport_playsport.member b on a.userid = b.userid;
 
