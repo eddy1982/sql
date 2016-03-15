@@ -24280,22 +24280,49 @@ group by b.d;
         group by a.userid, a.d) as b
     group by b.d;
 
-
 # 補充一天有多少人收到退券通知(2016-02-17)
 # 記得先匯入資料表coupon_dispatched 
 # http://redmine.playsport.cc/issues/983
-
 
 select b.d, count(b.userid) as dispatched_user_count
 from (
     select a.userid, a.d, a.reason
     from (
         SELECT userid, date(date) as d, reason
-        FROM coupon_dispatched 
+        FROM plsport_playsport.coupon_dispatched 
         WHERE reason in (2,21)
         and date(date) between '2016-01-14' and now()) as a
     group by a.userid, a.d) as b
 group by b.d;
+
+
+# 2.（這個３／１６報告時再新增）
+# 因為發現購牌清單也是一個買牌路徑
+# 所以我們想知道透過此路徑買牌的人，是否是因為該殺手前一天的勝率是有過的？
+# 例如使用者透過購牌清單買了a殺手，是否是因為ａ殺手昨日勝率有過？，還是其實無論該殺手勝率有沒有過，消費者都會長期跟牌
+# 主要想知道殺手戰績是不是影響使用者用購牌清單買牌的原因　　
+# 註:只要沒有因戰績不理想補卷的殺手，就是指有過的殺手
+# 追蹤碼任務我已經重新開啟
+
+#     買明天的牌與補卷處理結果未出現的=>代碼SPL
+#     殺手有過=>SPL_PASS
+#     殺手沒過=>SPL_FAIL
+
+# (1)透過購牌清單而再消費的人數 (2)累積貢獻收益($)
+select b.d, count(b.buyerid), sum(b.spent) 
+from (
+	select a.d, a.buyerid, sum(a.buy_price) as spent
+	from (
+		SELECT buyerid, date(buy_date) as d, buy_price
+		FROM plsport_playsport.predict_buyer
+		where buy_date between '2016-01-14%' and now()
+		and position like '%SPL%') as a
+	group by a.d, a.buyerid) as b
+group by b.d;
+
+
+
+
 
 
 
