@@ -34,6 +34,26 @@ from (SELECT userid, reply, @curRank := @curRank + 1 AS rank
 	 (select count(distinct userid) as cnt from plsport_playsport._yyyyy) as ct;
 ```
 
+Simple way to calculate median with MySQL
+-----------------------------------------
+```
+SELECT avg(t1.val) as median_val FROM (
+SELECT @rownum:=@rownum+1 as `row_number`, d.val
+  FROM data d,  (SELECT @rownum:=0) r
+  WHERE 1
+  -- put some where clause here
+  ORDER BY d.val
+) as t1, 
+(
+  SELECT count(*) as total_rows
+  FROM data d
+  WHERE 1
+  -- put same where clause here
+) as t2
+WHERE 1
+AND t1.row_number in ( floor((total_rows+1)/2), floor((total_rows+2)/2) );
+```
+
 Making a NULL value in a MySQL field appear as 0 / N/A
 ------------------------------------------------------
 把NA換成0
