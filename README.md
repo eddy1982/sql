@@ -23,7 +23,7 @@ ALTER TABLE plsport_playsport.xxxxx convert to character set utf8 collate utf8_g
 ALTER DATABASE plsport_playsport character set utf8 collate utf8_general_ci;
 ```
 
-calculate percentile in mysql
+calculate percentile in MySQL
 -----------------------------
 ```sh
 create table plsport_playsport._xxxxx engine = myisam
@@ -34,7 +34,7 @@ from (SELECT userid, reply, @curRank := @curRank + 1 AS rank
 	 (select count(distinct userid) as cnt from plsport_playsport._yyyyy) as ct;
 ```
 
-Simple way to calculate median with MySQL
+calculate median in MySQL
 -----------------------------------------
 ```
 SELECT avg(t1.val) as median_val FROM (
