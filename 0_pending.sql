@@ -7528,7 +7528,6 @@ group by lo, p;
 # predictgame   61
 
 
-
 # 儲值頁面的記錄
 create table actionlog._temp engine = myisam
 SELECT * FROM actionlog.action_201504
@@ -25180,6 +25179,89 @@ from (
 	group by d, allianceid) as a;
 
 
+
+# =================================================================================================
+# http://redmine.playsport.cc/issues/1281
+# 二、值優惠活動簡訊名單撈取
+# 條件1.曾經參與過儲值優惠活動(儲值3999以上)的消費者(2015/04&2015/10)
+# 條件2.半年內有儲值3999以上、8888以上的人
+# 條件3.去年棒球季(4月~9月)3999以上、儲值8888以上的人
+# 
+# 目的:提高金字塔級消費者的人數
+# 簡訊發送時間:4月13日下午5點
+# 名單提供時間:3月30日
+# =================================================================================================
+
+# 匯入order_data
+
+drop table if exists plsport_playsport._order_data;
+create table plsport_playsport._order_data engine = myisam
+SELECT userid, createon, ordernumber, price, payway, create_from, platform_type, phone
+FROM plsport_playsport.order_data
+where sellconfirm = 1
+and year(createon) >= 2014;
+
+drop table if exists plsport_playsport._temp;
+create table plsport_playsport._temp engine = myisam
+SELECT userid, phone, sum(price) as total_redeem
+FROM plsport_playsport._order_data
+where create_from = 8
+and userid not in ('wenting0403lin','ckone1209')
+and year(createon) >= 2015
+and price >= 3999
+group by userid;
+
+drop table if exists plsport_playsport._list1;
+create table plsport_playsport._list1 engine = myisam
+SELECT a.userid, b.nickname, a.phone, a.total_redeem
+FROM plsport_playsport._temp a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists plsport_playsport._temp;
+create table plsport_playsport._temp engine = myisam
+SELECT userid, phone, sum(price) as total_redeem
+FROM plsport_playsport._order_data
+where create_from <> 8
+and userid not in ('wenting0403lin','ckone1209')
+and createon between '2015-10-01%' and now()
+and price >= 3999
+group by userid;
+
+drop table if exists plsport_playsport._list2;
+create table plsport_playsport._list2 engine = myisam
+SELECT a.userid, b.nickname, a.phone, a.total_redeem
+FROM plsport_playsport._temp a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists plsport_playsport._temp;
+create table plsport_playsport._temp engine = myisam
+SELECT userid, phone, sum(price) as total_redeem
+FROM plsport_playsport._order_data
+where create_from <> 8
+and userid not in ('wenting0403lin','ckone1209')
+and createon between '2015-04-01%' and '2015-09-01%'
+and price >= 3999
+group by userid;
+
+drop table if exists plsport_playsport._list3;
+create table plsport_playsport._list3 engine = myisam
+SELECT a.userid, b.nickname, a.phone, a.total_redeem
+FROM plsport_playsport._temp a left join plsport_playsport.member b on a.userid = b.userid;
+
+
+SELECT 'usreid', '暱稱', '電話', '總儲值金額' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_list1.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list1);
+SELECT 'usreid', '暱稱', '電話', '總儲值金額' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_list2.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list2);
+SELECT 'usreid', '暱稱', '電話', '總儲值金額' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_list3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list3);
 
 
 
