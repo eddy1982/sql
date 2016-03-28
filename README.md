@@ -23,6 +23,12 @@ ALTER TABLE plsport_playsport.xxxxx convert to character set utf8 collate utf8_g
 ALTER DATABASE plsport_playsport character set utf8 collate utf8_general_ci;
 ```
 
+change variable name
+--------------------
+```sh
+ALTER TABLE `questionnaire_201510061537118762_answer` CHANGE `1444116822` `q1` VARCHAR(10) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+```
+
 calculate percentile in MySQL
 -----------------------------
 ```sh
