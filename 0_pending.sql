@@ -24187,6 +24187,58 @@ group by a.d
 order by a.d;
 
 
+# 2016-03-25
+# 麻煩分析問卷中有使用過禁止回文的數據，謝謝
+# http://goo.gl/QGA1TS
+# 匯入plsport_playsport.questionnaire_201603141358159482_answer
+
+# 上線時間：1/12
+
+create table plsport_playsport._poster engine = myisam
+SELECT postuser, count(subjectid) as post_count 
+FROM plsport_playsport.forum
+where posttime between '2016-01-12%' and now()
+group by postuser;
+
+
+create table plsport_playsport._poster_1 engine = myisam
+select postuser, post_count, round((cnt-rank+1)/cnt,2) as post_percentile
+from (SELECT postuser, post_count, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._poster, (SELECT @curRank := 0) r
+      order by post_count desc) as dt,
+     (select count(distinct postuser) as cnt from plsport_playsport._poster) as ct;
+
+
+ALTER TABLE plsport_playsport.questionnaire_201603141358159482_answer CHANGE `1457934654` `q1` VARCHAR(10) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE plsport_playsport.questionnaire_201603141358159482_answer CHANGE `1457934906` `q2` VARCHAR(10) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE plsport_playsport.questionnaire_201603141358159482_answer CHANGE `1458193608` `q3` VARCHAR(10) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE plsport_playsport.questionnaire_201603141358159482_answer CHANGE `1458199406` `q4` VARCHAR(1000) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+create table plsport_playsport._poster_2 engine = myisam
+SELECT a.userid, a.q1, a.q2, a.q3, a.q4, b.post_count, b.post_percentile
+FROM plsport_playsport.questionnaire_201603141358159482_answer a left join plsport_playsport._poster_1 b on a.userid = b.postuser
+where b.post_count is not null;
+
+create table plsport_playsport._poster_3 engine = myisam
+SELECT userid, q1, q2, q3, q4, post_count, post_percentile, 
+       (case when (post_percentile >= 0.9) then 'a1'
+             when (post_percentile >= 0.7) then 'a2' else 'a3' end) as stat
+FROM plsport_playsport._poster_2;
+
+
+SELECT stat, q1, count(userid) as c 
+FROM plsport_playsport._poster_3
+group by stat, q1;
+
+SELECT stat, q2, count(userid) as c 
+FROM plsport_playsport._poster_3
+group by stat, q2;
+
+SELECT stat, q3, count(userid) as c 
+FROM plsport_playsport._poster_3
+group by stat, q3;
+
+
 
 # =================================================================================================
 # 加強補卷說明使用情況分析
@@ -24356,10 +24408,6 @@ from (
 		and position like '%SPL_FAIL%') as a
 	group by a.d, a.buyerid) as b
 group by b.d;
-
-
-
-
 
 
 
@@ -25246,7 +25294,6 @@ create table plsport_playsport._list3 engine = myisam
 SELECT a.userid, b.nickname, a.phone, a.total_redeem
 FROM plsport_playsport._temp a left join plsport_playsport.member b on a.userid = b.userid;
 
-
 SELECT 'usreid', '暱稱', '電話', '總儲值金額' union (
 SELECT *
 into outfile 'C:/Users/eddy/Desktop/_list1.txt'
@@ -25264,8 +25311,28 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._list3);
 
 
+# =================================================================================================
+# http://redmine.playsport.cc/issues/1375
+# 撈取投票中獎人
+# 概述
+# 1. 撈取投票中獎人
+# 請撈取此文章中投"南區"的使用者，撈十位使用者的userid
+# =================================================================================================
 
+# 匯入:
+#   (1)vote 每個使用者投票的選項
+#   (2)poll 投票的題目
+#   (3)poll_option 投票的選項
 
+SELECT * FROM plsport_playsport.poll
+where subjectid = '1603221147169OG';
 
+SELECT * FROM plsport_playsport.poll_option
+where subjectid = '1603221147169OG';
 
+SELECT a.userid, b.nickname
+FROM plsport_playsport.vote a left join plsport_playsport.member b on a.userid = b.userid
+where subjectid = '1603221147169OG' and option_id = 343
+order by rand()
+limit 0, 10;
 
