@@ -22435,6 +22435,7 @@ where p in ('BZ_MF','BZ_SK','BZ_RCT','BZ_RC2','BZ_RC1');
 
 # 記得先匯入(1)forum_tracing_notify和(2)forum_tracing_postUser
 
+# http://redmine.playsport.cc/issues/1185
 SELECT a.id, a.userid, b.nickname, a.postuser, a.traced, a.create_time, a.modify_time 
 FROM plsport_playsport.forum_tracing_postUser a left join plsport_playsport.member b on a.userid = b.userid
 where a.userid in ('david30519','cs112345','polohong','a0981415848','happylala3388','FB1420051617','fushengidy','jimmy5693','aa6565931','bowen0925')
@@ -22466,6 +22467,32 @@ FROM plsport_playsport.forum_tracing_notify a left join plsport_playsport.member
 where a.userid in ('b001002','FB1442996396','Love888999','asn562072a','FB1339264829','minimi0410','k760531','n211308','a7909287',
 'xxxxxxxx0111','asdzxc888','askino1988','scottcott','a23715887','FB1349602649','newyork40','shady1769','baker19801225','AA5859','love03240116')
 group by a.userid, a.postuser;
+
+
+# http://redmine.playsport.cc/issues/1430
+# [201507-A-11]開發討論區會員追蹤功能-問卷分析
+# - 確認問卷填寫名單是否正確(只限有使用過功能的人)
+# - 各組別的結果(重度、中度、輕度)
+# - 問卷結果：http://www.playsport.cc/questionnaire.php?question=201603231452347914&action=statistics
+# SELECT * FROM plsport_playsport.questionnaire_201603231452347914_answer;
+
+# 匯入(1)questionnaire_201603231452347914_answer (2)forum_tracing_notify (3)forum_tracing_postuser
+
+drop table if exists plsport_playsport._qu;
+create table plsport_playsport._qu engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201603231452347914_answer;
+ALTER TABLE plsport_playsport._qu ADD INDEX (`userid`);
+
+drop table if exists plsport_playsport._list;
+create table plsport_playsport._list engine = myisam
+SELECT userid 
+FROM plsport_playsport.forum_tracing_postuser
+group by userid;
+ALTER TABLE plsport_playsport._list ADD INDEX (`userid`);
+
+SELECT * 
+FROM plsport_playsport._qu a inner join plsport_playsport._list b on a.userid = b.userid;
+# 名單結果為362名
 
 
 
@@ -25225,6 +25252,90 @@ from (
 	where year(d) >= 2013
     and allianceid in (1,2,3,4,8,83,91,92,97)
 	group by d, allianceid) as a;
+    
+drop table if exists plsport_playsport._forum_2;
+create table plsport_playsport._forum_2 engine = myisam    
+SELECT a.d, a.allianceid, b.alliancename, a.post_count, a.reply_count, a.ratio
+FROM plsport_playsport._forum_1 a left join plsport_playsport.alliance b on a.allianceid = b.allianceid;
+
+SELECT 'd', 'allianceid', 'alliancename', 'post_count', 'reply_count', 'ratio' union (
+SELECT *
+into outfile 'C:/proc/r/forumReplyRatio/_forum_2.txt'
+CHARACTER SET big5 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_2);
+
+# 2016-03-28思考? 發文回文比是一個客觀的指標嗎? 還是要用中位數來代替?
+
+# 捉取回文數的中位數
+SELECT avg(t1.replycount) as median_replycount FROM (
+SELECT @rownum:=@rownum+1 as `row_number`, d.replycount
+  FROM plsport_playsport._forum d,  (SELECT @rownum:=0) r
+  WHERE 1
+  and d = '2016-01-11'
+  and allianceid = 3
+  ORDER BY d.replycount
+) as t1, 
+(
+  SELECT count(*) as total_rows
+  FROM plsport_playsport._forum d
+  WHERE 1
+  and d = '2016-01-11'
+  and allianceid = 3
+) as t2
+WHERE 1
+AND t1.row_number in (floor((total_rows+1)/2), floor((total_rows+2)/2));
+
+# 捉取瀏覽數的中位數
+SELECT avg(t1.viewtimes) as median_viewtimes FROM (
+SELECT @rownum:=@rownum+1 as `row_number`, d.viewtimes
+  FROM plsport_playsport._forum d,  (SELECT @rownum:=0) r
+  WHERE 1
+  and d = '2016-03-11'
+  and allianceid = 3
+  ORDER BY d.viewtimes
+) as t1, 
+(
+  SELECT count(*) as total_rows
+  FROM plsport_playsport._forum d
+  WHERE 1
+  and d = '2016-03-11'
+  and allianceid = 3
+) as t2
+WHERE 1
+AND t1.row_number in ( floor((total_rows+1)/2), floor((total_rows+2)/2));
+
+drop table if exists plsport_playsport._forum_reply_medain;
+create table plsport_playsport._forum_reply_medain engine = myisam
+SELECT * FROM plsport_playsport._forum_reply_medain_97;
+insert ignore into plsport_playsport._forum_reply_medain
+SELECT * FROM plsport_playsport._forum_reply_medain_92;
+insert ignore into plsport_playsport._forum_reply_medain
+SELECT * FROM plsport_playsport._forum_reply_medain_91;
+insert ignore into plsport_playsport._forum_reply_medain
+SELECT * FROM plsport_playsport._forum_reply_medain_83;
+insert ignore into plsport_playsport._forum_reply_medain
+SELECT * FROM plsport_playsport._forum_reply_medain_8;
+insert ignore into plsport_playsport._forum_reply_medain
+SELECT * FROM plsport_playsport._forum_reply_medain_4;
+insert ignore into plsport_playsport._forum_reply_medain
+SELECT * FROM plsport_playsport._forum_reply_medain_1;
+insert ignore into plsport_playsport._forum_reply_medain
+SELECT * FROM plsport_playsport._forum_reply_medain_2;
+insert ignore into plsport_playsport._forum_reply_medain
+SELECT * FROM plsport_playsport._forum_reply_medain_3;
+
+update plsport_playsport._forum_reply_medain set reply_median = '' where reply_median = 'None' ;
+
+create table plsport_playsport._forum_reply_medain_temp engine = myisam
+SELECT a.allianceid, b.alliancename, a.date, a.reply_median
+FROM plsport_playsport._forum_reply_medain a left join plsport_playsport.alliance b on a.allianceid = b.allianceid;
+
+SELECT 'allianceid', 'alliancename', 'date', 'reply_median' union (
+SELECT *
+into outfile 'C:/proc/r/forumReplyRatio/_reply_median.txt'
+CHARACTER SET big5 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_reply_medain_temp);
+
 
 
 
@@ -25311,6 +25422,7 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._list3);
 
 
+
 # =================================================================================================
 # http://redmine.playsport.cc/issues/1375
 # 撈取投票中獎人
@@ -25335,4 +25447,311 @@ FROM plsport_playsport.vote a left join plsport_playsport.member b on a.userid =
 where subjectid = '1603221147169OG' and option_id = 343
 order by rand()
 limit 0, 10;
+
+
+# =================================================================================================
+# http://redmine.playsport.cc/issues/1352
+# 如何增加討論區回文數?
+# to EDDY:
+# 
+# 研究：站上有哪些因數，會影響討論區回文數？
+# （貼文者人氣、文章標籤、推文、瀏覽數、殺手資格...等）
+# 
+# 藉此來設法，讓回文數增加。
+# 時間:抓完整的mlb、nba、日棒的賽季。
+# 
+# 分析時程再麻煩你安排。
+# =================================================================================================
+
+drop table if exists forum._forumcontent;
+create table forum._forumcontent engine = myisam
+SELECT articleid, subjectid, userid, postdate 
+FROM forum.forumcontent
+where year(postdate) >= 2014;
+
+drop table if exists forum._forum;
+create table forum._forum engine = myisam
+SELECT subjectid, allianceid, postuser, posttime, viewtimes, replycount, pushcount, includeprediction, gametype
+FROM forum.forum
+where year(posttime) >= 2014
+order by posttime desc;
+
+ALTER TABLE forum._forumcontent ADD INDEX (`subjectid`);
+ALTER TABLE forum._forum ADD INDEX (`subjectid`);
+
+drop table if exists forum._forumcontent_1;
+create table forum._forumcontent_1 engine = myisam
+SELECT a.articleid, a.subjectid, b.allianceid, a.userid, a.postdate 
+FROM forum._forumcontent a left join forum._forum b on a.subjectid = b.subjectid
+where allianceid <> 999;
+
+drop table if exists forum._forumcontent_2;
+create table forum._forumcontent_2 engine = myisam
+SELECT a.articleid, a.subjectid, a.allianceid, b.alliancename, a.userid, a.postdate, 
+       substr(a.postdate,1,7) as ym, year(a.postdate) as y, month(a.postdate) as m
+FROM forum._forumcontent_1 a left join forum.alliance b on a.allianceid = b.allianceid;
+
+ALTER TABLE forum._forumcontent_2 ADD INDEX (`ym`,`allianceid`,`userid`);
+
+drop table if exists forum._forumcontent_3;
+create table forum._forumcontent_3 engine = myisam
+SELECT ym, allianceid, alliancename, userid, count(subjectid) as reply_count 
+FROM forum._forumcontent_2
+group by ym, allianceid, userid;
+
+drop table if exists forum._forumcontent_4;
+create table forum._forumcontent_4 engine = myisam
+SELECT ym, allianceid, alliancename, count(userid) as reply_user_count 
+FROM forum._forumcontent_3
+where alliancename is not null
+group by ym, allianceid;
+
+drop table if exists forum._forum_1;
+create table forum._forum_1 engine = myisam
+select b.ym, b.allianceid, count(b.postuser) as post_user_count
+from (
+	select a.ym, a.allianceid, a.postuser, count(a.subjectid) as post_count
+	from (
+		SELECT subjectid, allianceid, postuser, substr(posttime,1,7) as ym 
+		FROM forum._forum) as a
+	group by a.ym, a.allianceid, a.postuser) as b
+group by b.ym, b.allianceid;
+
+drop table if exists forum._forum_2;
+create table forum._forum_2 engine = myisam
+SELECT a.ym, a.allianceid, b.alliancename, a.post_user_count 
+FROM forum._forum_1 a left join forum.alliance b on a.allianceid = b.allianceid;
+
+SELECT 'y', 'm', 'allianceid', 'alliancename', 'reply_user_count' union (
+SELECT substr(ym,1,4) as y, substr(ym,6,2) as m, allianceid, alliancename, reply_user_count
+into outfile 'C:/Users/eddy/Desktop/xxxxx.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM forum._forumcontent_4);
+
+SELECT 'y', 'm', 'allianceid', 'alliancename', 'post_user_count' union (
+SELECT substr(ym,1,4) as y, substr(ym,6,2) as m, allianceid, alliancename, post_user_count 
+into outfile 'C:/Users/eddy/Desktop/xxxxx.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM forum._forum_2);
+
+
+# 使用slice07_action_log_get_forum_reply_each_month.py
+drop table if exists actionlog._reply_action_201603;
+create table actionlog._reply_action_201603 engine = myisam
+SELECT userid, uri, time, platform_type FROM actionlog.action_201603 where uri like '%forumdetail.php?ga=reply%' and userid <> '';
+
+create table plsport_playsport._forum_mid2015 engine = myisam
+SELECT * FROM plsport_playsport.forum
+where posttime between '2015-06-01%' and now();
+
+ALTER TABLE plsport_playsport._forum_mid2015 ADD INDEX (`postUser`);
+ALTER TABLE plsport_playsport.forum_new_user ADD INDEX (`userid`);
+
+drop table if exists plsport_playsport._forum_mid2015_1;
+create table plsport_playsport._forum_mid2015_1 engine = myisam
+SELECT * 
+FROM plsport_playsport._forum_mid2015 a inner join 
+(select * from plsport_playsport.forum_new_user where year(datetime)>=2015) b on a.postuser = b.userid
+order by posttime desc;
+
+# 以下是研究回文數為什麼降低????
+# between subdate(now(),545) and now()
+
+drop table if exists plsport_playsport._forum;
+create table plsport_playsport._forum engine = myisam
+SELECT subjectid, allianceid, gametype, postuser, viewtimes, replycount, pushcount, posttime
+FROM plsport_playsport.forum
+where year(posttime) = 2013
+and allianceid not in (95,96,98,99,100,101,102,103,111,112,113);
+
+drop table if exists plsport_playsport._forumcontent;
+create table plsport_playsport._forumcontent engine = myisam
+SELECT articleid, subjectid, userid, postdate 
+FROM plsport_playsport.forumcontent
+where year(postdate) = 2013;
+
+drop table if exists plsport_playsport._forumcontent_1;
+create table plsport_playsport._forumcontent_1 engine = myisam
+SELECT subjectid, userid, count(articleid) as c 
+FROM plsport_playsport._forumcontent
+group by subjectid, userid;
+
+drop table if exists plsport_playsport._forumcontent_2;
+create table plsport_playsport._forumcontent_2 engine = myisam
+select a.subjectid, (a.reply_user_count-1) as reply_user_count 
+from (
+	SELECT subjectid, count(userid) as reply_user_count 
+	FROM plsport_playsport._forumcontent_1
+	group by subjectid) as a;
+    
+ALTER TABLE plsport_playsport._forumcontent_2 ADD INDEX (`subjectid`);
+ALTER TABLE plsport_playsport._forum ADD INDEX (`subjectid`);
+
+drop table if exists plsport_playsport._forum_1;
+create table plsport_playsport._forum_1 engine = myisam 
+SELECT a.subjectid, a.allianceid, a.gametype, a.postuser, a.viewtimes, a.replycount, b.reply_user_count, a.pushcount, a.posttime 
+FROM plsport_playsport._forum a left join plsport_playsport._forumcontent_2 b on a.subjectid = b.subjectid
+where reply_user_count is not null;
+
+ALTER TABLE plsport_playsport._forum_1 ADD INDEX (`postuser`);
+
+# 接下來執行slice07_regression_forum_reply.py
+
+SELECT 'gametype', 'viewtimes', 'replycount', 'reply_user_count', 'pushcount', 'hr' union (
+SELECT gametype, viewtimes, replycount, reply_user_count, pushcount, substr(posttime,12,2) as hr
+into outfile 'C:/proc/r/forumReplyRatio/forum_reply.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_1);
+
+drop table if exists plsport_playsport._who_post_20_up;
+create table plsport_playsport._who_post_20_up engine = myisam
+select * 
+from (
+	SELECT postuser, count(subjectid) as post_count 
+	FROM plsport_playsport.forum
+	where year(posttime) >= 2013
+	and postuser <> ''
+	group by postuser) as a
+where a.post_count >= 22;
+ALTER TABLE plsport_playsport._who_post_20_up ADD INDEX (`postuser`);
+
+    
+drop table if exists plsport_playsport._forum_reply_median_statistics_2013_rank;
+create table plsport_playsport._forum_reply_median_statistics_2013_rank engine = myisam
+select substr(d.nickname,1,6) as userid, c.reply_median
+from (
+	SELECT a.postuser, round(a.reply_median,0) as reply_median
+	FROM plsport_playsport._forum_reply_median_statistics_2013 a inner join plsport_playsport._who_post_20_up b on a.postuser = b.postuser
+	order by reply_median desc) c left join plsport_playsport.member d on c.postuser = d.userid
+limit 0, 100;
+drop table if exists plsport_playsport._forum_reply_median_statistics_2014_rank;
+create table plsport_playsport._forum_reply_median_statistics_2014_rank engine = myisam
+select substr(d.nickname,1,6) as userid, c.reply_median
+from (
+	SELECT a.postuser, round(a.reply_median,0) as reply_median
+	FROM plsport_playsport._forum_reply_median_statistics_2014 a inner join plsport_playsport._who_post_20_up b on a.postuser = b.postuser
+	order by reply_median desc) c left join plsport_playsport.member d on c.postuser = d.userid
+limit 0, 100;
+drop table if exists plsport_playsport._forum_reply_median_statistics_2015_rank;
+create table plsport_playsport._forum_reply_median_statistics_2015_rank engine = myisam
+select substr(d.nickname,1,6) as userid, c.reply_median
+from (
+	SELECT a.postuser, round(a.reply_median,0) as reply_median
+	FROM plsport_playsport._forum_reply_median_statistics_2015 a inner join plsport_playsport._who_post_20_up b on a.postuser = b.postuser
+	order by reply_median desc) c left join plsport_playsport.member d on c.postuser = d.userid
+limit 0, 100;
+    
+ALTER TABLE plsport_playsport._forum_reply_median_statistics_2013_rank ADD id INT PRIMARY KEY AUTO_INCREMENT;
+ALTER TABLE plsport_playsport._forum_reply_median_statistics_2014_rank ADD id INT PRIMARY KEY AUTO_INCREMENT;
+ALTER TABLE plsport_playsport._forum_reply_median_statistics_2015_rank ADD id INT PRIMARY KEY AUTO_INCREMENT;
+
+SELECT 'userid', 'reply_median', 'id', 'year' union (
+SELECT userid, reply_median, id, (case when (userid is not null) then '2013' else '' end) as year
+into outfile 'C:/proc/r/forumReplyRatio/rank_2013.txt'
+CHARACTER SET big5 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_reply_median_statistics_2013_rank);
+SELECT 'userid', 'reply_median', 'id', 'year' union (
+SELECT userid, reply_median, id, (case when (userid is not null) then '2014' else '' end) as year
+into outfile 'C:/proc/r/forumReplyRatio/rank_2014.txt'
+CHARACTER SET big5 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_reply_median_statistics_2014_rank);
+SELECT 'userid', 'reply_median', 'id', 'year' union (
+SELECT userid, reply_median, id, (case when (userid is not null) then '2015' else '' end) as year
+into outfile 'C:/proc/r/forumReplyRatio/rank_2015.txt'
+CHARACTER SET big5 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_reply_median_statistics_2015_rank);
+
+# 接下來跑forumReplyRatio中的R檔
+
+
+
+# =================================================================================================
+# http://redmine.playsport.cc/issues/1297
+# [201511-C-12]購牌專區改版-推薦專區UI調整ABtesting報告
+# 說明   目的：了解推薦專區UI調整後對營業額影響
+# 
+# 內容  
+# - 測試時間：3/17~4/7，先執行三周，如沒有任何變化再執行三周
+# - 設定測試組別(50%)
+# - 觀察指標
+#     推薦專區點擊與購買次數
+#     推薦專區購買金額
+#     購牌區購買金額
+#     整體購買與儲值金額
+# =================================================================================================
+
+drop table if exists plsport_playsport._predict_buyer;
+create table plsport_playsport._predict_buyer engine = myisam
+SELECT id, buyerid, buy_date, id_bought, buy_price, platform_type  
+FROM plsport_playsport.predict_buyer
+where buy_date between '2016-03-17 16:00:00' and now();
+
+drop table if exists plsport_playsport._predict_buyer_cons_split;
+create table plsport_playsport._predict_buyer_cons_split engine = myisam
+SELECT * FROM plsport_playsport.predict_buyer_cons_split;
+
+ALTER TABLE plsport_playsport._predict_buyer ADD INDEX (`id`);
+ALTER TABLE plsport_playsport._predict_buyer_cons_split ADD INDEX (`id_predict_buyer`);
+
+drop table if exists plsport_playsport._predict_buyer_1;
+create table plsport_playsport._predict_buyer_1 engine = myisam
+SELECT a.buyerid, a.buy_date, a.buy_price, a.platform_type, b.position, b.allianceid
+FROM plsport_playsport._predict_buyer a left join plsport_playsport._predict_buyer_cons_split b on a.id = b.id_predict_buyer;
+
+drop table if exists plsport_playsport._predict_buyer_2;
+create table plsport_playsport._predict_buyer_2 engine = myisam
+SELECT (case when (((b.id%20)+1)<11) then 'a' else 'b' end) as abtest, a.buyerid, a.buy_date, a.buy_price, a.platform_type, a.position, a.allianceid
+FROM plsport_playsport._predict_buyer_1 a left join plsport_playsport.member b on a.buyerid = b.userid;
+
+update plsport_playsport._predict_buyer_2 set platform_type = 1 where platform_type = 3;
+
+drop table if exists plsport_playsport._predict_buyer_BZ;
+create table plsport_playsport._predict_buyer_BZ engine = myisam
+SELECT abtest, buyerid, sum(buy_price) as spent, count(buy_price) as spent_count
+FROM plsport_playsport._predict_buyer_2
+where substr(position,1,6) = 'BZ_RCT'
+group by abtest, buyerid;
+
+drop table if exists plsport_playsport._predict_buyer_BZ_pc;
+create table plsport_playsport._predict_buyer_BZ_pc engine = myisam
+SELECT abtest, buyerid, sum(buy_price) as spent, count(buy_price) as spent_count
+FROM plsport_playsport._predict_buyer_2
+where substr(position,1,6) = 'BZ_RCT' and platform_type = 1
+group by abtest, buyerid;
+
+drop table if exists plsport_playsport._predict_buyer_BZ_mobile;
+create table plsport_playsport._predict_buyer_BZ_mobile engine = myisam
+SELECT abtest, buyerid, sum(buy_price) as spent, count(buy_price) as spent_count
+FROM plsport_playsport._predict_buyer_2
+where substr(position,1,6) = 'BZ_RCT' and platform_type = 2
+group by abtest, buyerid;
+
+SELECT 'abtest', 'buyerid', 'spent', 'spent_count' union (
+SELECT *
+into outfile 'C:/proc/r/abtest/_predict_buyer.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._predict_buyer_bz);
+SELECT 'abtest', 'buyerid', 'spent', 'spent_count' union (
+SELECT *
+into outfile 'C:/proc/r/abtest/_predict_buyer_pc.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._predict_buyer_BZ_pc);
+SELECT 'abtest', 'buyerid', 'spent', 'spent_count' union (
+SELECT *
+into outfile 'C:/proc/r/abtest/_predict_buyer_mobile.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._predict_buyer_BZ_mobile);
+
+
+create table plsport_playsport._predict_buyer_3_BZ engine = myisam
+SELECT abtest, buyerid, date(buy_date) as d, buy_price, platform_type, position 
+FROM plsport_playsport._predict_buyer_2
+where substr(position,1,2) = 'BZ';
+
+
+
+
+
+
+
 
