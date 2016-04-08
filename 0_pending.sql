@@ -25421,6 +25421,57 @@ into outfile 'C:/Users/eddy/Desktop/_list3.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._list3);
 
+# 產生匯入yoyo8名單
+drop table if exists plsport_playsport._all_list;
+create table plsport_playsport._all_list engine = myisam
+SELECT userid, nickname, phone, total_redeem, (case when (userid is not null) then 'list1' else '' end) as clist 
+FROM plsport_playsport._list1;
+insert ignore into plsport_playsport._all_list
+SELECT userid, nickname, phone, total_redeem, (case when (userid is not null) then 'list2' else '' end) as clist 
+FROM plsport_playsport._list2;
+insert ignore into plsport_playsport._all_list
+SELECT userid, nickname, phone, total_redeem, (case when (userid is not null) then 'list3' else '' end) as clist 
+FROM plsport_playsport._list3;
+
+drop table if exists plsport_playsport._all_list_ok;
+create table plsport_playsport._all_list_ok engine = myisam
+SELECT userid, nickname, phone, clist
+FROM plsport_playsport._all_list
+where length(phone) = 10
+group by userid, nickname, phone;
+
+# 自己備份
+SELECT 'usreid', '暱稱', '電話', '總儲值', '名單' union (
+SELECT userid, nickname, phone, total_redeem, (case when (userid is not null) then 'list1' else '' end) as clist 
+into outfile 'C:/Users/eddy/Desktop/_list1.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list1);
+SELECT 'usreid', '暱稱', '電話', '總儲值', '名單' union (
+SELECT userid, nickname, phone, total_redeem, (case when (userid is not null) then 'list1' else '' end) as clist 
+into outfile 'C:/Users/eddy/Desktop/_list2.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list2);
+SELECT 'usreid', '暱稱', '電話', '總儲值', '名單' union (
+SELECT userid, nickname, phone, total_redeem, (case when (userid is not null) then 'list1' else '' end) as clist 
+into outfile 'C:/Users/eddy/Desktop/_list3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list3);
+SELECT 'usreid', '暱稱', '電話', '名單' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_all_list_ok.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._all_list_ok);
+
+# 給yoyo8簡訊發送
+SELECT '手機號碼(必填)', '姓名', '群組' union (
+SELECT a.phone, b.id, (case when (a.userid is not null) then 'buyPcashBonus201604' else '' end) as text_campaign
+into outfile 'C:/Users/eddy/Desktop/_all_list_ok_yoyo8.txt'
+CHARACTER SET big5 fields terminated by ',' enclosed by '' lines terminated by '\r\n'
+FROM plsport_playsport._all_list_ok a left join plsport_playsport.member b on a.userid = b.userid);
+
+
+
+
 
 
 # =================================================================================================
@@ -25748,10 +25799,40 @@ SELECT abtest, buyerid, date(buy_date) as d, buy_price, platform_type, position
 FROM plsport_playsport._predict_buyer_2
 where substr(position,1,2) = 'BZ';
 
+# 格式
+# SELECT *
+# FROM plsport_playsport._predict_buyer_3_bz
+# where d between '' and ''
+# and position = 'BZ_RCT'
+# and plstform_type in (1,2);
 
 
+create table actionlog._BZ_RCT engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201603
+where userid <> '' and uri like '%rp=BZ_RCT%'
+and time between '2016-03-17 16:00:00' and now();
+insert ignore into actionlog._BZ_RCT
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201604
+where userid <> '' and uri like '%rp=BZ_RCT%'
+and time between '2016-03-17 16:00:00' and now();
 
 
+drop table if exists actionlog._BZ_RCT_1;
+create table actionlog._BZ_RCT_1 engine = myisam
+select a.userid, a.d, a.platform_type, count(userid) as pv
+from(
+	SELECT userid, date(time) as d, platform_type 
+	FROM actionlog._bz_rct) as a
+group by a.userid, a.d, a.platform_type;
 
+update actionlog._BZ_RCT_1 set platform_type = 1 where platform_type = 3;
 
+ALTER TABLE actionlog._BZ_RCT_1 convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists actionlog._BZ_RCT_2;
+create table actionlog._BZ_RCT_2 engine = myisam
+SELECT (case when ((b.id%20)+1<11) then 'a' else 'b' end) as abtest, a.userid, a.d, a.platform_type, a.pv 
+FROM actionlog._bz_rct_1 a left join plsport_playsport.member b on a.userid = b.userid;
 
