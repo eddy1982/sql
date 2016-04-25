@@ -12669,16 +12669,19 @@ FROM plsport_playsport._order_data_check_2_for_r);
 
 #  是由 文 文工友 於 約 2 個月 前更新
 # 下次要麻煩您撈取11/13-1/13的貼圖使用狀況
-           
+
+drop table if exists plsport_playsport._forumcontent;
 CREATE TABLE plsport_playsport._forumcontent engine = myisam
 SELECT * 
 FROM plsport_playsport.forumcontent
-WHERE postdate between '2015-11-13 00:00:00' AND '2016-01-13 23:59:59';
+WHERE postdate between '2016-01-29 00:00:00' AND '2016-04-23 23:59:59';
 
+drop table if exists plsport_playsport._forumcontent_1;
 CREATE TABLE plsport_playsport._forumcontent_1 engine = myisam
 SELECT subjectid, userid, content, postdate 
 FROM plsport_playsport._forumcontent;
 
+drop table if exists plsport_playsport._forumcontent_2;
 CREATE TABLE plsport_playsport._forumcontent_2 engine = myisam
 SELECT subjectid, userid, content, postdate, 
        (case when (locate('/includes/images/smiley/playsport01.png',content)>0) then 1 else 0 end) as p01,
@@ -12718,14 +12721,26 @@ SELECT subjectid, userid, content, postdate,
        (case when (locate('/includes/images/smiley/playsport35.png',content)>0) then 1 else 0 end) as p35, #獲利之王
        (case when (locate('/includes/images/smiley/playsport36.png',content)>0) then 1 else 0 end) as p36,
        (case when (locate('/includes/images/smiley/playsport37.png',content)>0) then 1 else 0 end) as p37,
-       (case when (locate('/includes/images/smiley/playsport38.png',content)>0) then 1 else 0 end) as p38  #預測達人
+       (case when (locate('/includes/images/smiley/playsport38.png',content)>0) then 1 else 0 end) as p38, #預測達人
+       (case when (locate('/includes/images/smiley/playsport39.png',content)>0) then 1 else 0 end) as p39,
+       (case when (locate('/includes/images/smiley/playsport40.png',content)>0) then 1 else 0 end) as p40,
+       (case when (locate('/includes/images/smiley/playsport41.png',content)>0) then 1 else 0 end) as p41,
+       (case when (locate('/includes/images/smiley/playsport42.png',content)>0) then 1 else 0 end) as p42,
+       (case when (locate('/includes/images/smiley/playsport43.png',content)>0) then 1 else 0 end) as p43,
+       (case when (locate('/includes/images/smiley/playsport44.png',content)>0) then 1 else 0 end) as p44,
+       (case when (locate('/includes/images/smiley/playsport45.png',content)>0) then 1 else 0 end) as p45,
+       (case when (locate('/includes/images/smiley/playsport46.png',content)>0) then 1 else 0 end) as p46,
+       (case when (locate('/includes/images/smiley/playsport47.png',content)>0) then 1 else 0 end) as p47,
+       (case when (locate('/includes/images/smiley/playsport48.png',content)>0) then 1 else 0 end) as p48
 FROM plsport_playsport._forumcontent_1;
 
+drop table if exists plsport_playsport._forumcontent_2_all_icon_stat;
 CREATE TABLE plsport_playsport._forumcontent_2_all_icon_stat engine = myisam
 SELECT sum(p01), sum(p02), sum(p03), sum(p04), sum(p05), sum(p06), sum(p07), sum(p08), sum(p09), sum(p10), 
        sum(p11), sum(p12), sum(p13), sum(p14), sum(p15), sum(p16), sum(p17), sum(p18), sum(p19), sum(p20), 
        sum(p21), sum(p22), sum(p23), sum(p24), sum(p25), sum(p26), sum(p27), sum(p28), sum(p29), sum(p30),
-       sum(p31), sum(p32), sum(p33), sum(p34), sum(p35), sum(p36), sum(p37), sum(p38)
+       sum(p31), sum(p32), sum(p33), sum(p34), sum(p35), sum(p36), sum(p37), sum(p38), sum(p39), sum(p40),
+       sum(p41), sum(p42), sum(p43), sum(p44), sum(p45), sum(p46), sum(p47), sum(p48)
 FROM plsport_playsport._forumcontent_2;
 
 CREATE TABLE plsport_playsport._forumcontent_1_1 engine = myisam
@@ -23172,34 +23187,25 @@ FROM actionlog._friend_6);
 # =================================================================================================
 
 create table actionlog._s_p engine = myisam
-SELECT * FROM actionlog.action_201601
+SELECT * FROM actionlog.action_201603
 where uri like '%s=p%' ; # 最多推文
 create table actionlog._s_a engine = myisam
-SELECT * FROM actionlog.action_201601
+SELECT * FROM actionlog.action_201603
 where uri like '%s=a%' ; # 最新文章
 create table actionlog._s_r engine = myisam
-SELECT * FROM actionlog.action_201601
+SELECT * FROM actionlog.action_201603
 where uri like '%s=r%' ; # 最新回覆
 
 insert ignore into actionlog._s_p
-SELECT * FROM actionlog.action_201602
+SELECT * FROM actionlog.action_201604
 where uri like '%s=p%' ; # 最多推文
 insert ignore into actionlog._s_a
-SELECT * FROM actionlog.action_201602
+SELECT * FROM actionlog.action_201604
 where uri like '%s=a%' ; # 最新文章
 insert ignore into actionlog._s_r
-SELECT * FROM actionlog.action_201602
+SELECT * FROM actionlog.action_201604
 where uri like '%s=r%' ; # 最新回覆
 
-insert ignore into actionlog._s_p
-SELECT * FROM actionlog.action_201603
-where uri like '%s=p%' ; # 最多推文
-insert ignore into actionlog._s_a
-SELECT * FROM actionlog.action_201603
-where uri like '%s=a%' ; # 最新文章
-insert ignore into actionlog._s_r
-SELECT * FROM actionlog.action_201603
-where uri like '%s=r%' ; # 最新回覆
 
 create table actionlog._s_p_1 engine = myisam
 SELECT id, userid, date(time) as d
@@ -26322,3 +26328,4 @@ SELECT *
 into outfile 'C:/Users/eddy/Desktop/_list_6.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._list_6);
+
