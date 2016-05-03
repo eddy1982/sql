@@ -26712,12 +26712,86 @@ where (c.price - c.total_redeem) = 0;
 
 
 
+# =================================================================================================
+# http://redmine.playsport.cc/issues/1547#change-7773
+# 即時比分顯示隔日賽事數據 - 棒球優化 - 分析問卷結果
+# 概述
+# 說明  
+# 分析"即時比分賽事數據"問卷結果，排除沒在觀看隔日賽事數據的使用者
+#  
+# 備註：問卷做到 5/2 12:00
+# =================================================================================================
+
+# http://psadmin.info/administration/questionnaire.php?action=previewQuestionnaire&id=201604261632399023
+
+# 麻煩請將"投手數據"點擊事件塞到以下2個地方
+# 資料表userActions.event
+#    userid: 如果有的話就記錄
+#    name: livescore_pitchers_open_x (x:聯盟代碼), livescore_pitchers_close_x
+
+drop table if exists plsport_playsport._events_pitcher;
+create table plsport_playsport._events_pitcher engine = myisam
+SELECT * FROM plsport_playsport.events
+where name like '%livescore_pitcher%';
+
+drop table if exists plsport_playsport._events_pitcher_1;
+create table plsport_playsport._events_pitcher_1 engine = myisam
+SELECT userid, count(name) as op 
+FROM plsport_playsport._events_pitcher
+where userid <> ''
+group by userid;
+
+drop table if exists plsport_playsport._qu;
+create table plsport_playsport._qu engine = myisam
+SELECT userid, `1461657893` as q1, `1461658009` as q2, `1461659504` as q3, `1461659525` as q4
+FROM plsport_playsport.questionnaire_201604261632399023_answer;
+
+drop table if exists plsport_playsport._qu_1;
+create table plsport_playsport._qu_1 engine = myisam
+SELECT a.userid, a.q1, a.q2, a.q3, a.q4, b.op 
+FROM plsport_playsport._qu a left join plsport_playsport._events_pitcher_1 b on a.userid = b.userid;
+
+drop table if exists plsport_playsport._qu_2;
+create table plsport_playsport._qu_2 engine = myisam
+SELECT userid, q1, q2, q3, q4, (case when (op is not null) then 'ok' else '' end) as stat 
+FROM plsport_playsport._qu_1;
+
+drop table if exists plsport_playsport._qu_3;
+create table plsport_playsport._qu_3 engine = myisam
+SELECT userid, q1, (case when (q2 like '%1%') then 1 else 0 end) as q2_1,
+                   (case when (q2 like '%2%') then 1 else 0 end) as q2_2,
+				   (case when (q2 like '%3%') then 1 else 0 end) as q2_3,
+                   (case when (q2 like '%4%') then 1 else 0 end) as q2_4, q3, q4, stat
+FROM plsport_playsport._qu_2;
 
 
+SELECT q1, count(userid) as c 
+FROM plsport_playsport._qu_3
+where stat = 'ok'
+group by q1;
 
+SELECT q1, count(userid) as c 
+FROM plsport_playsport._qu_3
+where 1
+group by q1;
 
+SELECT sum(q2_1),  sum(q2_2), sum(q2_3), sum(q2_4)
+FROM plsport_playsport._qu_3
+where stat = 'ok';
 
+SELECT sum(q2_1),  sum(q2_2), sum(q2_3), sum(q2_4)
+FROM plsport_playsport._qu_3
+where 1;
 
+SELECT q4, count(userid) as c 
+FROM plsport_playsport._qu_3
+where stat = 'ok'
+group by q4;
+
+SELECT q4, count(userid) as c 
+FROM plsport_playsport._qu_3
+where 1
+group by q4;
 
 
 
