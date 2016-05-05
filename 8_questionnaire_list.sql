@@ -280,7 +280,6 @@ FROM questionnaire.satisfactionquestionnaire_answer
 where completeTime between subdate(now(),120) and now()
 group by userid;
 
-
 /*--------------------------------------------
   (2)上個月有登入過的人
 ---------------------------------------------*/
@@ -289,7 +288,7 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2016-03-01' and '2016-03-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2016-04-01' and '2016-04-30') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
 
 		use questionnaire;
