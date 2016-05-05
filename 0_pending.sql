@@ -26764,7 +26764,6 @@ SELECT userid, q1, (case when (q2 like '%1%') then 1 else 0 end) as q2_1,
                    (case when (q2 like '%4%') then 1 else 0 end) as q2_4, q3, q4, stat
 FROM plsport_playsport._qu_2;
 
-
 SELECT q1, count(userid) as c 
 FROM plsport_playsport._qu_3
 where stat = 'ok'
@@ -26795,9 +26794,37 @@ group by q4;
 
 
 
+# =================================================================================================
+# http://redmine.playsport.cc/issues/1394
+# 估算每日投注人數
+# 概述
+# 
+# 說明
+# 
+# 估算地下、台灣運彩淡望季每ㄖ投注人數
+# =================================================================================================
 
+drop table if exists  plsport_playsport._pcash;
+create table plsport_playsport._pcash engine = myisam
+SELECT userid, amount, date 
+FROM plsport_playsport.pcash_log
+where date between '2016-04-01 00:00:00' and '2016-04-30 23:59:59'
+and payed = 1 and type = 1;
 
+drop table if exists  plsport_playsport._pcash_1;
+create table plsport_playsport._pcash_1 engine = myisam
+SELECT userid, sum(amount) as spent 
+FROM plsport_playsport._pcash
+group by userid;
 
+drop table if exists  plsport_playsport._pcash_2;
+create table plsport_playsport._pcash_2 engine = myisam
+select userid, spent, round((cnt-rank+1)/cnt,2) as spent_percentile
+from (SELECT userid, spent, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._pcash_1, (SELECT @curRank := 0) r
+      order by spent desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._pcash_1) as ct;
 
-
-
+SELECT sum(spent) 
+FROM plsport_playsport._pcash_2
+where spent_percentile >=0.8;
