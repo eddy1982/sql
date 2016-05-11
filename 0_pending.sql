@@ -26416,7 +26416,7 @@ group by b.s_push;
 # 另外提供給你，目前已被加入系統的關鍵字
 # =================================================================================================
 
-# 匯入(1)relationshiprecord (2)forum (3)forumcontent
+# 匯入(1)relationshipRecord (2)forum (3)forumcontent
 
 drop table if exists plsport_playsport._ad_list_1;
 create table plsport_playsport._ad_list_1 engine = myisam
@@ -26455,13 +26455,32 @@ create table plsport_playsport._forumcontent_3 engine = myisam
 SELECT * FROM plsport_playsport._forumcontent_2
 order by postdate desc;
 
-ALTER TABLE  `_forumcontent_3` CHANGE  `content`  `content` VARCHAR( 5000 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
+ALTER TABLE  plsport_playsport._forumcontent_3 CHANGE  `content`  `content` VARCHAR( 5000 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 
-SELECT 'articleid', 'subjectid', 'userid', 'content', 'postdate' UNION (
-SELECT * 
-INTO outfile 'C:/Users/eddy/Desktop/forumcontent.csv'
-fields terminated by ',' enclosed by '"' lines terminated by '\r\n' 
-FROM plsport_playsport._forumcontent_3);
+# next...
+# 1. 然後匯出plsport_playsport._forumcontent_3.sql
+# 2. 上傳到NAS, /home/eddy/R/ultron/forumcontent.sql
+# 3. 把forumcontent.sql匯入NAS中的MySQL
+#       mysql -u root -p plsport_playsport < forumcontent.sql
+#       mysql -u root -p plsport_playsport < block_keyword.sql
+# 4. 把C:\proc\r\fuzzyserach\find_ad.R的程式碼貼到NAS的環境
+# 5. 把產生的fc.csv檔再捉下來分析(改成直接在R中分析)
+
+drop table if exists `plsport_playsport`.`fc`;
+CREATE TABLE `plsport_playsport`.`fc` 
+( `articleid` VARCHAR(30) NOT NULL , 
+  `subjectid` VARCHAR(30) NOT NULL , 
+  `userid`    VARCHAR(30) NOT NULL , 
+  `content`   VARCHAR(2000) NOT NULL , 
+  `postdate`  VARCHAR(30) NOT NULL 
+) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
+
+LOAD DATA INFILE 'C:/users/eddy/desktop/fc.csv' 
+INTO TABLE `plsport_playsport`.`fc`  
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
 
 
 
