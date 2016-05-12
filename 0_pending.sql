@@ -26847,3 +26847,38 @@ from (SELECT userid, spent, @curRank := @curRank + 1 AS rank
 SELECT sum(spent) 
 FROM plsport_playsport._pcash_2
 where spent_percentile >=0.8;
+
+
+# =================================================================================================
+# http://redmine.playsport.cc/issues/1397#
+# 降低特價金額
+# TO eddy:
+# 麻煩你協助撈取名單，
+# 範圍是:近三年內，有設定販售的人。
+# 此問卷預計5/13~5/19投放，名單完成時間再麻煩你安排。
+# =================================================================================================
+
+drop table if exists plsport_playsport._seller_list_in_three_years;
+create table plsport_playsport._seller_list_in_three_years engine = myisam
+SELECT id, sellerid, mode, sale_allianceid, sale_date, sale_price, buyer_count 
+FROM plsport_playsport.predict_seller
+where sale_date between subdate(now(),1095) and now();
+
+drop table if exists plsport_playsport._seller_list_in_three_years_1;
+create table plsport_playsport._seller_list_in_three_years_1 engine = myisam
+SELECT sellerid, sum(sale_price*buyer_count) as earn
+FROM plsport_playsport._seller_list_in_three_years
+group by sellerid;
+
+drop table if exists plsport_playsport._seller_list_in_three_years_2;
+create table plsport_playsport._seller_list_in_three_years_2 engine = myisam
+SELECT sellerid 
+FROM plsport_playsport._seller_list_in_three_years_1
+group by sellerid;
+
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_seller_list_in_three_years_2.txt'
+fields terminated by ',' enclosed by '' lines terminated by '\r\n'
+FROM plsport_playsport._seller_list_in_three_years_2;
+
+
