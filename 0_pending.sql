@@ -26882,3 +26882,103 @@ fields terminated by ',' enclosed by '' lines terminated by '\r\n'
 FROM plsport_playsport._seller_list_in_three_years_2;
 
 
+
+# =================================================================================================
+# 推廌系統檢查名單http://redmine.playsport.cc/issues/1593
+# =================================================================================================
+
+# 這是直接要貼給靜怡的而己
+SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, b.nickname, a.total_count, a.killer_count, a.update_time 
+FROM plsport_playsport.buy_acquaintance_weight a left join plsport_playsport.member b on a.userid = b.userid
+order by total_count desc;
+
+
+
+# =================================================================================================
+# [201604-A-2]即時比分競品訪談-問卷分析
+# http://redmine.playsport.cc/issues/1626#change-8306
+# 說明
+# 進一步分析即時比分使用狀況問卷
+#  
+# 內容
+# - 沒有使用玩運彩即時比分的人，都使用哪些網站(APP)
+# - 有使用玩運彩即時比分的人，多數又使用哪些網站(APP)
+# - 問卷結果：http://www.playsport.cc/questionnaire.php?question=201604271658308268&action=statistics
+# =================================================================================================
+
+# 先匯入plsport_playsport.questionnaire_201604271658308268_answer
+
+drop table if exists plsport_playsport._qu;
+create table plsport_playsport._qu engine = myisam
+select * 
+from plsport_playsport.questionnaire_201604271658308268_answer;
+
+ALTER TABLE plsport_playsport._qu CHANGE `1461746732` q1 VARCHAR(20);
+ALTER TABLE plsport_playsport._qu CHANGE `1461747012` q2 VARCHAR(20);
+
+drop table if exists plsport_playsport._qu_1;
+create table plsport_playsport._qu_1 engine = myisam
+SELECT userid, concat(',',q1,',') as q1, concat(',',q2,',') as q2
+FROM plsport_playsport._qu;
+
+drop table if exists plsport_playsport._qu_2;
+create table plsport_playsport._qu_2 engine = myisam
+SELECT userid,  (case when (q1 like '%,1,%') then 1 else 0 end) as a1,
+                (case when (q1 like '%,2,%') then 1 else 0 end) as a2,
+                (case when (q1 like '%,3,%') then 1 else 0 end) as a3,
+                (case when (q1 like '%,4,%') then 1 else 0 end) as a4,
+                (case when (q1 like '%,5,%') then 1 else 0 end) as a5,
+                (case when (q1 like '%,6,%') then 1 else 0 end) as a6,
+                (case when (q1 like '%,7,%') then 1 else 0 end) as a7,
+                (case when (q1 like '%,8,%') then 1 else 0 end) as a8,
+                (case when (q1 like '%,9,%') then 1 else 0 end) as a9,
+                (case when (q1 like '%,10,%') then 1 else 0 end) as a10,
+                (case when (q1 like '%,11,%') then 1 else 0 end) as a11,
+                (case when (q1 like '%,12,%') then 1 else 0 end) as a12,
+                (case when (q1 like '%,13,%') then 1 else 0 end) as a13,
+                (case when (q1 like '%,14,%') then 1 else 0 end) as a14, 
+                (case when (q2 like '%,1,%') then 1 else 0 end) as b1,
+                (case when (q2 like '%,2,%') then 1 else 0 end) as b2,
+                (case when (q2 like '%,3,%') then 1 else 0 end) as b3,
+                (case when (q2 like '%,4,%') then 1 else 0 end) as b4,
+                (case when (q2 like '%,5,%') then 1 else 0 end) as b5,
+                (case when (q2 like '%,6,%') then 1 else 0 end) as b6,
+                (case when (q2 like '%,7,%') then 1 else 0 end) as b7,
+                (case when (q2 like '%,8,%') then 1 else 0 end) as b8,
+                (case when (q2 like '%,9,%') then 1 else 0 end) as b9,
+                (case when (q2 like '%,10,%') then 1 else 0 end) as b10,
+                (case when (q2 like '%,11,%') then 1 else 0 end) as b11,
+                (case when (q2 like '%,12,%') then 1 else 0 end) as b12,
+                (case when (q2 like '%,13,%') then 1 else 0 end) as b13
+FROM plsport_playsport._qu_1;
+
+# 沒有使用玩運彩即時比分的人，都使用哪些網站(APP)
+	# 用網站
+	SELECT sum(a2) as a2, sum(a3) as a3, sum(a4) as a4, sum(a5) as a5, sum(a6) as a6,
+		   sum(a7) as a7, sum(a8) as a8, sum(a9) as a9, sum(a10) as a10, sum(a11) as a11,
+		   sum(a12) as a12, sum(a13) as a13, sum(a14) as a14
+	FROM plsport_playsport._qu_2
+	where a1 = 0; #玩運彩即時比分
+	# 用APP
+	SELECT sum(b2) as b2, sum(b3) as b3, sum(b4) as b4, sum(b5) as b5, sum(b6) as b6,
+		   sum(b7) as b7, sum(b8) as b8, sum(b9) as b9, sum(b10) as b10, sum(b11) as b11,
+		   sum(b12) as b12, sum(b13) as b13
+	FROM plsport_playsport._qu_2
+	where b1 = 0; #玩運彩即時比分
+
+# 有使用玩運彩即時比分的人，多數又使用哪些網站(APP)
+	# 用網站
+	SELECT sum(a2) as a2, sum(a3) as a3, sum(a4) as a4, sum(a5) as a5, sum(a6) as a6,
+		   sum(a7) as a7, sum(a8) as a8, sum(a9) as a9, sum(a10) as a10, sum(a11) as a11,
+		   sum(a12) as a12, sum(a13) as a13, sum(a14) as a14
+	FROM plsport_playsport._qu_2
+	where a1 = 1; #玩運彩即時比分
+	# 用APP
+	SELECT sum(b2) as b2, sum(b3) as b3, sum(b4) as b4, sum(b5) as b5, sum(b6) as b6,
+		   sum(b7) as b7, sum(b8) as b8, sum(b9) as b9, sum(b10) as b10, sum(b11) as b11,
+		   sum(b12) as b12, sum(b13) as b13
+	FROM plsport_playsport._qu_2
+	where b1 = 1; #玩運彩即時比分
+
+
+
