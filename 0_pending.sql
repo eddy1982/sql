@@ -24053,13 +24053,13 @@ order by friend_count_p desc;
 create table plsport_playsport._friends_advance engine = myisam
 select *
 from (
-	select a.userid, count(a.friendid) as c
-	from (
-		SELECT userid, friendid
-		FROM plsport_playsport.friends_advance
-		where userid <> ''
-		group by userid, friendid) as a
-	group by a.userid) as b
+    select a.userid, count(a.friendid) as c
+    from (
+        SELECT userid, friendid
+        FROM plsport_playsport.friends_advance
+        where userid <> ''
+        group by userid, friendid) as a
+    group by a.userid) as b
 order by b.c desc;
 
 create table plsport_playsport._friends_advance_1 engine = myisam
@@ -24081,8 +24081,8 @@ GROUP BY userid;
 
     ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
     ALTER TABLE plsport_playsport._friends_advance_2 ADD INDEX (`userid`);
-	ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
-	ALTER TABLE plsport_playsport._friends_advance_2 convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE plsport_playsport._friends_advance_2 convert to character set utf8 collate utf8_general_ci;
     
 create table plsport_playsport._friends_advance_3 engine = myisam
 SELECT a.userid, a.nickname, a.friend_count, a.c_percentile, date(b.signin_time) as d
@@ -24408,35 +24408,35 @@ WHERE a.buy_date between '2016-01-14%' AND now();
 
 select b.d, count(b.buyerid), sum(b.spent) 
 from (
-	select a.d, a.buyerid, sum(a.buy_price) as spent
-	from (
-		SELECT buyerid, date(buy_date) as d, buy_price
-		FROM plsport_playsport._predict_buyer
-		where buy_date between '2016-01-14%' and now()
-		and position like '%SPL%') as a
-	group by a.d, a.buyerid) as b
+    select a.d, a.buyerid, sum(a.buy_price) as spent
+    from (
+        SELECT buyerid, date(buy_date) as d, buy_price
+        FROM plsport_playsport._predict_buyer
+        where buy_date between '2016-01-14%' and now()
+        and position like '%SPL%') as a
+    group by a.d, a.buyerid) as b
 group by b.d;
 
 select b.d, count(b.buyerid), sum(b.spent) 
 from (
-	select a.d, a.buyerid, sum(a.buy_price) as spent
-	from (
-		SELECT buyerid, date(buy_date) as d, buy_price
-		FROM plsport_playsport._predict_buyer
-		where buy_date between '2016-01-14%' and now()
-		and position like '%SPL_PASS%') as a
-	group by a.d, a.buyerid) as b
+    select a.d, a.buyerid, sum(a.buy_price) as spent
+    from (
+        SELECT buyerid, date(buy_date) as d, buy_price
+        FROM plsport_playsport._predict_buyer
+        where buy_date between '2016-01-14%' and now()
+        and position like '%SPL_PASS%') as a
+    group by a.d, a.buyerid) as b
 group by b.d;
 
 select b.d, count(b.buyerid), sum(b.spent) 
 from (
-	select a.d, a.buyerid, sum(a.buy_price) as spent
-	from (
-		SELECT buyerid, date(buy_date) as d, buy_price
-		FROM plsport_playsport._predict_buyer
-		where buy_date between '2016-01-14%' and now()
-		and position like '%SPL_FAIL%') as a
-	group by a.d, a.buyerid) as b
+    select a.d, a.buyerid, sum(a.buy_price) as spent
+    from (
+        SELECT buyerid, date(buy_date) as d, buy_price
+        FROM plsport_playsport._predict_buyer
+        where buy_date between '2016-01-14%' and now()
+        and position like '%SPL_FAIL%') as a
+    group by a.d, a.buyerid) as b
 group by b.d;
 
 
@@ -24636,12 +24636,12 @@ update actionlog._buy_predict_1 set platform_type = 1 where platform_type = 3;
 create table actionlog._buy_predict_2 engine = myisam
 select b.userid, (b.pc+b.mobile) as pv, round((b.pc/(b.pc+b.mobile)),3) as pc_p, round((b.mobile/(b.pc+b.mobile)),3) as mobile_p
 from (
-	select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
-	from (
-		SELECT userid, (case when (platform_type = 1) then pv else 0 end) as pc, 
-					   (case when (platform_type = 2) then pv else 0 end) as mobile
-		FROM actionlog._buy_predict_1) as a
-	group by a.userid) as b;
+    select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+    from (
+        SELECT userid, (case when (platform_type = 1) then pv else 0 end) as pc, 
+                       (case when (platform_type = 2) then pv else 0 end) as mobile
+        FROM actionlog._buy_predict_1) as a
+    group by a.userid) as b;
 
 create table actionlog._buy_predict_3 engine = myisam
 select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, pc_p, mobile_p
@@ -24683,8 +24683,8 @@ ALTER TABLE actionlog._buy_predict_3 convert to character set utf8 collate utf8_
 create table actionlog._buy_predict_4 engine = myisam
 select c.userid, c.pv, c.pv_percentile, c.bz_spent, d.total_spent, c.pc_p, c.mobile_p
 from (
-	SELECT a.userid, a.pv, b.bz_spent, a.pv_percentile, a.pc_p, a.mobile_p 
-	FROM actionlog._buy_predict_3 a left join plsport_playsport._predict_buyer_1_BZ_spent b on a.userid = b.buyerid) as c
+    SELECT a.userid, a.pv, b.bz_spent, a.pv_percentile, a.pc_p, a.mobile_p 
+    FROM actionlog._buy_predict_3 a left join plsport_playsport._predict_buyer_1_BZ_spent b on a.userid = b.buyerid) as c
     left join plsport_playsport._predict_buyer_1_total_spent d on c.userid = d.buyerid
 where c.pv_percentile >= 0.85;
 
@@ -24693,16 +24693,16 @@ SELECT a.userid, b.nickname, a.pv, a.pv_percentile, COALESCE(a.bz_spent,0) as bz
        a.pc_p, a.mobile_p 
 FROM actionlog._buy_predict_4 a left join plsport_playsport.member b on a.userid = b.userid;
 
-	create table plsport_playsport._spent_in_10_days engine = myisam
-	SELECT buyerid, sum(buy_price) as spent_in_10_days, count(buy_price) as spent_count_in_10_days
-	FROM plsport_playsport._predict_buyer_1
-	where buy_date between subdate(now(),10) and now()
-	group by buyerid;
+    create table plsport_playsport._spent_in_10_days engine = myisam
+    SELECT buyerid, sum(buy_price) as spent_in_10_days, count(buy_price) as spent_count_in_10_days
+    FROM plsport_playsport._predict_buyer_1
+    where buy_date between subdate(now(),10) and now()
+    group by buyerid;
 
-	create table plsport_playsport._latest_spent engine = myisam
-	SELECT buyerid, date(max(buy_date)) as latest_spent 
-	FROM plsport_playsport._predict_buyer_1
-	group by buyerid;
+    create table plsport_playsport._latest_spent engine = myisam
+    SELECT buyerid, date(max(buy_date)) as latest_spent 
+    FROM plsport_playsport._predict_buyer_1
+    group by buyerid;
 
 create table actionlog._buy_predict_6 engine = myisam
 SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.bz_spent, a.total_spent, b.spent_in_10_days, b.spent_count_in_10_days,
@@ -24741,12 +24741,12 @@ update actionlog._buy_predict set platform_type = 1 where platform_type = 3;
 create table actionlog._buy_predict_1 engine = myisam
 select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
 from (
-	select a.userid, (case when(a.platform_type = 1) then c else 0 end) as pc,
-					 (case when(a.platform_type = 2) then c else 0 end) as mobile
-	from (
-		SELECT userid, platform_type, count(uri) as c 
-		FROM actionlog._buy_predict
-		group by userid, platform_type) as a) as b
+    select a.userid, (case when(a.platform_type = 1) then c else 0 end) as pc,
+                     (case when(a.platform_type = 2) then c else 0 end) as mobile
+    from (
+        SELECT userid, platform_type, count(uri) as c 
+        FROM actionlog._buy_predict
+        group by userid, platform_type) as a) as b
 group by b.userid;
 
     ALTER TABLE actionlog._buy_predict_1 convert to character set utf8 collate utf8_general_ci;
@@ -24759,30 +24759,30 @@ drop table if exists actionlog._buy_tota_bz;
 create table actionlog._buy_total_bz engine = myisam
 select a.buyerid, count(buy_price) as buy_count_bz, sum(buy_price) as buy_total_bz
 from (
-	SELECT buyerid, buy_date, buy_price 
-	FROM plsport_playsport.predict_buyer
-	where buy_date between '2016-03-04%' and '2016-03-07%'
+    SELECT buyerid, buy_date, buy_price 
+    FROM plsport_playsport.predict_buyer
+    where buy_date between '2016-03-04%' and '2016-03-07%'
     and position like 'BZ%'
-	and buyerid in ('FB1451844148','kennyhou888','ececec','king_695888','ice3345678','0937722310','J6254','zncyoyo',
-					'aa6565931','FB100000216144535','670620','Ja0918211','zg1169','M9566888')) as a
+    and buyerid in ('FB1451844148','kennyhou888','ececec','king_695888','ice3345678','0937722310','J6254','zncyoyo',
+                    'aa6565931','FB100000216144535','670620','Ja0918211','zg1169','M9566888')) as a
 group by a.buyerid;
 
 drop table if exists actionlog._buy_total;
 create table actionlog._buy_total engine = myisam
 select a.buyerid, count(buy_price) as buy_count, sum(buy_price) as buy_total
 from (
-	SELECT buyerid, buy_date, buy_price 
-	FROM plsport_playsport.predict_buyer
-	where buy_date between '2016-03-04%' and '2016-03-07%'
-	and buyerid in ('FB1451844148','kennyhou888','ececec','king_695888','ice3345678','0937722310','J6254','zncyoyo',
-					'aa6565931','FB100000216144535','670620','Ja0918211','zg1169','M9566888')) as a
+    SELECT buyerid, buy_date, buy_price 
+    FROM plsport_playsport.predict_buyer
+    where buy_date between '2016-03-04%' and '2016-03-07%'
+    and buyerid in ('FB1451844148','kennyhou888','ececec','king_695888','ice3345678','0937722310','J6254','zncyoyo',
+                    'aa6565931','FB100000216144535','670620','Ja0918211','zg1169','M9566888')) as a
 group by a.buyerid;
 
 create table actionlog._buy_predict_3 engine = myisam
 select c.userid, c.nickname, c.pc, c.mobile, c.buy_count_bz, c.buy_total_bz, d.buy_count, d.buy_total
 from (
-	SELECT a.userid, a.nickname, a.pc, a.mobile, b.buy_count_bz, b.buy_total_bz
-	FROM actionlog._buy_predict_2 a left join actionlog._buy_total_bz b on a.userid = b.buyerid) as c
+    SELECT a.userid, a.nickname, a.pc, a.mobile, b.buy_count_bz, b.buy_total_bz
+    FROM actionlog._buy_predict_2 a left join actionlog._buy_total_bz b on a.userid = b.buyerid) as c
     left join actionlog._buy_total d on c.userid = d.buyerid;
 
 
@@ -24825,10 +24825,10 @@ group by ym, alliancename;
 
 select a.ym, a.alliancename, a.subject_count, a.reply_count, round((a.reply_count/a.subject_count),2) as ratio
 from (
-	SELECT ym, alliancename, count(subjectid) as subject_count, sum(replycount) as reply_count 
-	FROM plsport_playsport._forum_jan
-	where alliancename is not null
-	group by ym, alliancename) as a;
+    SELECT ym, alliancename, count(subjectid) as subject_count, sum(replycount) as reply_count 
+    FROM plsport_playsport._forum_jan
+    where alliancename is not null
+    group by ym, alliancename) as a;
 
 
 
@@ -24866,15 +24866,15 @@ update actionlog._predict_scale set platform_type = 1 where platform_type = 3;
 create table actionlog._predict_scale_1 engine = myisam
 select c.userid, (c.pc+c.mobile) as pv, round((c.pc/(c.pc+c.mobile)),3) as p_pc, round((c.mobile/(c.pc+c.mobile)),3) as p_mobile
 from (
-	select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
-	from (
-		select a.userid, (case when (a.platform_type = 1) then c else 0 end) as pc,
-						 (case when (a.platform_type = 2) then c else 0 end) as mobile
-		from (
-			SELECT userid, platform_type, count(uri) as c
-			FROM actionlog._predict_scale
-			group by userid, platform_type) as a) as b
-	group by b.userid) as c;
+    select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
+    from (
+        select a.userid, (case when (a.platform_type = 1) then c else 0 end) as pc,
+                         (case when (a.platform_type = 2) then c else 0 end) as mobile
+        from (
+            SELECT userid, platform_type, count(uri) as c
+            FROM actionlog._predict_scale
+            group by userid, platform_type) as a) as b
+    group by b.userid) as c;
 
 create table actionlog._predict_scale_2 engine = myisam
 select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, p_pc, p_mobile
@@ -24890,8 +24890,8 @@ FROM plsport_playsport.member_signin_log_archive
 GROUP BY userid;
 
     ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
-	ALTER TABLE plsport_playsport.member convert to character set utf8 collate utf8_general_ci;
-	ALTER TABLE actionlog._predict_scale_2 convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE plsport_playsport.member convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE actionlog._predict_scale_2 convert to character set utf8 collate utf8_general_ci;
     ALTER TABLE plsport_playsport._last_login ADD INDEX (`userid`);
 
 create table actionlog._predict_scale_3 engine = myisam
@@ -24941,15 +24941,15 @@ update actionlog._predict_scale set platform_type = 1 where platform_type = 3;
 create table actionlog._predict_scale_1 engine = myisam
 select c.userid, (c.pc+c.mobile) as pv, c.pc, c.mobile
 from (
-	select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
-	from (
-		select a.userid, (case when (a.platform_type = 1) then c else 0 end) as pc,
-						 (case when (a.platform_type = 2) then c else 0 end) as mobile
-		from (
-			SELECT userid, platform_type, count(uri) as c
-			FROM actionlog._predict_scale
-			group by userid, platform_type) as a) as b
-	group by b.userid) as c;
+    select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
+    from (
+        select a.userid, (case when (a.platform_type = 1) then c else 0 end) as pc,
+                         (case when (a.platform_type = 2) then c else 0 end) as mobile
+        from (
+            SELECT userid, platform_type, count(uri) as c
+            FROM actionlog._predict_scale
+            group by userid, platform_type) as a) as b
+    group by b.userid) as c;
 
 ALTER TABLE actionlog._predict_scale_1 convert to character set utf8 collate utf8_general_ci;
 
@@ -25007,7 +25007,7 @@ SELECT userid, count(uri) as pv
 FROM actionlog._redeem_1
 group by userid;
 
-	ALTER TABLE actionlog._redeem_2 convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE actionlog._redeem_2 convert to character set utf8 collate utf8_general_ci;
 
 create table actionlog._redeem_3 engine = myisam
 SELECT (case when ((b.id%20)+1 in (14,15,16,17,18,19,20)) then 'a' else 'b' end) as abtest, a.userid, a.pv  
@@ -25022,7 +25022,7 @@ and price >= 199
 and createon between '2016-02-17 09:47:00' and now()
 group by userid;
 
-	ALTER TABLE actionlog._order_data convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE actionlog._order_data convert to character set utf8 collate utf8_general_ci;
 
 create table actionlog._redeem_4 engine = myisam
 SELECT a.abtest, a.userid, a.pv, COALESCE(b.redeem,'NA') as redeem, COALESCE(b.redeem_count,'NA') as redeem_count
@@ -25059,10 +25059,10 @@ where uri like '%rp=MSA%' or uri like '%rp=MSI%';
 create table actionlog._click_title_from_app_1 engine = myisam
 select *
 from (
-	SELECT userid, count(uri) as click 
-	FROM actionlog._click_title_from_app
-	where userid <> ''
-	group by userid) as a
+    SELECT userid, count(uri) as click 
+    FROM actionlog._click_title_from_app
+    where userid <> ''
+    group by userid) as a
 order by a.click desc;
 
 # mongodb import
@@ -25164,8 +25164,8 @@ and uri like '%dmd=%';
 create table actionlog._user_from_app engine = myisam
 select a.userid, a.dmd
 from (
-	SELECT userid, substr(uri,locate('dmd=',uri)+4,length(uri)) as dmd, time, p 
-	FROM actionlog._click_app_title) as a
+    SELECT userid, substr(uri,locate('dmd=',uri)+4,length(uri)) as dmd, time, p 
+    FROM actionlog._click_app_title) as a
 group by a.userid, a.dmd;
 
 ALTER TABLE actionlog._user_from_app convert to character set utf8 collate utf8_general_ci;
@@ -25210,8 +25210,8 @@ create table actionlog._pageview_visitmember_1 engine = myisam
 select a.userid, (case when (locate('&',a.visit)>0) then substr(a.visit,1,locate('&',a.visit)-1) else a.visit end) as visit,
                  (case when (locate('&',a.allianceid)>0) then substr(a.allianceid,1,locate('&',a.allianceid)-1) else a.allianceid end) as allianceid
 from (
-	SELECT userid, uri, substr(uri,locate('visit=',uri)+6,length(uri)) as visit, substr(uri,locate('allianceid=',uri)+11,length(uri)) as allianceid
-	FROM actionlog._pageview_visitmember) as a;
+    SELECT userid, uri, substr(uri,locate('visit=',uri)+6,length(uri)) as visit, substr(uri,locate('allianceid=',uri)+11,length(uri)) as allianceid
+    FROM actionlog._pageview_visitmember) as a;
 
 create table actionlog._pageview_visitmember_2 engine = myisam
 SELECT userid, allianceid, count(userid) as c 
@@ -25223,16 +25223,16 @@ group by userid, allianceid;
 create table actionlog._pageview_visitmember_3 engine = myisam
 select a.userid, sum(alli_1) as alli_1, sum(alli_3) as alli_3
 from (
-	SELECT userid, (case when (allianceid = 1) then c else 0 end) as alli_1,
-				   (case when (allianceid = 3) then c else 0 end) as alli_3 
-	FROM actionlog._pageview_visitmember_2) as a
+    SELECT userid, (case when (allianceid = 1) then c else 0 end) as alli_1,
+                   (case when (allianceid = 3) then c else 0 end) as alli_3 
+    FROM actionlog._pageview_visitmember_2) as a
 group by a.userid;
 
 create table actionlog._pageview_livescore_1 engine = myisam
 select a.userid, (case when (locate('&',a.aid)>0) then substr(a.aid,1,locate('&',a.aid)-1) else a.aid end) as aid
 from (
-	SELECT userid, uri, substr(uri,locate('aid=',uri)+4,length(uri)) as aid
-	FROM actionlog._pageview_livescore) as a;
+    SELECT userid, uri, substr(uri,locate('aid=',uri)+4,length(uri)) as aid
+    FROM actionlog._pageview_livescore) as a;
     
 create table actionlog._pageview_livescore_2 engine = myisam
 SELECT userid, aid, count(userid) as c 
@@ -25242,10 +25242,10 @@ group by userid, aid;
 create table actionlog._pageview_livescore_3 engine = myisam
 select a.userid, sum(alli_1_s) as alli_1_s, sum(alli_3_s) as alli_3_s
 from (
-	SELECT userid, (case when (aid = 1) then c else 0 end) as alli_1_s,
-				   (case when (aid = 3) then c else 0 end) as alli_3_s 
-	FROM actionlog._pageview_livescore_2
-	where aid in (1,3)) as a
+    SELECT userid, (case when (aid = 1) then c else 0 end) as alli_1_s,
+                   (case when (aid = 3) then c else 0 end) as alli_3_s 
+    FROM actionlog._pageview_livescore_2
+    where aid in (1,3)) as a
 group by a.userid;
 
 ALTER TABLE actionlog._app_action_log_4 convert to character set utf8 collate utf8_general_ci;
@@ -25321,11 +25321,11 @@ drop table if exists plsport_playsport._forum_1;
 create table plsport_playsport._forum_1 engine = myisam
 select a.d, a.allianceid, a.post_count, a.reply_count, round((a.reply_count/a.post_count),1) as ratio
 from (
-	SELECT d, allianceid, count(subjectid) as post_count, sum(replycount) as reply_count 
-	FROM plsport_playsport._forum
-	where year(d) >= 2013
+    SELECT d, allianceid, count(subjectid) as post_count, sum(replycount) as reply_count 
+    FROM plsport_playsport._forum
+    where year(d) >= 2013
     and allianceid in (1,2,3,4,8,83,91,92,97)
-	group by d, allianceid) as a;
+    group by d, allianceid) as a;
     
 drop table if exists plsport_playsport._forum_2;
 create table plsport_playsport._forum_2 engine = myisam    
@@ -25632,11 +25632,11 @@ drop table if exists forum._forum_1;
 create table forum._forum_1 engine = myisam
 select b.ym, b.allianceid, count(b.postuser) as post_user_count
 from (
-	select a.ym, a.allianceid, a.postuser, count(a.subjectid) as post_count
-	from (
-		SELECT subjectid, allianceid, postuser, substr(posttime,1,7) as ym 
-		FROM forum._forum) as a
-	group by a.ym, a.allianceid, a.postuser) as b
+    select a.ym, a.allianceid, a.postuser, count(a.subjectid) as post_count
+    from (
+        SELECT subjectid, allianceid, postuser, substr(posttime,1,7) as ym 
+        FROM forum._forum) as a
+    group by a.ym, a.allianceid, a.postuser) as b
 group by b.ym, b.allianceid;
 
 drop table if exists forum._forum_2;
@@ -25702,9 +25702,9 @@ drop table if exists plsport_playsport._forumcontent_2;
 create table plsport_playsport._forumcontent_2 engine = myisam
 select a.subjectid, (a.reply_user_count-1) as reply_user_count 
 from (
-	SELECT subjectid, count(userid) as reply_user_count 
-	FROM plsport_playsport._forumcontent_1
-	group by subjectid) as a;
+    SELECT subjectid, count(userid) as reply_user_count 
+    FROM plsport_playsport._forumcontent_1
+    group by subjectid) as a;
     
 ALTER TABLE plsport_playsport._forumcontent_2 ADD INDEX (`subjectid`);
 ALTER TABLE plsport_playsport._forum ADD INDEX (`subjectid`);
@@ -25729,11 +25729,11 @@ drop table if exists plsport_playsport._who_post_20_up;
 create table plsport_playsport._who_post_20_up engine = myisam
 select * 
 from (
-	SELECT postuser, count(subjectid) as post_count 
-	FROM plsport_playsport.forum
-	where year(posttime) >= 2013
-	and postuser <> ''
-	group by postuser) as a
+    SELECT postuser, count(subjectid) as post_count 
+    FROM plsport_playsport.forum
+    where year(posttime) >= 2013
+    and postuser <> ''
+    group by postuser) as a
 where a.post_count >= 22;
 ALTER TABLE plsport_playsport._who_post_20_up ADD INDEX (`postuser`);
 
@@ -25742,25 +25742,25 @@ drop table if exists plsport_playsport._forum_reply_median_statistics_2013_rank;
 create table plsport_playsport._forum_reply_median_statistics_2013_rank engine = myisam
 select substr(d.nickname,1,6) as userid, c.reply_median
 from (
-	SELECT a.postuser, round(a.reply_median,0) as reply_median
-	FROM plsport_playsport._forum_reply_median_statistics_2013 a inner join plsport_playsport._who_post_20_up b on a.postuser = b.postuser
-	order by reply_median desc) c left join plsport_playsport.member d on c.postuser = d.userid
+    SELECT a.postuser, round(a.reply_median,0) as reply_median
+    FROM plsport_playsport._forum_reply_median_statistics_2013 a inner join plsport_playsport._who_post_20_up b on a.postuser = b.postuser
+    order by reply_median desc) c left join plsport_playsport.member d on c.postuser = d.userid
 limit 0, 100;
 drop table if exists plsport_playsport._forum_reply_median_statistics_2014_rank;
 create table plsport_playsport._forum_reply_median_statistics_2014_rank engine = myisam
 select substr(d.nickname,1,6) as userid, c.reply_median
 from (
-	SELECT a.postuser, round(a.reply_median,0) as reply_median
-	FROM plsport_playsport._forum_reply_median_statistics_2014 a inner join plsport_playsport._who_post_20_up b on a.postuser = b.postuser
-	order by reply_median desc) c left join plsport_playsport.member d on c.postuser = d.userid
+    SELECT a.postuser, round(a.reply_median,0) as reply_median
+    FROM plsport_playsport._forum_reply_median_statistics_2014 a inner join plsport_playsport._who_post_20_up b on a.postuser = b.postuser
+    order by reply_median desc) c left join plsport_playsport.member d on c.postuser = d.userid
 limit 0, 100;
 drop table if exists plsport_playsport._forum_reply_median_statistics_2015_rank;
 create table plsport_playsport._forum_reply_median_statistics_2015_rank engine = myisam
 select substr(d.nickname,1,6) as userid, c.reply_median
 from (
-	SELECT a.postuser, round(a.reply_median,0) as reply_median
-	FROM plsport_playsport._forum_reply_median_statistics_2015 a inner join plsport_playsport._who_post_20_up b on a.postuser = b.postuser
-	order by reply_median desc) c left join plsport_playsport.member d on c.postuser = d.userid
+    SELECT a.postuser, round(a.reply_median,0) as reply_median
+    FROM plsport_playsport._forum_reply_median_statistics_2015 a inner join plsport_playsport._who_post_20_up b on a.postuser = b.postuser
+    order by reply_median desc) c left join plsport_playsport.member d on c.postuser = d.userid
 limit 0, 100;
     
 ALTER TABLE plsport_playsport._forum_reply_median_statistics_2013_rank ADD id INT PRIMARY KEY AUTO_INCREMENT;
@@ -25894,8 +25894,8 @@ drop table if exists actionlog._BZ_RCT_1;
 create table actionlog._BZ_RCT_1 engine = myisam
 select a.userid, a.d, a.platform_type, count(userid) as pv
 from(
-	SELECT userid, date(time) as d, platform_type 
-	FROM actionlog._bz_rct) as a
+    SELECT userid, date(time) as d, platform_type 
+    FROM actionlog._bz_rct) as a
 group by a.userid, a.d, a.platform_type;
 
 update actionlog._BZ_RCT_1 set platform_type = 1 where platform_type = 3;
@@ -25935,15 +25935,14 @@ create table plsport_playsport._trace engine = myisam
 SELECT * FROM plsport_playsport.forum_tracing_postuser
 where create_time between '2016-02-25 10:15:00' and now();
 
-
 drop table if exists plsport_playsport._trace_1;
 create table plsport_playsport._trace_1 engine = myisam
 select *
 from (
-	SELECT userid, count(postuser) as trace_count
-	FROM plsport_playsport._trace
-	where traced = 1
-	group by userid) as a
+    SELECT userid, count(postuser) as trace_count
+    FROM plsport_playsport._trace
+    where traced = 1
+    group by userid) as a
 order by trace_count desc;
 
 drop table if exists plsport_playsport._trace_2;
@@ -25957,9 +25956,9 @@ from (SELECT userid, trace_count, @curRank := @curRank + 1 AS rank
 # 使用者訂閱(追蹤)人數分佈
 select *
 from (
-	SELECT trace_count_percentile, max(trace_count) as max_trace_count 
-	FROM plsport_playsport._trace_2
-	group by trace_count_percentile) as a
+    SELECT trace_count_percentile, max(trace_count) as max_trace_count 
+    FROM plsport_playsport._trace_2
+    group by trace_count_percentile) as a
 order by trace_count_percentile desc;
 
 drop table if exists actionlog._forum;
@@ -26027,10 +26026,10 @@ drop table if exists plsport_playsport._order_data;
 create table plsport_playsport._order_data engine = myisam
 select a.userid, a.d, sum(price) as redeem
 from (
-	SELECT userid, date(createon) as d, price 
-	FROM plsport_playsport.order_data
-	where sellconfirm = 1
-	and createon between '2016-02-25 10:15:00' and now()) as a
+    SELECT userid, date(createon) as d, price 
+    FROM plsport_playsport.order_data
+    where sellconfirm = 1
+    and createon between '2016-02-25 10:15:00' and now()) as a
 group by a.userid, a.d;
 
 drop table if exists plsport_playsport._order_data_1;
@@ -26055,25 +26054,199 @@ create table plsport_playsport._order_data_2 engine = myisam
 SELECT a.abtest, a.userid, a.d, a.redeem 
 FROM plsport_playsport._order_data_1 a inner join plsport_playsport._who_use_trace b on a.userid = b.userid;
 
-
 # 每天A組有多少人看討論區
 select a.d, count(a.userid) as user_count
 from (
-	SELECT userid, d 
-	FROM actionlog._forum_4
-	where abtest = 'a'
-	group by userid, d) as a
+    SELECT userid, d 
+    FROM actionlog._forum_4
+    where abtest = 'a'
+    group by userid, d) as a
 group by a.d;
 
 # 每天A組有多少人收到追蹤通知
 select b.d, count(b.userid) as user_count
 from (
+    select a.userid, a.d
+    from (
+        SELECT userid, date(posttime) as d 
+        FROM plsport_playsport._notify) as a
+    group by a.userid, a.d) as b
+group by b.d;
+
+
+# http://redmine.playsport.cc/issues/1507
+# 目的：了解討論區會員追蹤使用狀況
+# 內容   
+# - 上線時間：4/19 16:35
+#  
+# - 觀察指標
+# 儲值金額
+# 討論區PV
+# 使用率 
+# 
+# a/b testing已全上線
+# 此任務只看手機裝置的使用情況
+# 比較的指標就是跟之前的比
+# 
+# 4/19 16:35 上線，觀察至4/27
+
+# 通知
+drop table if exists plsport_playsport._notify;
+create table plsport_playsport._notify engine = myisam
+SELECT * FROM plsport_playsport.forum_tracing_notify
+where posttime between '2016-02-25 10:15:00' and now();
+
+# 誰追蹤誰
+drop table if exists plsport_playsport._trace;
+create table plsport_playsport._trace engine = myisam
+SELECT * FROM plsport_playsport.forum_tracing_postuser
+where create_time between '2016-02-25 10:15:00' and now();
+
+# 每個人追蹤多少人的統計
+
+drop table if exists plsport_playsport._trace_1;
+create table plsport_playsport._trace_1 engine = myisam
+select a.userid, a.d, a.platform_type, count(a.userid) as trace_count
+from (
+	SELECT userid, postUser, date(create_time) as d, platform_type
+	FROM plsport_playsport._trace
+	where traced = 1) as a
+group by a.userid, a.d, a.platform_type;
+
+update plsport_playsport._trace_1 set platform_type = 1 where platform_type = 3;
+
+# (1)不同裝置每天有多少人在用追蹤
+SELECT d, platform_type, count(userid) as trace_user_count 
+FROM plsport_playsport._trace_1
+group by d, platform_type;
+
+# (2)不區分裝置每天有多少人在用追蹤
+select a.d, count(a.userid) as c
+from (
+	SELECT d, userid 
+	FROM plsport_playsport._trace_1
+	group by d, userid) as a
+group by a.d;
+
+
+drop table if exists actionlog._forum;
+create table actionlog._forum engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201602
+where userid <> '' and time between '2016-02-25 10:15:00' and now()
+and uri like '%forumdetail.php%';
+insert ignore into actionlog._forum
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201603
+where userid <> '' and time between '2016-02-25 10:15:00' and now()
+and uri like '%forumdetail.php%';
+insert ignore into actionlog._forum
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201604
+where userid <> '' and time between '2016-02-25 10:15:00' and now()
+and uri like '%forumdetail.php%';
+insert ignore into actionlog._forum
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201605
+where userid <> '' and time between '2016-02-25 10:15:00' and now()
+and uri like '%forumdetail.php%';
+
+update actionlog._forum set platform_type = 1 where platform_type = 3;
+
+drop table if exists actionlog._forum_1;
+create table actionlog._forum_1 engine = myisam
+SELECT userid, uri, time, platform_type, substr(substr(uri,locate('subjectid',uri)+10,length(uri)),1,15) as sid, date(time) as d
+FROM actionlog._forum;
+
+ALTER TABLE actionlog._forum_1 ADD INDEX (`userid`,`platform_type`,`sid`,`d`);
+
+drop table if exists actionlog._forum_2;
+create table actionlog._forum_2 engine = myisam
+SELECT userid, platform_type, sid, d
+FROM actionlog._forum_1
+group by userid, platform_type, sid, d;
+
+ALTER TABLE actionlog._forum_2 ADD INDEX (`userid`,`platform_type`,`sid`);
+
+# 單純討論區中每個人每天看文章的數量
+drop table if exists actionlog._forum_3;
+create table actionlog._forum_3 engine = myisam
+SELECT userid, platform_type, d, count(sid) as read_post_count 
+FROM actionlog._forum_2
+group by userid, platform_type, d;
+
+ALTER TABLE actionlog._forum_3 ADD INDEX (`userid`);
+ALTER TABLE actionlog._forum_3 convert to character set utf8 collate utf8_general_ci;
+
+# 每天登入者有在看討論區的人數-有分裝置
+SELECT platform_type, d, count(userid) as user_read_post 
+FROM actionlog._forum_3
+group by platform_type, d;
+
+# 每天登入者有在看討論區的人數-不分裝置
+select a.d, count(a.userid) as user_count
+from (
+	SELECT userid, d 
+	FROM actionlog._forum_3
+	group by userid, d) as a
+group by a.d;
+
+# 收到通知
+drop table if exists plsport_playsport._notify_1;
+create table plsport_playsport._notify_1 engine = myisam
+select a.userid, a.d, a.platform_type
+from (
+	SELECT userid, date(read_time) as d, platform_type
+	FROM plsport_playsport._notify
+	where readed = 1) as a
+group by a.userid, a.d, a.platform_type;
+
+update plsport_playsport._notify_1 set platform_type = 1 where platform_type = 3;
+
+SELECT d, platform_type, count(userid) as user_receive 
+FROM plsport_playsport._notify_1
+group by d, platform_type;
+
+select b.d, count(b.userid) as c
+from (
 	select a.userid, a.d
 	from (
 		SELECT userid, date(posttime) as d 
-		FROM plsport_playsport._notify) as a
+		FROM plsport_playsport._notify
+		where readed = 1) as a
 	group by a.userid, a.d) as b
 group by b.d;
+
+ALTER TABLE plsport_playsport._notify ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport._notify convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport.member ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport.member convert to character set utf8 collate utf8_general_ci;
+
+create table plsport_playsport._temp engine = myisam
+SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.postuser, date(a.read_time) as d
+FROM plsport_playsport._notify a left join plsport_playsport.member b on a.userid = b.userid
+where a.readed = 1;
+
+SELECT abtest, d, count(userid) 
+FROM plsport_playsport._temp
+group by abtest, d;
+
+select c.d, c.abtest, count(c.userid)
+from (
+	SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.postuser, date(create_time) as d
+	FROM plsport_playsport._trace a left join plsport_playsport.member b on a.userid = b.userid) as c
+group by c.d, c.abtest;
+
+
+
+select c.d, c.abtest, count(c.userid)
+from (
+	SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.postuser, date(a.posttime) as d, a.read_time 
+	FROM plsport_playsport.forum_tracing_notify a left join plsport_playsport.member b on a.userid = b.userid
+	where a.posttime between '2016-02-25 10:15:00' and now()) as c
+group by c.d, c.abtest
+order by c.abtest, c.d;
+
 
 
 # =================================================================================================
@@ -26087,8 +26260,6 @@ and viewtimes > 15000
 group by postuser
 limit 0,18;
 # =================================================================================================
-
-
 
 
 
@@ -26142,9 +26313,9 @@ drop table if exists actionlog._click_idx_2;
 create table actionlog._click_idx_2 engine = myisam
 select abtest, userid, uri, date(time) as d, platform_type, substr(a.f,5,1) as v, substr(a.f,7,1) as p
 from (
-	SELECT abtest, userid, uri, time, platform_type, 
-		   substr(uri, locate('from=',uri)+5, length(uri)) as f
-	FROM actionlog._click_idx_1) as a;
+    SELECT abtest, userid, uri, time, platform_type, 
+           substr(uri, locate('from=',uri)+5, length(uri)) as f
+    FROM actionlog._click_idx_1) as a;
 
 update actionlog._click_idx_2 set platform_type = 1 where platform_type = 3;
 
@@ -26215,13 +26386,13 @@ drop table if exists actionlog._score_aid_1_temp;
 create table actionlog._score_aid_1_temp engine = myisam
 select c.userid, count(c.uri) as mlb
 from (
-	select *
-	from (
-		select a.userid, a.uri, a.d, a.vd, DATEDIFF(a.vd, a.d) as see_nextday, a.platform_type
-		from (
-			SELECT userid, uri, date(time) as d, STR_TO_DATE(substr(uri,locate('gamedate=',uri)+9,8),'%Y%m%d') as vd, platform_type
-			FROM actionlog._score_aid_1) as a) as b
-	where b.see_nextday = 1) as c
+    select *
+    from (
+        select a.userid, a.uri, a.d, a.vd, DATEDIFF(a.vd, a.d) as see_nextday, a.platform_type
+        from (
+            SELECT userid, uri, date(time) as d, STR_TO_DATE(substr(uri,locate('gamedate=',uri)+9,8),'%Y%m%d') as vd, platform_type
+            FROM actionlog._score_aid_1) as a) as b
+    where b.see_nextday = 1) as c
 group by c.userid;
 
 drop table if exists actionlog._score_aid_1_temp_1;
@@ -26237,37 +26408,37 @@ drop table if exists actionlog._jpb_firstgame;
 create table actionlog._jpb_firstgame engine = myisam
 select a.d, min(a.dateon) as firstgame
 from (
-	SELECT id, official_id, dateon, date(dateon) as d, gameid, gameday
-	FROM plsport_playsport.live_score
-	where allianceid = 2
-	and year(dateon) = 2016) as a
+    SELECT id, official_id, dateon, date(dateon) as d, gameid, gameday
+    FROM plsport_playsport.live_score
+    where allianceid = 2
+    and year(dateon) = 2016) as a
 group by a.d;
 
 drop table if exists actionlog._score_aid_2_temp_1;
 create table actionlog._score_aid_2_temp_1 engine = myisam
 select *
 from (
-	select b.userid, b.uri, b.d, b.time, b.platform_type, (case when (b.vd='') then date(time) else STR_TO_DATE(b.vd,'%Y%m%d') end) as vd
-	from (
-		select a.userid, a.uri, a.d, a.time, a.platform_type, substr(a.vd,1,8) as vd
-		from (
-			SELECT userid, uri, date(time) as d, time, platform_type, 
-				   (case when (locate('gamedate',uri)=0) then '' else substr(uri, locate('gamedate=',uri)+9, length(uri)) end) as vd
-			FROM actionlog._score_aid_2) as a) as b) as c
+    select b.userid, b.uri, b.d, b.time, b.platform_type, (case when (b.vd='') then date(time) else STR_TO_DATE(b.vd,'%Y%m%d') end) as vd
+    from (
+        select a.userid, a.uri, a.d, a.time, a.platform_type, substr(a.vd,1,8) as vd
+        from (
+            SELECT userid, uri, date(time) as d, time, platform_type, 
+                   (case when (locate('gamedate',uri)=0) then '' else substr(uri, locate('gamedate=',uri)+9, length(uri)) end) as vd
+            FROM actionlog._score_aid_2) as a) as b) as c
 where c.d = c.vd;
-				
+                
 drop table if exists actionlog._score_aid_2_temp_2;
 create table actionlog._score_aid_2_temp_2 engine = myisam
 select *
 from (
-	select d.userid, count(d.uri) as jpb
-	from (
-		select c.userid, c.uri, c.vd, c.time, c.firstgame, UNIX_TIMESTAMP(c.firstgame)-UNIX_TIMESTAMP(c.time) as dif, c.platform_type
-		from (
-			SELECT a.userid, a.uri, a.d, a.vd, a.time, b.firstgame, a.platform_type
-			FROM actionlog._score_aid_2_temp_1 a left join actionlog._jpb_firstgame b on a.vd = b.d) as c) as d
-	where d.dif > 0
-	group by d.userid) as e
+    select d.userid, count(d.uri) as jpb
+    from (
+        select c.userid, c.uri, c.vd, c.time, c.firstgame, UNIX_TIMESTAMP(c.firstgame)-UNIX_TIMESTAMP(c.time) as dif, c.platform_type
+        from (
+            SELECT a.userid, a.uri, a.d, a.vd, a.time, b.firstgame, a.platform_type
+            FROM actionlog._score_aid_2_temp_1 a left join actionlog._jpb_firstgame b on a.vd = b.d) as c) as d
+    where d.dif > 0
+    group by d.userid) as e
 order by e.jpb desc;
 
 create table actionlog._score_aid_2_temp_3 engine = myisam
@@ -26358,21 +26529,21 @@ select d.alliancename, d.subject, d.replycount, d.pushcount, d.viewtimes,
        d.m1, (case when (d.m1 <> '') then '分鐘前' else '' end) as n4,  
        d.posttime, d.replytime, d.postuser, d.rt
 from (
-	select c.alliancename, c.subject, c.replycount, c.pushcount, c.viewtimes, c.posttime, c.replytime, 
-		   (case when (c.h>=1.0) then round(c.h,0) else '' end) as h,
-		   (case when (c.m<60) then c.m else '' end) as m,
-		   (case when (c.h1>=1.0) then round(c.h1,0) else '' end) as h1,
-		   (case when (c.m1<60) then c.m1 else '' end) as m1, c.m as rt,
+    select c.alliancename, c.subject, c.replycount, c.pushcount, c.viewtimes, c.posttime, c.replytime, 
+           (case when (c.h>=1.0) then round(c.h,0) else '' end) as h,
+           (case when (c.m<60) then c.m else '' end) as m,
+           (case when (c.h1>=1.0) then round(c.h1,0) else '' end) as h1,
+           (case when (c.m1<60) then c.m1 else '' end) as m1, c.m as rt,
            c.postuser
-	from (
-		SELECT b.alliancename, subject, replycount, pushcount, viewtimes, posttime, replytime, 
-			   round((timestampdiff(minute, posttime, now())/60),5) as h, timestampdiff(minute, posttime, now()) as m,
+    from (
+        SELECT b.alliancename, subject, replycount, pushcount, viewtimes, posttime, replytime, 
+               round((timestampdiff(minute, posttime, now())/60),5) as h, timestampdiff(minute, posttime, now()) as m,
                round((timestampdiff(minute, replytime, now())/60),5) as h1, timestampdiff(minute, replytime, now()) as m1,
                a.postuser
-		FROM plsport_playsport.forum a left join plsport_playsport.alliance b on a.allianceid = b.allianceid
-		where posttime between date_add(now(), interval-48 hour) and now()
-		and isDelete = 0
-		order by posttime desc) as c) as d;
+        FROM plsport_playsport.forum a left join plsport_playsport.alliance b on a.allianceid = b.allianceid
+        where posttime between date_add(now(), interval-48 hour) and now()
+        and isDelete = 0
+        order by posttime desc) as c) as d;
         
 drop table if exists plsport_playsport._forum_list_1;
 create table plsport_playsport._forum_list_1 engine = myisam
@@ -26383,23 +26554,23 @@ FROM plsport_playsport._forum_list a left join plsport_playsport.member b on a.p
 
 select * 
 from (
-	SELECT alliancename, subject, replycount, pushcount, viewtimes, nickname, 
-		   p_time, r_time, posttime, replytime, rt, round(log(2,rt),1) as s_rt, round(log(2,pushcount),1) s_push,
+    SELECT alliancename, subject, replycount, pushcount, viewtimes, nickname, 
+           p_time, r_time, posttime, replytime, rt, round(log(2,rt),1) as s_rt, round(log(2,pushcount),1) s_push,
            (round(log(2,pushcount),1) - round(log(2,rt),1)) as s
-	FROM plsport_playsport._forum_list_1
-	order by pushcount desc) as a
+    FROM plsport_playsport._forum_list_1
+    order by pushcount desc) as a
 order by s_push desc;
 
 select b.s_push, count(subject)
 from (
-	select * 
-	from (
-		SELECT alliancename, subject, replycount, pushcount, viewtimes, nickname, 
-			   p_time, r_time, posttime, replytime, rt, round(log(2,rt),1) as s_rt, round(log(2,pushcount),1) s_push,
-			   (round(log(2,pushcount),1) - round(log(2,rt),1)) as s
-		FROM plsport_playsport._forum_list_1
-		order by pushcount desc) as a
-	order by s desc) as b
+    select * 
+    from (
+        SELECT alliancename, subject, replycount, pushcount, viewtimes, nickname, 
+               p_time, r_time, posttime, replytime, rt, round(log(2,rt),1) as s_rt, round(log(2,pushcount),1) s_push,
+               (round(log(2,pushcount),1) - round(log(2,rt),1)) as s
+        FROM plsport_playsport._forum_list_1
+        order by pushcount desc) as a
+    order by s desc) as b
 group by b.s_push;
 
 
@@ -26524,12 +26695,12 @@ create table plsport_playsport._qu_2 engine = myisam
 SELECT userid, q, (case when (q like '%,1,%') then 1 else 0 end) as q1,
                   (case when (q like '%,2,%') then 1 else 0 end) as q2,
                   (case when (q like '%,3,%') then 1 else 0 end) as q3,
-				  (case when (q like '%,4,%') then 1 else 0 end) as q4,
+                  (case when (q like '%,4,%') then 1 else 0 end) as q4,
                   (case when (q like '%,5,%') then 1 else 0 end) as q5,
                   (case when (q like '%,6,%') then 1 else 0 end) as q6,
                   (case when (q like '%,7,%') then 1 else 0 end) as q7,
                   (case when (q like '%,8,%') then 1 else 0 end) as q8,
-				  (case when (q like '%,9,%') then 1 else 0 end) as q9,
+                  (case when (q like '%,9,%') then 1 else 0 end) as q9,
                   (case when (q like '%,10,%') then 1 else 0 end) as q10,
                   (case when (q like '%,11,%') then 1 else 0 end) as q11,
                   (case when (q like '%,12,%') then 1 else 0 end) as q12
@@ -26696,7 +26867,7 @@ SELECT *
 FROM plsport_playsport._campaign
 where userid in ('263388','aa2017','abc33813','abc36928','ake168','axf410920',
                  'binui','c083911','cross1976','david0417','e124686','FB1354669354','FB1457377336','KD62898',
-				 'lkkddh','monkey2141','p790224','Steven421','tai0822','tommy140354','tony760213','xsw9876','yaoyun1981');
+                 'lkkddh','monkey2141','p790224','Steven421','tai0822','tommy140354','tony760213','xsw9876','yaoyun1981');
 
 # 按下line share 按紐的人
 SELECT * FROM plsport_playsport.events
@@ -26725,8 +26896,8 @@ drop table if exists plsport_playsport._campaign_redeem_first_time;
 create table plsport_playsport._campaign_redeem_first_time engine = myisam
 select *
 from (
-	SELECT a.userid, a.createon, a.price, b.total_redeem 
-	FROM plsport_playsport._campaign_redeem a left join plsport_playsport._campaign_history b on a.userid = b.userid) as c
+    SELECT a.userid, a.createon, a.price, b.total_redeem 
+    FROM plsport_playsport._campaign_redeem a left join plsport_playsport._campaign_history b on a.userid = b.userid) as c
 where (c.price - c.total_redeem) = 0;
 
 
@@ -26779,7 +26950,7 @@ drop table if exists plsport_playsport._qu_3;
 create table plsport_playsport._qu_3 engine = myisam
 SELECT userid, q1, (case when (q2 like '%1%') then 1 else 0 end) as q2_1,
                    (case when (q2 like '%2%') then 1 else 0 end) as q2_2,
-				   (case when (q2 like '%3%') then 1 else 0 end) as q2_3,
+                   (case when (q2 like '%3%') then 1 else 0 end) as q2_3,
                    (case when (q2 like '%4%') then 1 else 0 end) as q2_4, q3, q4, stat
 FROM plsport_playsport._qu_2;
 
@@ -26953,32 +27124,36 @@ SELECT userid,  (case when (q1 like '%,1,%') then 1 else 0 end) as a1,
 FROM plsport_playsport._qu_1;
 
 # 沒有使用玩運彩即時比分的人，都使用哪些網站(APP)
-	# 用網站
-	SELECT sum(a2) as a2, sum(a3) as a3, sum(a4) as a4, sum(a5) as a5, sum(a6) as a6,
-		   sum(a7) as a7, sum(a8) as a8, sum(a9) as a9, sum(a10) as a10, sum(a11) as a11,
-		   sum(a12) as a12, sum(a13) as a13, sum(a14) as a14
-	FROM plsport_playsport._qu_2
-	where a1 = 0; #玩運彩即時比分
-	# 用APP
-	SELECT sum(b2) as b2, sum(b3) as b3, sum(b4) as b4, sum(b5) as b5, sum(b6) as b6,
-		   sum(b7) as b7, sum(b8) as b8, sum(b9) as b9, sum(b10) as b10, sum(b11) as b11,
-		   sum(b12) as b12, sum(b13) as b13
-	FROM plsport_playsport._qu_2
-	where b1 = 0; #玩運彩即時比分
+    # 用網站
+    SELECT sum(a2) as a2, sum(a3) as a3, sum(a4) as a4, sum(a5) as a5, sum(a6) as a6,
+           sum(a7) as a7, sum(a8) as a8, sum(a9) as a9, sum(a10) as a10, sum(a11) as a11,
+           sum(a12) as a12, sum(a13) as a13, sum(a14) as a14
+    FROM plsport_playsport._qu_2
+    where a1 = 0; #玩運彩即時比分
+    # 用APP
+    SELECT sum(b2) as b2, sum(b3) as b3, sum(b4) as b4, sum(b5) as b5, sum(b6) as b6,
+           sum(b7) as b7, sum(b8) as b8, sum(b9) as b9, sum(b10) as b10, sum(b11) as b11,
+           sum(b12) as b12, sum(b13) as b13
+    FROM plsport_playsport._qu_2
+    where b1 = 0; #玩運彩即時比分
 
 # 有使用玩運彩即時比分的人，多數又使用哪些網站(APP)
-	# 用網站
-	SELECT sum(a2) as a2, sum(a3) as a3, sum(a4) as a4, sum(a5) as a5, sum(a6) as a6,
-		   sum(a7) as a7, sum(a8) as a8, sum(a9) as a9, sum(a10) as a10, sum(a11) as a11,
-		   sum(a12) as a12, sum(a13) as a13, sum(a14) as a14
-	FROM plsport_playsport._qu_2
-	where a1 = 1; #玩運彩即時比分
-	# 用APP
-	SELECT sum(b2) as b2, sum(b3) as b3, sum(b4) as b4, sum(b5) as b5, sum(b6) as b6,
-		   sum(b7) as b7, sum(b8) as b8, sum(b9) as b9, sum(b10) as b10, sum(b11) as b11,
-		   sum(b12) as b12, sum(b13) as b13
-	FROM plsport_playsport._qu_2
-	where b1 = 1; #玩運彩即時比分
+    # 用網站
+    SELECT sum(a2) as a2, sum(a3) as a3, sum(a4) as a4, sum(a5) as a5, sum(a6) as a6,
+           sum(a7) as a7, sum(a8) as a8, sum(a9) as a9, sum(a10) as a10, sum(a11) as a11,
+           sum(a12) as a12, sum(a13) as a13, sum(a14) as a14
+    FROM plsport_playsport._qu_2
+    where a1 = 1; #玩運彩即時比分
+    # 用APP
+    SELECT sum(b2) as b2, sum(b3) as b3, sum(b4) as b4, sum(b5) as b5, sum(b6) as b6,
+           sum(b7) as b7, sum(b8) as b8, sum(b9) as b9, sum(b10) as b10, sum(b11) as b11,
+           sum(b12) as b12, sum(b13) as b13
+    FROM plsport_playsport._qu_2
+    where b1 = 1; #玩運彩即時比分
+
+
+
+
 
 
 
