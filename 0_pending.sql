@@ -27150,6 +27150,328 @@ FROM plsport_playsport._qu_1;
            sum(b12) as b12, sum(b13) as b13
     FROM plsport_playsport._qu_2
     where b1 = 1; #玩運彩即時比分
+    
+ 
+ 
+# =================================================================================================   
+# [201511-C-14]購牌專區改版-推薦系統ABtesting報告
+# http://redmine.playsport.cc/issues/1593
+# 說明 目的：了解推薦系統對營業額影響
+# 內容 測試時間：5/12~6/7，先執行三周，如沒有任何變化再執行三周
+#  
+# - 設定測試組別(50%)
+#  
+# - 觀察指標
+# 推薦專區點擊與購買次數
+# 推薦專區購買金額
+# 購牌區購買金額
+# 整體購買與儲值金額
+# =================================================================================================
+
+# 郭 靜怡 先前提到:
+# ABtesting已於5/12 14:30上線
+#    記錄一下, 因為目前推廌專區(黃色區塊)還沒全面上線, 所以觀察時間為5/12 16:00PM之後
+#    PS. 5/12 16:00PM之後推廌專區已上線
+# 名單為(userid%20)+1 in (11,12,13,14,15,16,17,18,19,20)
+
+drop table if exists plsport_playsport._predict_buyer;
+create table plsport_playsport._predict_buyer engine = myisam
+SELECT id, buyerid, buy_date, id_bought, buy_price, platform_type  
+FROM plsport_playsport.predict_buyer
+where buy_date between '2016-05-12 16:00:00' and now();
+
+drop table if exists plsport_playsport._predict_buyer_cons_split;
+create table plsport_playsport._predict_buyer_cons_split engine = myisam
+SELECT * FROM plsport_playsport.predict_buyer_cons_split;
+
+ALTER TABLE plsport_playsport._predict_buyer ADD INDEX (`id`);
+ALTER TABLE plsport_playsport._predict_buyer_cons_split ADD INDEX (`id_predict_buyer`);
+
+drop table if exists plsport_playsport._predict_buyer_1;
+create table plsport_playsport._predict_buyer_1 engine = myisam
+SELECT a.buyerid, a.buy_date, a.buy_price, a.platform_type, b.position, b.allianceid
+FROM plsport_playsport._predict_buyer a left join plsport_playsport._predict_buyer_cons_split b on a.id = b.id_predict_buyer;
+
+drop table if exists plsport_playsport._predict_buyer_2;
+create table plsport_playsport._predict_buyer_2 engine = myisam
+SELECT (case when (((b.id%20)+1)>10) then 'a' else 'b' end) as abtest, a.buyerid, a.buy_date, a.buy_price, a.platform_type, a.position, a.allianceid
+FROM plsport_playsport._predict_buyer_1 a left join plsport_playsport.member b on a.buyerid = b.userid;
+
+update plsport_playsport._predict_buyer_2 set platform_type = 1 where platform_type = 3;
+
+drop table if exists plsport_playsport._predict_buyer_3_BZ;
+create table plsport_playsport._predict_buyer_3_BZ engine = myisam
+SELECT abtest, buyerid, date(buy_date) as d, buy_price, platform_type, position 
+FROM plsport_playsport._predict_buyer_2
+where substr(position,1,2) = 'BZ';
+
+
+#以下是計算PV
+drop table if exists actionlog._BZ;
+create table actionlog._BZ engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201605
+where userid <> '' and uri like '%rp=BZ%'
+and time between '2016-05-12 16:00:00' and now();
+
+drop table if exists actionlog._BZ_1;
+create table actionlog._BZ_1 engine = myisam
+select a.userid, a.d, a.platform_type, count(userid) as pv
+from(
+    SELECT userid, date(time) as d, platform_type 
+    FROM actionlog._BZ) as a
+group by a.userid, a.d, a.platform_type;
+
+update actionlog._BZ_1 set platform_type = 1 where platform_type = 3;
+ALTER TABLE actionlog._BZ_1 convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists actionlog._BZ_2;
+create table actionlog._BZ_2 engine = myisam
+SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.d, a.platform_type, a.pv 
+FROM actionlog._BZ_1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+
+
+# =================================================================================================  
+# 等級一發文狀況http://redmine.playsport.cc/issues/1620
+# 概述
+# TO eddy:
+# 我們想了解，等級一使用者，在站上的發文比、回文比、發表圖片的比例(排除表情符號、排除置入、新人限制發文)，
+# 麻煩您協助撈取數據。
+# 目的是:若使用率不高，將考慮禁止等級一使用者發圖，以減少圖片置入。
+# 再麻煩回覆完成時間。
+# =================================================================================================  
+
+# 匯入 (1)userlevel, (2)forum, (3)forumcontent (4)relationshipRecord
+
+drop table if exists plsport_playsport._userlevel;
+create table plsport_playsport._userlevel engine = myisam
+SELECT userid, allianceid, level, (case when (level=1) then 'lv1' else 'lv2~x' end) as stat
+FROM plsport_playsport.userlevel;
+
+drop table if exists plsport_playsport._forum;
+create table plsport_playsport._forum engine = myisam
+SELECT subjectid, allianceid, subject, postuser, posttime
+FROM plsport_playsport.forum
+where posttime between '2016-05-16 18:00:00' and '2016-05-23 10:00:00';
+
+drop table if exists plsport_playsport._forumcontent;
+create table plsport_playsport._forumcontent engine = myisam
+SELECT articleid, subjectid, userid, content, postdate 
+FROM plsport_playsport.forumcontent
+where postdate between '2016-05-16 18:00:00' and '2016-05-23 10:00:00';
+
+drop table if exists plsport_playsport._ad_list_1;
+create table plsport_playsport._ad_list_1 engine = myisam
+SELECT * FROM plsport_playsport.relationshiprecord
+where add_user <> 'playsport'
+and add_user <> ''
+and record like '%置入%'
+and record like '%新人限制發文%'
+and record not like '%不像%'
+and record not like '%疑似%'
+order by id desc;
+
+drop table if exists plsport_playsport._ad_list_2;
+create table plsport_playsport._ad_list_2 engine = myisam
+SELECT userid 
+FROM plsport_playsport._ad_list_1
+group by userid;
+
+# 排除掉置入和新人限制發文的人的發回文
+drop table if exists plsport_playsport._forumcontent_1;
+create table plsport_playsport._forumcontent_1 engine = myisam
+SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate 
+FROM plsport_playsport._forumcontent a left join plsport_playsport._ad_list_2 b on a.userid = b.userid
+where b.userid is null;
+
+update plsport_playsport._forumcontent_1 set content = REPLACE(content, '<p>', '');
+update plsport_playsport._forumcontent_1 set content = REPLACE(content, '</p>', '');
+update plsport_playsport._forumcontent_1 set content = REPLACE(content, '<br />', '');
+update plsport_playsport._forumcontent_1 set content = REPLACE(content, '&nbsp;', '');
+
+
+drop table if exists plsport_playsport._forumcontent_2;
+create table plsport_playsport._forumcontent_2 engine = myisam 
+SELECT articleid, subjectid, userid, content, postdate,
+       (case when (content like '%www.playsport.cc/upload/forum%') then 'yes' else 'no' end) as upload_pic
+FROM plsport_playsport._forumcontent_1;
+
+ALTER TABLE plsport_playsport._forumcontent_2 ADD INDEX (`subjectid`);
+ALTER TABLE plsport_playsport._forum ADD INDEX (`subjectid`);
+
+drop table if exists plsport_playsport._forumcontent_3;
+create table plsport_playsport._forumcontent_3 engine = myisam 
+SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, a.upload_pic, b.allianceid
+FROM plsport_playsport._forumcontent_2 a left join plsport_playsport._forum b on a.subjectid = b.subjectid
+where allianceid is not null;
+
+drop table if exists plsport_playsport._forumcontent_4;
+create table plsport_playsport._forumcontent_4 engine = myisam 
+SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, a.upload_pic, a.allianceid, b.alliancename
+FROM plsport_playsport._forumcontent_3 a left join plsport_playsport.alliance b on a.allianceid = b.allianceid;
+
+ALTER TABLE plsport_playsport._forumcontent_4 ADD INDEX (`userid`,`allianceid`);
+ALTER TABLE plsport_playsport._userlevel ADD INDEX (`allianceid`,`userid`);
+
+drop table if exists plsport_playsport._forumcontent_5;
+create table plsport_playsport._forumcontent_5 engine = myisam 
+SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, a.upload_pic, a.allianceid, a.alliancename, b.level, b.stat
+FROM plsport_playsport._forumcontent_4 a left join plsport_playsport._userlevel b on a.userid = b.userid and a.allianceid = b.allianceid;
+
+update plsport_playsport._forumcontent_5 set level = 1 where level is null;
+update plsport_playsport._forumcontent_5 set stat = 'lv1' where stat is null;
+
+SELECT * FROM plsport_playsport._forumcontent_5;
+
+# 所有回文統計
+SELECT stat, alliancename, upload_pic, count(articleid) 
+FROM plsport_playsport._forumcontent_5
+group by stat, alliancename, upload_pic;
+
+# 只統計發文
+select a.stat, a.alliancename, a.upload_pic, count(a.articleid)
+from (
+	SELECT articleid, subjectid, userid, content, min(postdate), upload_pic, allianceid, alliancename, level, stat 
+	FROM plsport_playsport._forumcontent_5
+	group by subjectid) as a
+group by a.stat, a.alliancename, a.upload_pic;
+
+
+# to eddy:
+# 新增:
+# 1. 100篇發回文中, 有多少篇文是等級1的
+# 2. 100篇發回文中, 有多少人是等級1的(以人為單位)
+# 
+# 應該是，這段期間內，
+# 
+# 1. 所有發回文中, 有多少篇文是等級1的
+# 2. 所有發回文中, 有多少人是等級1的(以人為單位)
+# 
+# 再麻煩你了，感謝！
+
+
+
+# =================================================================================================
+# 棒球季亮單活動數據撈取
+# http://redmine.playsport.cc/issues/1622
+# TO eddy：
+# 
+# 4/20~5/3舉辦了一個亮單活動，想請您撈取相關數據
+# 1.  4/13~5/10這段期間內，中、日、韓、美棒的逐日亮單文數量
+# 2.  撈取4/20~5/3這段期間，於中、日、韓、美棒發表亮單文，且文章標題符合＂參加＂、＂參賽＂、＂活動＂、
+#     ＂比賽＂其中一個關鍵字的亮單文數量
+# 3.  呈上述，想知道發表這些文章的不重複人數
+# =================================================================================================
+
+
+drop table if exists plsport_playsport._showoff;
+create table plsport_playsport._showoff engine = myisam
+SELECT a.subjectid, a.allianceid, b.alliancename, a.subject, a.postuser, date(a.posttime) as d, a.gametype
+FROM plsport_playsport.forum a left join plsport_playsport.alliance b on a.allianceid = b.allianceid
+where a.posttime between '2016-04-13 00:00:00' and '2016-05-10 23:59:59'
+and a.allianceid in (1,2,6,9)
+and isDelete = 0;
+
+# 條件1
+drop table if exists plsport_playsport._showoff_list1;
+create table plsport_playsport._showoff_list1 engine = myisam
+SELECT postuser, alliancename, d, count(subject) as c
+FROM plsport_playsport._showoff
+where gametype = 3
+group by postuser, alliancename, d;
+
+drop table if exists plsport_playsport._showoff_1;
+create table plsport_playsport._showoff_1 engine = myisam
+SELECT * 
+FROM plsport_playsport._showoff
+where subject like '%參加%'
+or subject like '%亮單%'
+or subject like '%活動%'
+or subject like '%比賽%'
+and d between '2016-04-20' and '2016-05-03';
+
+drop table if exists plsport_playsport._showoff_2;
+create table plsport_playsport._showoff_2 engine = myisam
+SELECT * 
+FROM plsport_playsport._showoff_1
+where d between '2016-04-20' and '2016-05-03';
+
+# 條件2
+drop table if exists plsport_playsport._showoff_1_list2;
+create table plsport_playsport._showoff_1_list2 engine = myisam
+SELECT alliancename, postuser, d, count(subject) as c
+FROM plsport_playsport._showoff_2
+group by alliancename, postuser, d;
+
+# 條件2-只限標亮單文
+drop table if exists plsport_playsport._showoff_1_list2_only;
+create table plsport_playsport._showoff_1_list2_only engine = myisam
+SELECT alliancename, postuser, d, count(subject) as c
+FROM plsport_playsport._showoff_2
+where gametype = 3
+group by alliancename, postuser, d;
+
+
+
+# =================================================================================================
+# iOS 即時比分 APP 7.X 佔比 http://redmine.playsport.cc/issues/1664#change-8582
+# 是由 壯 兔 於 5 天 前加入. 於 約 1 小時 前更新.
+# 
+# Eddy
+# 我想要知道現在站上使用 iOS 7.X 的佔比
+# 在 app_action_log 裡面 有一個欄位 deviceOsVersion 有紀錄這項資訊
+# 再麻煩你很有空的時候，幫我撈一下～謝謝～
+# =================================================================================================
+
+drop table if exists `actionlog`.`app_action_log_temp`;
+CREATE TABLE `actionlog`.`app_action_log_temp` 
+( `abtestGroup` VARCHAR(3) NOT NULL , 
+  `remark`      VARCHAR(50) NOT NULL , 
+  `deviceModel` VARCHAR(60) NOT NULL , 
+  `ip`          VARCHAR(50) NOT NULL , 
+  `app`         VARCHAR(50) NOT NULL , 
+  `userid`      VARCHAR(50) NOT NULL , 
+  `appVersion`  VARCHAR(50) NOT NULL , 
+  `datetime`    VARCHAR(50) NOT NULL , 
+  `deviceid`    VARCHAR(50) NOT NULL , 
+  `deviceOsVersion` VARCHAR(50) NOT NULL , 
+  `action`      VARCHAR(50) NOT NULL , 
+  `os`          VARCHAR(50) NOT NULL ,
+  `deviceidMd5` VARCHAR(80) NOT NULL
+) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
+
+LOAD DATA INFILE 'H:/appactionlog/app_action_log_20160421.csv' 
+INTO TABLE `actionlog`.`app_action_log_temp`  
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
+
+# 在這裡使用C:\proc\python\scripts\import_mongodb_csv_file.py
+
+drop table if exists actionlog.app_action_log_temp_1;
+create table actionlog.app_action_log_temp_1 engine = myisam
+SELECT * FROM actionlog.app_action_log_temp
+where app = 1 and os = 2;
+
+drop table if exists actionlog.app_action_log_temp_2;
+create table actionlog.app_action_log_temp_2 engine = myisam
+SELECT deviceOsVersion, substr(deviceOsVersion,1,1) as os, ip 
+FROM actionlog.app_action_log_temp_
+where action = 'openApp';
+
+SELECT os, count(ip) as c 
+FROM actionlog.app_action_log_temp_2
+group by os;
+
+
+
+
+
+
+
+
 
 
 
