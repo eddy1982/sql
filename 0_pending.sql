@@ -27679,7 +27679,6 @@ SELECT a.userid, a.nickname, a.all_pv, a.all_pv_percentile, a.livescore_pv, a.li
        date(b.signin_time) as signin
 FROM actionlog._list_3 a left join plsport_playsport._last_login b on a.userid = b.userid;
 
-
 drop table if exists plsport_playsport._qu;
 create table plsport_playsport._qu engine = myisam
 select * 
@@ -27764,9 +27763,46 @@ FROM actionlog._list_5);
 
 
 
+# =================================================================================================
+# 偵測流失客，即時給出優惠挽回http://redmine.playsport.cc/issues/1350
+# 2. 對於消費者來說,與其去問他們想要什麼回饋,對我們來說,了解他們是什麼原因而離開才是比較重要的事, 所以使用問券了解他們離開的原因,
+# 我們過去沒有直接問過消費者這方面的問題, 藉由問券的結果, 我們期待可以當成未來改善網站功能或修改制度的方向
+# 問券內容如下:
+# -------------------------------------------------------------------------
+# 對象:曾經有儲值過的會員
+# 謝謝你長期對玩運彩的支持, 為了幫助我們可以提供更好的購買殺手預測服務, 請花1分鐘填寫此問券
+# 
+# 什麼情況會讓你不想再來玩運彩買殺手的牌?
+#    -殺手不準
+#    -不知道怎麼選殺手
+#    -沒有更詳細殺手的歷史數據可以參考
+#    -沒辦法和殺手互動
+#    -殺手成績不理想時,補償機制(補券)不佳
+# 
+# 有其它的問題或是建議想告訴我們嗎?
+#    -文字輸入
+# =================================================================================================
 
+# 範圍是:近三年內，有購買過預測的人
 
+# 名單是要給http://redmine.playsport.cc/issues/1699這個任務
 
+drop table if exists plsport_playsport._paid_users;
+create table plsport_playsport._paid_users engine = myisam
+SELECT buyerid, sum(buy_price) as paid
+FROM plsport_playsport.predict_buyer
+where buy_date between subdate(now(),365) and now()
+group by buyerid;
+
+# 上面的SQL供參考用, 壯兔已說玉米說明用其它的方式撈取, 補在任務中, 
+# TO 玉米
+# 這個任務要設定 prdict_buyer 近一年內的有消費的人才能看到問卷，
+# 和 EDDY 討論過後應該是要從程式端判斷
+# 請幫忙撰寫程式後讓我 REVIEW，謝謝
+#    1. 判斷 $_SESSION['login']['isBuyPredictLastYear'] 是否存在，不存在就撈 sql 判斷該使用者一年內有無在 prdict_buyer 消費
+#       並設定 $_SESSION['login']['isBuyPredictLastYear'] 是 true or false
+#    2. 如果 $_SESSION['login']['isBuyPredictLastYear'] 存在，直接使用 $_SESSION['login']['isBuyPredictLastYear'] 的值， true 才執行燈箱的程式
+#    3. 燈箱下線後，此程式要移除，避免造成伺服器負擔
 
 
 
