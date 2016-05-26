@@ -27806,4 +27806,41 @@ group by buyerid;
 
 
 
+# =================================================================================================
+# [201512-B-9]優化手機版預測比列-問卷分析http://redmine.playsport.cc/issues/1693
+# 說明
+# 進一步分析問卷內容
+# 內容
+# 依據問題一選項，分析使用者在問題二各是選擇哪個版本
+# 
+# 問卷結果：http://www.playsport.cc/questionnaire.php?question=201605171156565464&action=statistics
+# =================================================================================================
+
+drop table if exists plsport_playsport._qu;
+create table plsport_playsport._qu engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201605171156565464_answer;
+
+ALTER TABLE plsport_playsport._qu CHANGE `1463457238` q1 VARCHAR(10);
+ALTER TABLE plsport_playsport._qu CHANGE `1463457390` q2 VARCHAR(10);
+
+drop table if exists plsport_playsport._qu_1;
+create table plsport_playsport._qu_1 engine = myisam
+SELECT userid, q1, q2 
+FROM plsport_playsport._qu;
+
+update plsport_playsport._qu_1 set q1 = '喜歡' where q1 in (1,2);
+update plsport_playsport._qu_1 set q1 = '無意見' where q1 in (3);
+update plsport_playsport._qu_1 set q1 = '不喜歡' where q1 in (4,5);
+update plsport_playsport._qu_1 set q2 = '新版' where q2 in (1);
+update plsport_playsport._qu_1 set q2 = '原版' where q2 in (2);
+update plsport_playsport._qu_1 set q2 = '無意見' where q2 in (3);
+
+
+SELECT q1, q2, count(userid) as c 
+FROM plsport_playsport._qu_1
+group by q1, q2;
+
+SELECT q1, count(userid) as c 
+FROM plsport_playsport._qu_1
+group by q1;
 
