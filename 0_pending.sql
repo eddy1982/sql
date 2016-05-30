@@ -26237,8 +26237,6 @@ from (
 	FROM plsport_playsport._trace a left join plsport_playsport.member b on a.userid = b.userid) as c
 group by c.d, c.abtest;
 
-
-
 select c.d, c.abtest, count(c.userid)
 from (
 	SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.postuser, date(a.posttime) as d, a.read_time 
@@ -26246,6 +26244,116 @@ from (
 	where a.posttime between '2016-02-25 10:15:00' and now()) as c
 group by c.d, c.abtest
 order by c.abtest, c.d;
+
+
+# =================================================================================================
+# [201507-A-12]開發討論區會員追蹤功能-使用狀況報告http://redmine.playsport.cc/issues/1507
+# 說明    目的：了解討論區會員追蹤使用狀況
+# TO EDDY
+# 請再進一步分析使用者有無觀看所追蹤的文章
+# 文章追蹤碼於5/20 15:00上線
+# 觀察至5/30
+# =================================================================================================
+# [在下拉式選單中]
+#    追蹤發文
+#    http://www.playsport.cc/forumdetail.php?subjectid=160519093449cix&from=notify_trace_dropdown
+#    回文通知
+#    http://www.playsport.cc/forumdetail.php?subjectid=160519093449cix&from=notify_reply_dropdown
+# 
+# [在forumTracing.php中]
+#    追蹤發文
+#    http://www.playsport.cc/forumdetail.php?subjectid=160519093449cix&from=notify_trace_page
+#    回文通知
+#    http://www.playsport.cc/forumdetail.php?subjectid=160519093449cix&from=notify_reply_page
+# 
+# http://redmine.playsport.cc/issues/227#change-8538​
+
+# 每天有多少人看討論區 > 每天有多少人看到通知 > 每天有多少人點開通知的內容
+
+
+
+drop table if exists actionlog._forum_user;
+create table actionlog._forum_user engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201605
+where userid <> '' and time between '2016-05-20 18:00:00' and now();
+
+drop table if exists actionlog._forum_user_1;
+create table actionlog._forum_user_1 engine = myisam
+SELECT * FROM actionlog._forum_user
+where uri like '%forumdetail.php%';
+
+update actionlog._forum_user_1 set platform_type = 1 where platform_type = 3;
+
+drop table if exists actionlog._forum_user_2;
+create table actionlog._forum_user_2 engine = myisam
+select a.d, a.userid, a.platform_type, count(a.uri) as pv
+from (
+	SELECT userid, date(time) as d, platform_type, uri 
+	FROM actionlog._forum_user_1) as a
+group by a.d, a.userid, a.platform_type;
+
+# 1.每天看討論區的人
+drop table if exists actionlog._forum_user_3;
+create table actionlog._forum_user_3 engine = myisam
+SELECT d, platform_type, count(userid) as c 
+FROM actionlog._forum_user_2
+group by d, platform_type;
+
+
+
+drop table if exists plsport_playsport._notify;
+create table plsport_playsport._notify engine = myisam
+SELECT * FROM plsport_playsport.forum_tracing_notify
+where posttime between '2016-05-20 18:00:00' and now();
+
+drop table if exists plsport_playsport._notify_1;
+create table plsport_playsport._notify_1 engine = myisam
+select a.userid, a.d, a.platform_type
+from (
+	SELECT userid, date(read_time) as d, platform_type
+	FROM plsport_playsport._notify
+	where readed = 1) as a
+group by a.userid, a.d, a.platform_type;
+
+update plsport_playsport._notify_1 set platform_type = 1 where platform_type = 3;
+
+# 2. 收到通知
+drop table if exists plsport_playsport._notify_2;
+create table plsport_playsport._notify_2 engine = myisam
+SELECT d, platform_type, count(userid) as user_receive 
+FROM plsport_playsport._notify_1
+group by d, platform_type;
+
+
+drop table if exists actionlog._user_click;
+create table actionlog._user_click engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201605
+where userid <> ''
+and time between '2016-05-20 18:00:00' and now()
+and uri regexp '^/forumdetail.*php.*from=notify.*';
+
+drop table if exists actionlog._user_click_1;
+create table actionlog._user_click_1 engine = myisam
+SELECT userid, substr(uri, locate('from=notify', uri)+5, 20)  as f, time, platform_type  
+FROM actionlog._user_click;
+
+update actionlog._user_click_1 set platform_type = 1 where platform_type = 3;
+
+drop table if exists actionlog._user_click_2;
+create table actionlog._user_click_2 engine = myisam
+select a.userid, a.f, a.d, a.platform_type, count(a.f) as c
+from (
+	SELECT userid, f, date(time) as d, platform_type 
+	FROM actionlog._user_click_1) as a
+group by a.userid, a.f, a.d, a.platform_type;
+
+drop table if exists actionlog._user_click_3;
+create table actionlog._user_click_3 engine = myisam
+SELECT d, f, platform_type, count(userid) as c 
+FROM actionlog._user_click_2
+group by d, f, platform_type;
 
 
 
@@ -27825,7 +27933,7 @@ ALTER TABLE plsport_playsport._qu CHANGE `1463457390` q2 VARCHAR(10);
 
 drop table if exists plsport_playsport._qu_1;
 create table plsport_playsport._qu_1 engine = myisam
-SELECT userid, q1, q2 
+SELECT userid, q1, q2
 FROM plsport_playsport._qu;
 
 update plsport_playsport._qu_1 set q1 = '喜歡' where q1 in (1,2);
@@ -27835,7 +27943,6 @@ update plsport_playsport._qu_1 set q2 = '新版' where q2 in (1);
 update plsport_playsport._qu_1 set q2 = '原版' where q2 in (2);
 update plsport_playsport._qu_1 set q2 = '無意見' where q2 in (3);
 
-
 SELECT q1, q2, count(userid) as c 
 FROM plsport_playsport._qu_1
 group by q1, q2;
@@ -27843,4 +27950,10 @@ group by q1, q2;
 SELECT q1, count(userid) as c 
 FROM plsport_playsport._qu_1
 group by q1;
+
+
+
+
+
+
 
