@@ -26108,9 +26108,9 @@ drop table if exists plsport_playsport._trace_1;
 create table plsport_playsport._trace_1 engine = myisam
 select a.userid, a.d, a.platform_type, count(a.userid) as trace_count
 from (
-	SELECT userid, postUser, date(create_time) as d, platform_type
-	FROM plsport_playsport._trace
-	where traced = 1) as a
+    SELECT userid, postUser, date(create_time) as d, platform_type
+    FROM plsport_playsport._trace
+    where traced = 1) as a
 group by a.userid, a.d, a.platform_type;
 
 update plsport_playsport._trace_1 set platform_type = 1 where platform_type = 3;
@@ -26123,9 +26123,9 @@ group by d, platform_type;
 # (2)不區分裝置每天有多少人在用追蹤
 select a.d, count(a.userid) as c
 from (
-	SELECT d, userid 
-	FROM plsport_playsport._trace_1
-	group by d, userid) as a
+    SELECT d, userid 
+    FROM plsport_playsport._trace_1
+    group by d, userid) as a
 group by a.d;
 
 
@@ -26186,9 +26186,9 @@ group by platform_type, d;
 # 每天登入者有在看討論區的人數-不分裝置
 select a.d, count(a.userid) as user_count
 from (
-	SELECT userid, d 
-	FROM actionlog._forum_3
-	group by userid, d) as a
+    SELECT userid, d 
+    FROM actionlog._forum_3
+    group by userid, d) as a
 group by a.d;
 
 # 收到通知
@@ -26196,9 +26196,9 @@ drop table if exists plsport_playsport._notify_1;
 create table plsport_playsport._notify_1 engine = myisam
 select a.userid, a.d, a.platform_type
 from (
-	SELECT userid, date(read_time) as d, platform_type
-	FROM plsport_playsport._notify
-	where readed = 1) as a
+    SELECT userid, date(read_time) as d, platform_type
+    FROM plsport_playsport._notify
+    where readed = 1) as a
 group by a.userid, a.d, a.platform_type;
 
 update plsport_playsport._notify_1 set platform_type = 1 where platform_type = 3;
@@ -26209,12 +26209,12 @@ group by d, platform_type;
 
 select b.d, count(b.userid) as c
 from (
-	select a.userid, a.d
-	from (
-		SELECT userid, date(posttime) as d 
-		FROM plsport_playsport._notify
-		where readed = 1) as a
-	group by a.userid, a.d) as b
+    select a.userid, a.d
+    from (
+        SELECT userid, date(posttime) as d 
+        FROM plsport_playsport._notify
+        where readed = 1) as a
+    group by a.userid, a.d) as b
 group by b.d;
 
 ALTER TABLE plsport_playsport._notify ADD INDEX (`userid`);
@@ -26233,15 +26233,15 @@ group by abtest, d;
 
 select c.d, c.abtest, count(c.userid)
 from (
-	SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.postuser, date(create_time) as d
-	FROM plsport_playsport._trace a left join plsport_playsport.member b on a.userid = b.userid) as c
+    SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.postuser, date(create_time) as d
+    FROM plsport_playsport._trace a left join plsport_playsport.member b on a.userid = b.userid) as c
 group by c.d, c.abtest;
 
 select c.d, c.abtest, count(c.userid)
 from (
-	SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.postuser, date(a.posttime) as d, a.read_time 
-	FROM plsport_playsport.forum_tracing_notify a left join plsport_playsport.member b on a.userid = b.userid
-	where a.posttime between '2016-02-25 10:15:00' and now()) as c
+    SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.postuser, date(a.posttime) as d, a.read_time 
+    FROM plsport_playsport.forum_tracing_notify a left join plsport_playsport.member b on a.userid = b.userid
+    where a.posttime between '2016-02-25 10:15:00' and now()) as c
 group by c.d, c.abtest
 order by c.abtest, c.d;
 
@@ -26270,8 +26270,6 @@ order by c.abtest, c.d;
 
 # 每天有多少人看討論區 > 每天有多少人看到通知 > 每天有多少人點開通知的內容
 
-
-
 drop table if exists actionlog._forum_user;
 create table actionlog._forum_user engine = myisam
 SELECT userid, uri, time, platform_type 
@@ -26289,8 +26287,8 @@ drop table if exists actionlog._forum_user_2;
 create table actionlog._forum_user_2 engine = myisam
 select a.d, a.userid, a.platform_type, count(a.uri) as pv
 from (
-	SELECT userid, date(time) as d, platform_type, uri 
-	FROM actionlog._forum_user_1) as a
+    SELECT userid, date(time) as d, platform_type, uri 
+    FROM actionlog._forum_user_1) as a
 group by a.d, a.userid, a.platform_type;
 
 # 1.每天看討論區的人
@@ -26299,8 +26297,6 @@ create table actionlog._forum_user_3 engine = myisam
 SELECT d, platform_type, count(userid) as c 
 FROM actionlog._forum_user_2
 group by d, platform_type;
-
-
 
 drop table if exists plsport_playsport._notify;
 create table plsport_playsport._notify engine = myisam
@@ -26311,9 +26307,9 @@ drop table if exists plsport_playsport._notify_1;
 create table plsport_playsport._notify_1 engine = myisam
 select a.userid, a.d, a.platform_type
 from (
-	SELECT userid, date(read_time) as d, platform_type
-	FROM plsport_playsport._notify
-	where readed = 1) as a
+    SELECT userid, date(read_time) as d, platform_type
+    FROM plsport_playsport._notify
+    where readed = 1) as a
 group by a.userid, a.d, a.platform_type;
 
 update plsport_playsport._notify_1 set platform_type = 1 where platform_type = 3;
@@ -26324,7 +26320,6 @@ create table plsport_playsport._notify_2 engine = myisam
 SELECT d, platform_type, count(userid) as user_receive 
 FROM plsport_playsport._notify_1
 group by d, platform_type;
-
 
 drop table if exists actionlog._user_click;
 create table actionlog._user_click engine = myisam
@@ -26345,8 +26340,8 @@ drop table if exists actionlog._user_click_2;
 create table actionlog._user_click_2 engine = myisam
 select a.userid, a.f, a.d, a.platform_type, count(a.f) as c
 from (
-	SELECT userid, f, date(time) as d, platform_type 
-	FROM actionlog._user_click_1) as a
+    SELECT userid, f, date(time) as d, platform_type 
+    FROM actionlog._user_click_1) as a
 group by a.userid, a.f, a.d, a.platform_type;
 
 drop table if exists actionlog._user_click_3;
@@ -27402,7 +27397,8 @@ update plsport_playsport._forumcontent_1 set content = REPLACE(content, '&nbsp;'
 drop table if exists plsport_playsport._forumcontent_2;
 create table plsport_playsport._forumcontent_2 engine = myisam 
 SELECT articleid, subjectid, userid, content, postdate,
-       (case when (content like '%www.playsport.cc/upload/forum%') then 'yes' else 'no' end) as upload_pic
+       (case when (content like '%www.playsport.cc/upload/forum%') then 'yes' else 'no' end) as upload_pic,
+       (case when (content like '%youtube%') then 'yes' else 'no' end) as embed_youtube
 FROM plsport_playsport._forumcontent_1;
 
 ALTER TABLE plsport_playsport._forumcontent_2 ADD INDEX (`subjectid`);
@@ -27410,13 +27406,13 @@ ALTER TABLE plsport_playsport._forum ADD INDEX (`subjectid`);
 
 drop table if exists plsport_playsport._forumcontent_3;
 create table plsport_playsport._forumcontent_3 engine = myisam 
-SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, a.upload_pic, b.allianceid
+SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, a.upload_pic, a.embed_youtube, b.allianceid
 FROM plsport_playsport._forumcontent_2 a left join plsport_playsport._forum b on a.subjectid = b.subjectid
 where allianceid is not null;
 
 drop table if exists plsport_playsport._forumcontent_4;
 create table plsport_playsport._forumcontent_4 engine = myisam 
-SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, a.upload_pic, a.allianceid, b.alliancename
+SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, a.upload_pic, a.embed_youtube, a.allianceid, b.alliancename
 FROM plsport_playsport._forumcontent_3 a left join plsport_playsport.alliance b on a.allianceid = b.allianceid;
 
 ALTER TABLE plsport_playsport._forumcontent_4 ADD INDEX (`userid`,`allianceid`);
@@ -27424,7 +27420,7 @@ ALTER TABLE plsport_playsport._userlevel ADD INDEX (`allianceid`,`userid`);
 
 drop table if exists plsport_playsport._forumcontent_5;
 create table plsport_playsport._forumcontent_5 engine = myisam 
-SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, a.upload_pic, a.allianceid, a.alliancename, b.level, b.stat
+SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, a.upload_pic, a.embed_youtube, a.allianceid, a.alliancename, b.level, b.stat
 FROM plsport_playsport._forumcontent_4 a left join plsport_playsport._userlevel b on a.userid = b.userid and a.allianceid = b.allianceid;
 
 update plsport_playsport._forumcontent_5 set level = 1 where level is null;
@@ -27437,26 +27433,43 @@ SELECT stat, alliancename, upload_pic, count(articleid)
 FROM plsport_playsport._forumcontent_5
 group by stat, alliancename, upload_pic;
 
+# 所有回文統計-補充使用youtube
+SELECT stat, alliancename, embed_youtube, count(articleid) 
+FROM plsport_playsport._forumcontent_5
+group by stat, alliancename, embed_youtube;
+
+
+
+
 # 只統計發文
 select a.stat, a.alliancename, a.upload_pic, count(a.articleid)
 from (
-	SELECT articleid, subjectid, userid, content, min(postdate), upload_pic, allianceid, alliancename, level, stat 
-	FROM plsport_playsport._forumcontent_5
-	group by subjectid) as a
+    SELECT articleid, subjectid, userid, content, min(postdate), upload_pic, allianceid, alliancename, level, stat 
+    FROM plsport_playsport._forumcontent_5
+    group by subjectid) as a
 group by a.stat, a.alliancename, a.upload_pic;
 
 
 # to eddy:
 # 新增:
-# 1. 100篇發回文中, 有多少篇文是等級1的
-# 2. 100篇發回文中, 有多少人是等級1的(以人為單位)
+#    1. 100篇發回文中, 有多少篇文是等級1的
+#    2. 100篇發回文中, 有多少人是等級1的(以人為單位)
 # 
 # 應該是，這段期間內，
-# 
-# 1. 所有發回文中, 有多少篇文是等級1的
-# 2. 所有發回文中, 有多少人是等級1的(以人為單位)
-# 
+#    1. 所有發回文中, 有多少篇文是等級1的
+#    2. 所有發回文中, 有多少人是等級1的(以人為單位)
 # 再麻煩你了，感謝！
+
+# TO eddy:
+# 
+# 麻煩你撈取: 等級一，嵌入youtube連結 或是 發/回文內有youtube連結的比例高嗎?
+# 一樣以一周的文章數來觀察。
+# 麻煩你提供完成時間~感謝!
+
+
+
+
+
 
 
 
@@ -27717,12 +27730,12 @@ create table actionlog._all_log_2 engine = myisam
 select b.userid, (b.all_pc+b.all_mobile) as all_pv, round((b.all_pc/(b.all_pc+b.all_mobile)),3) as all_pc,
                                                     round((b.all_mobile/(b.all_pc+b.all_mobile)),3) as all_mobile
 from (
-	select a.userid, sum(a.all_pc) as all_pc, sum(a.all_mobile) as all_mobile
-	from (
-		SELECT userid, (case when (platform_type = 1) then pv else 0 end) as all_pc,
-					   (case when (platform_type = 2) then pv else 0 end) as all_mobile
-		FROM actionlog._all_log_1) as a
-	group by a.userid) as b;
+    select a.userid, sum(a.all_pc) as all_pc, sum(a.all_mobile) as all_mobile
+    from (
+        SELECT userid, (case when (platform_type = 1) then pv else 0 end) as all_pc,
+                       (case when (platform_type = 2) then pv else 0 end) as all_mobile
+        FROM actionlog._all_log_1) as a
+    group by a.userid) as b;
 
 # 計算出即時比分的pv
 drop table if exists actionlog._all_log_2_livescore;
@@ -27950,10 +27963,4 @@ group by q1, q2;
 SELECT q1, count(userid) as c 
 FROM plsport_playsport._qu_1
 group by q1;
-
-
-
-
-
-
 
