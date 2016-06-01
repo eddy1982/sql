@@ -27398,7 +27398,7 @@ drop table if exists plsport_playsport._forumcontent_2;
 create table plsport_playsport._forumcontent_2 engine = myisam 
 SELECT articleid, subjectid, userid, content, postdate,
        (case when (content like '%www.playsport.cc/upload/forum%') then 'yes' else 'no' end) as upload_pic,
-       (case when (content like '%youtube%') then 'yes' else 'no' end) as embed_youtube
+       (case when (content like '%youtu.be%') then 'yes' else 'no' end) as embed_youtube
 FROM plsport_playsport._forumcontent_1;
 
 ALTER TABLE plsport_playsport._forumcontent_2 ADD INDEX (`subjectid`);
@@ -27438,9 +27438,6 @@ SELECT stat, alliancename, embed_youtube, count(articleid)
 FROM plsport_playsport._forumcontent_5
 group by stat, alliancename, embed_youtube;
 
-
-
-
 # 只統計發文
 select a.stat, a.alliancename, a.upload_pic, count(a.articleid)
 from (
@@ -27462,15 +27459,11 @@ group by a.stat, a.alliancename, a.upload_pic;
 
 # TO eddy:
 # 
-# 麻煩你撈取: 等級一，嵌入youtube連結 或是 發/回文內有youtube連結的比例高嗎?
+# 麻煩你撈取: 等級一，嵌入youtube連結 或是發/回文內有youtube連結的比例高嗎?
 # 一樣以一周的文章數來觀察。
 # 麻煩你提供完成時間~感謝!
 
-
-
-
-
-
+# !!!直接修正在之前的任務中了
 
 
 # =================================================================================================
@@ -27484,7 +27477,6 @@ group by a.stat, a.alliancename, a.upload_pic;
 #     ＂比賽＂其中一個關鍵字的亮單文數量
 # 3.  呈上述，想知道發表這些文章的不重複人數
 # =================================================================================================
-
 
 drop table if exists plsport_playsport._showoff;
 create table plsport_playsport._showoff engine = myisam
@@ -27963,4 +27955,91 @@ group by q1, q2;
 SELECT q1, count(userid) as c 
 FROM plsport_playsport._qu_1
 group by q1;
+
+
+
+# =================================================================================================
+# 流失客原因問券調查http://redmine.playsport.cc/issues/1350
+# 謝謝你長期對玩運彩的支持, 為了幫助我們可以提供更好的購買殺手預測服務, 請花1分鐘填寫此問券。
+# 什麼情況會讓你不想再買殺手的牌? (複選)
+# 
+# 殺手不準                      738  64.2%
+# 不知道怎麼選殺手               294  25.6%
+# 沒有更詳細殺手的歷史數據可以參考 328  28.5%
+# 沒辦法和殺手互動               215  18.7%
+# 殺手成績不理想時,補償機制(補券)不佳 675  58.7%
+# 其它原因                      73
+# =================================================================================================
+
+drop table if exists plsport_playsport._qu;
+create table plsport_playsport._qu engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201605240948445350_answer;
+
+ALTER TABLE plsport_playsport._qu CHANGE `1464054149` q1 VARCHAR(20);
+ALTER TABLE plsport_playsport._qu CHANGE `1464054475` q2 VARCHAR(2000);
+
+drop table if exists plsport_playsport._qu_1;
+create table plsport_playsport._qu_1 engine = myisam
+SELECT userid, q1, q2
+FROM plsport_playsport._qu;
+
+drop table if exists plsport_playsport._qu_2;
+create table plsport_playsport._qu_2 engine = myisam
+SELECT userid, (case when(q1 like '%1%') then 1 else 0 end) as a1,
+               (case when(q1 like '%2%') then 1 else 0 end) as a2,
+			   (case when(q1 like '%3%') then 1 else 0 end) as a3,
+               (case when(q1 like '%4%') then 1 else 0 end) as a4,
+               (case when(q1 like '%5%') then 1 else 0 end) as a5,
+               (case when(q1 like '%6%') then 1 else 0 end) as a6, q2
+FROM plsport_playsport._qu_1;
+
+drop table if exists plsport_playsport._spent;
+create table plsport_playsport._spent engine = myisam
+SELECT userid, sum(amount) as spent 
+FROM plsport_playsport.pcash_log
+where payed = 1 and type = 1
+and date between subdate(now(),365) and now()
+group by userid;
+
+drop table if exists plsport_playsport._spent_1;
+create table plsport_playsport._spent_1 engine = myisam
+select userid, spent, round((cnt-rank+1)/cnt,2) as spent_percentile
+from (SELECT userid, spent, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._spent, (SELECT @curRank := 0) r
+      order by spent desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._spent) as ct;
+     
+drop table if exists plsport_playsport._qu_3;
+create table plsport_playsport._qu_3 engine = myisam
+SELECT a.userid, a.a1, a.a2, a.a3, a.a4, a.a5, a.a6, b.spent, b.spent_percentile, a.q2
+FROM plsport_playsport._qu_2 a left join plsport_playsport._spent_1 b on a.userid = b.userid;
+
+drop table if exists plsport_playsport._qu_4;
+create table plsport_playsport._qu_4 engine = myisam
+SELECT a.userid, b.nickname, a.a1, a.a2, a.a3, a.a4, a.a5, a.a6, a.spent, a.spent_percentile, a.q2
+FROM plsport_playsport._qu_3 a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists plsport_playsport._qu_5;
+create table plsport_playsport._qu_5 engine = myisam
+SELECT sum(a1), sum(a2), sum(a3), sum(a4), sum(a5), sum(a6), sum(spent)
+FROM plsport_playsport._qu_4
+where spent_percentile >= 0.80;
+insert ignore into plsport_playsport._qu_5
+SELECT sum(a1), sum(a2), sum(a3), sum(a4), sum(a5), sum(a6), sum(spent)
+FROM plsport_playsport._qu_4
+where spent_percentile >= 0.60 and spent_percentile < 0.80;
+insert ignore into plsport_playsport._qu_5
+SELECT sum(a1), sum(a2), sum(a3), sum(a4), sum(a5), sum(a6), sum(spent)
+FROM plsport_playsport._qu_4
+where spent_percentile >= 0.40 and spent_percentile < 0.60;
+insert ignore into plsport_playsport._qu_5
+SELECT sum(a1), sum(a2), sum(a3), sum(a4), sum(a5), sum(a6), sum(spent)
+FROM plsport_playsport._qu_4
+where spent_percentile >= 0.20 and spent_percentile < 0.40;
+insert ignore into plsport_playsport._qu_5
+SELECT sum(a1), sum(a2), sum(a3), sum(a4), sum(a5), sum(a6), sum(spent)
+FROM plsport_playsport._qu_4
+where spent_percentile >= 0.00 and spent_percentile < 0.20;
+
+
 
