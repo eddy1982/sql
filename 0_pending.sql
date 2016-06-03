@@ -27987,7 +27987,7 @@ drop table if exists plsport_playsport._qu_2;
 create table plsport_playsport._qu_2 engine = myisam
 SELECT userid, (case when(q1 like '%1%') then 1 else 0 end) as a1,
                (case when(q1 like '%2%') then 1 else 0 end) as a2,
-			   (case when(q1 like '%3%') then 1 else 0 end) as a3,
+               (case when(q1 like '%3%') then 1 else 0 end) as a3,
                (case when(q1 like '%4%') then 1 else 0 end) as a4,
                (case when(q1 like '%5%') then 1 else 0 end) as a5,
                (case when(q1 like '%6%') then 1 else 0 end) as a6, q2
@@ -28042,4 +28042,240 @@ FROM plsport_playsport._qu_4
 where spent_percentile >= 0.00 and spent_percentile < 0.20;
 
 
+
+# =================================================================================================
+# 增加今日20大排行頁面http://redmine.playsport.cc/issues/1262
+# 位置：
+# 討論區，原最讚分析文位置
+# 獨立頁面
+# 需求：
+#    點擊此頁面後，用以下條件列出20篇文章
+#    依推數排序
+#    不分看版（含公告、都蘭、閒聊等）
+#    每小時更新一次
+#    每次更新時，往前計算12小時
+#    不包含置頂文
+#    增加第一欄，為排名，列1~10名的文字。
+# 成效指標追蹤需求：
+#    記錄最讚分析文 / 今日20大推文 的點擊次數
+#    記錄此獨立頁面瀏覽量
+#    頁面內的排行文章點擊次數
+# =================================================================================================
+# 20大推文榜, a/b testing名單:
+# 分組名單: (userid%20)+1 in (1,2,3,4,5,6,7,8,9,10)
+
+# TO eddy:
+# 20大推文榜再4/29已經上線abtesting了!
+# 預計一個月後觀察成效唷~
+
+drop table if exists actionlog._click_f;
+create table actionlog._click_f engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201604
+where userid <> ''
+and time between '2016-04-29 18:00:00' and now()
+and uri regexp '^/forumdetail.*php.*post_from=.*';
+insert ignore into actionlog._click_f
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201605
+where userid <> ''
+and time between '2016-04-29 18:00:00' and now()
+and uri regexp '^/forumdetail.*php.*post_from=.*';
+insert ignore into actionlog._click_f
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201606
+where userid <> ''
+and time between '2016-04-29 18:00:00' and now()
+and uri regexp '^/forumdetail.*php.*post_from=.*';
+
+# 最讚分析文: post_from=FLA
+# 今天最多推: post_from=FMP
+#   --analysis_king.php(看更多)
+#     最讚分析文: post_from=AL
+#   --topPushedArticles.php(看更多)
+#     今天最多推: post_from=MP
+
+drop table if exists actionlog._click_f_1;
+create table actionlog._click_f_1 engine = myisam
+select a.userid, a.uri, a.time, a.platform_type, (case when (locate('&',a.pf)=0) then a.pf else substr(a.pf,1,locate('&',a.pf)-1) end) as f
+from (
+	SELECT userid, uri, time, platform_type, substr(uri,locate('post_from',uri)+10,length(uri)) as pf
+	FROM actionlog._click_f) as a;
+
+drop table if exists actionlog._click_f_2;
+create table actionlog._click_f_2 engine = myisam
+SELECT * 
+FROM actionlog._click_f_1
+where f in ('FLA','FMP','AL','MP');
+
+update actionlog._click_f_2 set platform_type = 1 where platform_type = 3;
+ALTER TABLE actionlog._click_f_2 convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists actionlog._click_f_3;
+create table actionlog._click_f_3 engine = myisam
+SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, a.uri, a.time, a.platform_type, a.f 
+FROM actionlog._click_f_2 a left join plsport_playsport.member b on a.userid = b.userid;
+
+update actionlog._click_f_3 set f = '2_AL' where f = 'AL';
+update actionlog._click_f_3 set f = '1_FLA' where f = 'FLA';
+update actionlog._click_f_3 set f = '3_FMP' where f = 'FMP';
+update actionlog._click_f_3 set f = '4_MP' where f = 'MP';
+
+drop table if exists actionlog._click_f_4;
+create table actionlog._click_f_4 engine = myisam
+select a.abtest, a.d, a.platform_type, a.f, count(a.uri) as click
+from (
+	SELECT abtest, userid, uri, date(time) as d, platform_type, f 
+	FROM actionlog._click_f_3) as a 
+group by a.abtest, a.d, a.platform_type, a.f;
+
+
+# 整體看文章數
+drop table if exists actionlog._click_f_all;
+create table actionlog._click_f_all engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201604
+where userid <> ''
+and time between '2016-04-29 18:00:00' and now()
+and uri regexp '^/forumdetail.*php.*';
+insert ignore into actionlog._click_f_all
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201605
+where userid <> ''
+and time between '2016-04-29 18:00:00' and now()
+and uri regexp '^/forumdetail.*php.*';
+insert ignore into actionlog._click_f_all
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201606
+where userid <> ''
+and time between '2016-04-29 18:00:00' and now()
+and uri regexp '^/forumdetail.*php.*';
+
+update actionlog._click_f_all set platform_type = 1 where platform_type = 3;
+
+drop table if exists actionlog._click_f_all_1;
+create table actionlog._click_f_all_1 engine = myisam
+SELECT userid, uri, time, platform_type, substr(uri,locate('subjectid=',uri)+10,15) as s
+FROM actionlog._click_f_all;
+
+drop table if exists actionlog._click_f_all_2;
+create table actionlog._click_f_all_2 engine = myisam
+SELECT userid, min(time) as time, platform_type, s, count(s) as c
+FROM actionlog._click_f_all_1
+group by userid, platform_type, s;
+
+drop table if exists actionlog._click_f_all_3;
+create table actionlog._click_f_all_3 engine = myisam
+SELECT userid, date(time) as d, platform_type, s, c 
+FROM actionlog._click_f_all_2;
+
+ALTER TABLE actionlog._click_f_all_3 convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists actionlog._click_f_all_4;
+create table actionlog._click_f_all_4 engine = myisam
+SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, a.d, a.platform_type, a.s, a.c 
+FROM actionlog._click_f_all_3 a left join plsport_playsport.member b on a.userid = b.userid;
+
+# 2組之間他們閱讀文章數量的a/b testing比較, 第一個a/b testing項目
+drop table if exists actionlog._click_f_all_5;
+create table actionlog._click_f_all_5 engine = myisam
+SELECT abtest, userid, d, platform_type, count(s) as post_count 
+FROM actionlog._click_f_all_4
+group by abtest, userid, d, platform_type;
+
+# 記錄此獨立頁面瀏覽量
+#    (1)topPushedArticles.php
+#    (2)analysis_king.php
+drop table if exists actionlog._click_f_page;
+create table actionlog._click_f_page engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201604
+where userid <> ''
+and time between '2016-04-29 18:00:00' and now()
+and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
+insert ignore into actionlog._click_f_page
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201605
+where userid <> ''
+and time between '2016-04-29 18:00:00' and now()
+and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
+insert ignore into actionlog._click_f_page
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201606
+where userid <> ''
+and time between '2016-04-29 18:00:00' and now()
+and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
+
+update actionlog._click_f_page set platform_type = 1 where platform_type = 3;
+ALTER TABLE actionlog._click_f_page convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists actionlog._click_f_page_1;
+create table actionlog._click_f_page_1 engine = myisam
+SELECT userid, uri, date(time) as d, platform_type 
+FROM actionlog._click_f_page;
+
+drop table if exists actionlog._click_f_page_2;
+create table actionlog._click_f_page_2 engine = myisam
+SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, a.uri, a.d, a.platform_type 
+FROM actionlog._click_f_page_1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists actionlog._click_f_page_3;
+create table actionlog._click_f_page_3 engine = myisam
+SELECT abtest, userid, uri, d, platform_type, substr(uri,2,locate('.php',uri)-2) as p
+FROM actionlog._click_f_page_2;
+
+drop table if exists actionlog._click_f_page_4;
+create table actionlog._click_f_page_4 engine = myisam
+SELECT abtest, d, p, count(uri) as pv 
+FROM actionlog._click_f_page_3
+group by abtest, d, p;
+
+# 使用不同版本的人, 除了閱讀的文章數量之外, 那他們對於這個討論區的互動有什麼變化, 
+# 例如: 看的文章數量可能沒有什麼變, 但用新版的人可能變的更容易回文, 去按讚之類的
+
+# 先來看有閱讀高推文數的文章比較
+drop table if exists plsport_playsport._forum_push;
+create table plsport_playsport._forum_push engine = myisam
+SELECT subjectid, postuser, posttime, pushcount
+FROM plsport_playsport.forum
+where posttime between '2016-04-29 18:00:00' and now()
+and pushcount >= 30;
+
+ALTER TABLE plsport_playsport._forum_push ADD INDEX (`subjectid`); 
+ALTER TABLE actionlog._click_f_all_4 ADD INDEX (`s`); 
+
+drop table if exists actionlog._click_f_all_4_;
+create table actionlog._click_f_all_4_ engine = myisam
+SELECT a.abtest, a.userid, a.d, a.platform_type, a.s, b.pushcount 
+FROM actionlog._click_f_all_4 a left join plsport_playsport._forum_push b on a.s = b.subjectid
+where b.pushcount is not null;
+
+drop table if exists actionlog._click_f_all_5_;
+create table actionlog._click_f_all_5_ engine = myisam
+SELECT abtest, userid, d, platform_type, count(s) as post_count 
+FROM actionlog._click_f_all_4_
+group by abtest, userid, d, platform_type;
+
+# 再來看按推的狀況
+
+drop table if exists plsport_playsport._forum_like;
+create table plsport_playsport._forum_like engine = myisam
+SELECT *
+FROM plsport_playsport.forum_like
+where create_date between '2016-04-29 18:00:00' and now();
+
+drop table if exists plsport_playsport._forum_like_1;
+create table plsport_playsport._forum_like_1 engine = myisam
+select a.d, a.userid, count(a.subject_id) as push_count
+from (
+	SELECT userid, date(create_date) as d, subject_id 
+	FROM plsport_playsport._forum_like) as a
+group by a.d, a.userid;
+
+ALTER TABLE plsport_playsport._forum_like_1 ADD INDEX (`userid`); 
+
+drop table if exists plsport_playsport._forum_like_2;
+create table plsport_playsport._forum_like_2 engine = myisam
+SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.d, a.userid, a.push_count 
+FROM plsport_playsport._forum_like_1 a left join plsport_playsport.member b on a.userid = b.userid;
 
