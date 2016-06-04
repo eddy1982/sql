@@ -28279,3 +28279,55 @@ create table plsport_playsport._forum_like_2 engine = myisam
 SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.d, a.userid, a.push_count 
 FROM plsport_playsport._forum_like_1 a left join plsport_playsport.member b on a.userid = b.userid;
 
+
+
+# =================================================================================================
+# 監控即時比分app評價變化和廣告對使用者行為的影響http://redmine.playsport.cc/issues/1758
+# 目的: 
+# 1.從Android即時比分APP版本4.2.1開始之後, 開始於數據等頁面放入插頁式廣告,
+#         因擔心廣告對於使用者的負面影響, 所以開始監控評價的變化
+# 
+# 2. 網頁版的即時比分頁面和預測比例頁面因為置入的廣告內容變多, 需觀察這2個頁面行為上的變化
+# 
+# 方法:
+# 
+# 1. 監控評價
+#     在google play developer console有提供所有過去至今詳細評論資料的.csv檔可以下載,
+#     從這些評論資料可以做更細的評價整理和檢驗.
+#         例如:利用統計的方式來檢驗不同版本間的評價是否真的有顯著差異,
+#         如果沒有顯著, 那代表使用者對於版本的變動還有忍受的空間
+#         如果有顯著, 那代表版本的變動有影響到使用者
+# 2. 有置入廣告的數據頁面使用行為變化(即時比分APP)
+#         從app_action_log來統計不同版本間置入廣告的頁面在使用上有什麼變化
+# 3. 針對置入更多廣告內容的即時比分和預測比例頁面來觀察使用者在使用上有什麼變化(5月31日下午18:00上線)
+# =================================================================================================
+
+# 要先去執行C:\proc\python\googleplay\googleplay_reviews_import.py
+
+drop table if exists plsport_playsport._googleplay_reviews_1;
+create table plsport_playsport._googleplay_reviews_1 engine = myisam
+select concat(a.App_Version_Name,' (',a.App_Version_Code,')') as ver, 
+       round(avg(a.Star_Rating),1) as star_avg,
+       count(a.Star_Rating) as star_count,
+	   sum(a.positive) as star_good,
+       round(sum(a.positive)/count(a.Star_Rating),2) as star_good_percent
+from (
+	SELECT App_Version_Code, App_Version_Name, Star_Rating, (case when (Star_Rating>=4) then 1 else 0 end) as positive
+	FROM plsport_playsport.googleplay_reviews
+	where App_Version_Name <> '') as a
+group by a.App_Version_Code;
+
+drop table if exists plsport_playsport._googleplay_reviews_2;
+create table plsport_playsport._googleplay_reviews_2 engine = myisam
+SELECT concat(App_Version_Name,' (',App_Version_Code,')') as ver, Star_Rating, (case when (Star_Rating>=4) then 1 else 0 end) as positive
+FROM plsport_playsport.googleplay_reviews
+where App_Version_Name <> ''
+and App_Version_Code >= 87; # 版本87之後
+
+# 4.0.3 (87)	4.4	153	134	0.88
+# 4.1.1 (89)	4.7	32	29	0.91
+# 4.1.2 (90)	4.5	51	47	0.92
+# 4.1.3 (91)	4.0	48	36	0.75
+# 4.2.0 (92)	4.4	54	47	0.87
+# 4.2.1 (93)	4.0	26	18	0.69 目前最新的是4.2.2 (94)但google play console還捉不到資料
+
