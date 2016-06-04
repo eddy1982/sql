@@ -37,10 +37,12 @@ where spendminute>0.4;
     PART.2 轉換問券成樞紐的形式
 ---------------------------------------------*/
 # 篩選出ver4.0的, 也就是新版的問券
+drop table if exists plsport_playsport.satisfactionquestionnaire_answer_ver_5;
 create table plsport_playsport.satisfactionquestionnaire_answer_ver_5 engine = myisam
 SELECT * FROM plsport_playsport.satisfactionquestionnaire_answer
 where version = 5.0;
 
+drop table if exists plsport_playsport.satisfactionquestionnaire_answer_ver_5_edited;
 create table plsport_playsport.satisfactionquestionnaire_answer_ver_5_edited engine = myisam
 SELECT serialnumber, userid, version, completetime, spendminute, entrance, 
        forum_notused, forum_improve, forum_platform, 
@@ -49,6 +51,7 @@ SELECT serialnumber, userid, version, completetime, spendminute, entrance,
        ourweb, hearaboutus, suggestion, whereDoYouLive
 FROM plsport_playsport.satisfactionquestionnaire_answer_ver_5;
 
+drop table if exists plsport_playsport._q_all_answer;
 create table plsport_playsport._q_all_answer engine = myisam
 SELECT serialnumber, userid, version, completetime, spendminute, entrance, 
        forum_notused, 
@@ -83,6 +86,7 @@ SELECT serialnumber, userid, version, completetime, spendminute, entrance,
 FROM plsport_playsport.satisfactionquestionnaire_answer_ver_5_edited
 where userid not in ('yenhsun1982', 'monkey', 'chinginge', 'pauleanr', 'ydasam', 'n12232001', 'sakyla', 'wenchi') # 工友都要排除掉
 and spendminute > 0.5; # 小於30秒完成問卷的人就不計
+
 
 /*--------------------------------------------
     PART.3 [圖表程式化]輸出給R使用
@@ -288,13 +292,14 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2016-04-01' and '2016-04-30') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2016-05-01' and '2016-05-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
 
-		use questionnaire;
-        ALTER TABLE _signin_list ADD INDEX (`userid`); 
-        ALTER TABLE _existed_list ADD INDEX (`userid`);
-        ALTER TABLE _fill_question_in_4_month ADD INDEX (`userid`);
+
+use questionnaire;
+ALTER TABLE _signin_list ADD INDEX (`userid`); 
+ALTER TABLE _existed_list ADD INDEX (`userid`);
+ALTER TABLE _fill_question_in_4_month ADD INDEX (`userid`);
 /*--------------------------------------------
   排除1: 上月份的名單, 但排除掉之前有做過問卷的人
 ---------------------------------------------*/
@@ -376,6 +381,11 @@ ALTER TABLE  `_list_limit_3000` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER 
 ALTER TABLE  `_fill_question_in_4_month` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 select a.userid from _list_limit_3000 a inner join _fill_question_in_4_month b on a.userid = b.userid;
 # select的結果應該是空的
+
+
+
+
+
 
 
 
