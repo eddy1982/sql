@@ -28331,3 +28331,90 @@ and App_Version_Code >= 87; # 版本87之後
 # 4.2.0 (92)	4.4	54	47	0.87
 # 4.2.1 (93)	4.0	26	18	0.69 目前最新的是4.2.2 (94)但google play console還捉不到資料
 
+
+
+# =================================================================================================
+# [201512-B-9]優化手機版預測比列-問卷分析http://redmine.playsport.cc/issues/1693 (2016-06-06)
+# 說明
+# 進一步分析問卷內容
+# 
+# 內容
+# 依據問題一選項，分析使用者在問題二各是選擇哪個版本
+# 問卷結果：http://www.playsport.cc/questionnaire.php?question=201605171156565464&action=statistics
+# =================================================================================================
+# 
+# TO EDDY
+# 第二次問卷結果已出爐了
+# http://www.playsport.cc/questionnaire.php?question=201605311645302833&action=statistics
+# 麻煩幫我將第一次第2題的結果與第二次第1題結果相加
+# 
+# 謝謝
+
+
+# 第1次的問券
+drop table if exists plsport_playsport._qu;
+create table plsport_playsport._qu engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201605171156565464_answer;
+
+ALTER TABLE plsport_playsport._qu CHANGE `1463457238` q1 VARCHAR(10);
+ALTER TABLE plsport_playsport._qu CHANGE `1463457390` q2 VARCHAR(10);
+
+drop table if exists plsport_playsport._qu_1;
+create table plsport_playsport._qu_1 engine = myisam
+SELECT userid, q2
+FROM plsport_playsport._qu;
+
+drop table if exists plsport_playsport._qu;
+create table plsport_playsport._qu engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201605311645302833_answer;
+
+ALTER TABLE plsport_playsport._qu CHANGE `1464684130` q2 VARCHAR(10);
+
+insert ignore into plsport_playsport._qu_1
+SELECT userid, q2
+FROM plsport_playsport._qu;
+
+update plsport_playsport._qu_1 set q2 = '新版' where q2 in (1);
+update plsport_playsport._qu_1 set q2 = '原版' where q2 in (2);
+update plsport_playsport._qu_1 set q2 = '無意見' where q2 in (3);
+
+drop table if exists actionlog._predictscale;
+create table actionlog._predictscale engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201605
+where userid <> '' and uri like '%predictgame.php?action=scale%'
+and time between subdate(now(),15) and now();
+insert ignore into actionlog._predictscale
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201606
+where userid <> '' and uri like '%predictgame.php?action=scale%'
+and time between subdate(now(),15) and now();
+
+drop table if exists actionlog._predictscale_1;
+create table actionlog._predictscale_1 engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._predictscale
+group by userid;
+
+drop table if exists actionlog._predictscale_2;
+create table actionlog._predictscale_2 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._predictscale_1, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._predictscale_1) as ct;
+     
+ALTER TABLE plsport_playsport._qu_1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._predictscale_2 convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists plsport_playsport._qu_2;
+create table plsport_playsport._qu_2 engine = myisam
+SELECT a.userid, a.q2, b.pv, b.pv_percentile 
+FROM plsport_playsport._qu_1 a left join actionlog._predictscale_2 b on a.userid = b.userid;
+
+
+
+
+
+
+
