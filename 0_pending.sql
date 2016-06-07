@@ -28414,7 +28414,70 @@ FROM plsport_playsport._qu_1 a left join actionlog._predictscale_2 b on a.userid
 
 
 
+# =================================================================================================
+# 說明    目的：了解推薦系統對營業額影響http://redmine.playsport.cc/issues/1593
+# 內容   - 測試時間：5/12~6/7，先執行三周，如沒有任何變化再執行三周
+# - 設定測試組別(50%)
+#  
+# - 觀察指標
+# 推薦專區點擊與購買次數
+# 推薦專區購買金額
+# 購牌區購買金額
+# 整體購買與儲值金額
+# =================================================================================================
 
+# 有點擊過購買後推廌專區的人, 那他們的購買金額有差嗎?
+drop table if exists actionlog._brc_2_abtest_for_spent;
+create table actionlog._brc_2_abtest_for_spent engine = myisam
+select c.abtest, c.userid, sum(c.pv) as pv
+from (
+	SELECT a.abtest, a.userid, a.d, a.platform_type, a.pv, b.percent, b.update_time
+	FROM actionlog._brc_2 a left join plsport_playsport.buy_acquaintance_weight b on a.userid = b.userid 
+	where percent <= 0.642) as c
+group by c.abtest, c.userid;
 
+drop table if exists actionlog._brc_2_abtest_for_spent_1;
+create table actionlog._brc_2_abtest_for_spent_1 engine = myisam
+select a.userid, a.d, sum(a.spent) as spent, count(a.spent) as spent_count
+from (
+	SELECT userid, date(date) as d, amount as spent
+	FROM plsport_playsport.pcash_log
+	where date between '2016-05-13 00:00:00' and now()
+	and payed = 1 and type = 1) as a
+group by a.userid, a.d;
 
+drop table if exists actionlog._brc_2_abtest_for_spent_2;
+create table actionlog._brc_2_abtest_for_spent_2 engine = myisam
+SELECT b.abtest, a.userid, a.d, a.spent, a.spent_count
+FROM actionlog._brc_2_abtest_for_spent_1 a inner join actionlog._brc_2_abtest_for_spent b on a.userid = b.userid;
 
+# 有點擊過購買後推廌專區和找高手頁面的人, 那他們的購買金額有差嗎?
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT * FROM actionlog._brc_2;
+insert ignore into actionlog._temp
+SELECT * FROM actionlog._bz_2;
+
+drop table if exists actionlog._all_2_abtest_for_spent;
+create table actionlog._all_2_abtest_for_spent engine = myisam
+select c.abtest, c.userid, sum(c.pv) as pv
+from (
+	SELECT a.abtest, a.userid, a.d, a.platform_type, a.pv, b.percent, b.update_time
+	FROM actionlog._temp a left join plsport_playsport.buy_acquaintance_weight b on a.userid = b.userid 
+	where percent <= 0.642) as c
+group by c.abtest, c.userid;
+
+drop table if exists actionlog._all_2_abtest_for_spent_1;
+create table actionlog._all_2_abtest_for_spent_1 engine = myisam
+select a.userid, a.d, sum(a.spent) as spent, count(a.spent) as spent_count
+from (
+	SELECT userid, date(date) as d, amount as spent
+	FROM plsport_playsport.pcash_log
+	where date between '2016-05-13 00:00:00' and now()
+	and payed = 1 and type = 1) as a
+group by a.userid, a.d;
+
+drop table if exists actionlog._all_2_abtest_for_spent_2;
+create table actionlog._all_2_abtest_for_spent_2 engine = myisam
+SELECT b.abtest, a.userid, a.d, a.spent, a.spent_count
+FROM actionlog._all_2_abtest_for_spent_1 a inner join actionlog._all_2_abtest_for_spent b on a.userid = b.userid;
