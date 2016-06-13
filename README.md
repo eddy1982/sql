@@ -71,7 +71,11 @@ COALESCE(valuecolumn, 0)
 IFNULL(valuecolumn, 'N/A')
 ```
 
-
+use function STR_TO_DATE to convert MongeDB datetime value to MySQL
+-------------------------------------------------------------------
+```
+DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR) as d
+```
 
 
 PURGE BINARY LOGS Syntax
