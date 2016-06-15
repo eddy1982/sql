@@ -1,5 +1,16 @@
 
 -- ███████╗██████╗ ██████╗ ██╗   ██╗    ███████╗ ██████╗ ██╗     
+SELECT a.m, a.postuser, a.nickname, a.c
+FROM (
+    SELECT m, postuser, nickname, count(subjectid) as c 
+    FROM plsport_playsport._forum
+    GROUP BY m, postuser) as a
+WHERE m = '2012-01' ORDER BY a.c DESC limit 1,25;
+/*(3)插入其它月份*/
+INSERT IGNORE INTO _forum_top25_ranking
+SELECT a.m, a.postuser, a.nickname, a.c
+FROM (
+    SELECT m, postuser, nickname, count(subjectid) as c 
 -- ██╔════╝██╔══██╗██╔══██╗╚██╗ ██╔╝    ██╔════╝██╔═══██╗██║     
 -- █████╗  ██║  ██║██║  ██║ ╚████╔╝     ███████╗██║   ██║██║     
 -- ██╔══╝  ██║  ██║██║  ██║  ╚██╔╝      ╚════██║██║▄▄ ██║██║     
@@ -18,17 +29,6 @@ FROM (
     ORDER BY posttime DESC) as c LEFT JOIN plsport_playsport.member d on c.postuser = d.userid;
 /*(2)新增第1個月*/
 CREATE TABLE plsport_playsport._forum_top25_ranking engine = myisam
-SELECT a.m, a.postuser, a.nickname, a.c
-FROM (
-    SELECT m, postuser, nickname, count(subjectid) as c 
-    FROM plsport_playsport._forum
-    GROUP BY m, postuser) as a
-WHERE m = '2012-01' ORDER BY a.c DESC limit 1,25;
-/*(3)插入其它月份*/
-INSERT IGNORE INTO _forum_top25_ranking
-SELECT a.m, a.postuser, a.nickname, a.c
-FROM (
-    SELECT m, postuser, nickname, count(subjectid) as c 
     FROM plsport_playsport._forum
     GROUP BY m, postuser) as a
 WHERE m = '2014-03' ORDER BY a.c DESC limit 1,25;
@@ -23184,13 +23184,23 @@ FROM actionlog._friend_6);
 # =================================================================================================
 
 create table actionlog._s_p engine = myisam
-SELECT * FROM actionlog.action_201603
+SELECT * FROM actionlog.action_201605
 where uri like '%s=p%' ; # 最多推文
 create table actionlog._s_a engine = myisam
-SELECT * FROM actionlog.action_201603
+SELECT * FROM actionlog.action_201605
 where uri like '%s=a%' ; # 最新文章
 create table actionlog._s_r engine = myisam
-SELECT * FROM actionlog.action_201603
+SELECT * FROM actionlog.action_201605
+where uri like '%s=r%' ; # 最新回覆
+
+insert ignore into actionlog._s_p
+SELECT * FROM actionlog.action_201606
+where uri like '%s=p%' ; # 最多推文
+insert ignore into actionlog._s_a
+SELECT * FROM actionlog.action_201606
+where uri like '%s=a%' ; # 最新文章
+insert ignore into actionlog._s_r
+SELECT * FROM actionlog.action_201606
 where uri like '%s=r%' ; # 最新回覆
 
 insert ignore into actionlog._s_p
@@ -23203,13 +23213,15 @@ insert ignore into actionlog._s_r
 SELECT * FROM actionlog.action_201604
 where uri like '%s=r%' ; # 最新回覆
 
-
+drop table if exists actionlog._s_p_1;
 create table actionlog._s_p_1 engine = myisam
 SELECT id, userid, date(time) as d
 FROM actionlog._s_p;
+drop table if exists actionlog._s_a_1;
 create table actionlog._s_a_1 engine = myisam
 SELECT id, userid, date(time) as d
 FROM actionlog._s_a;
+drop table if exists actionlog._s_r_1;
 create table actionlog._s_r_1 engine = myisam
 SELECT id, userid, date(time) as d
 FROM actionlog._s_r;
@@ -23217,9 +23229,11 @@ FROM actionlog._s_r;
 SELECT d, count(id) as c 
 FROM actionlog._s_p_1
 group by d; # 最多推文
+
 SELECT d, count(id) as c 
 FROM actionlog._s_a_1
 group by d; # 最新文章
+
 SELECT d, count(id) as c 
 FROM actionlog._s_r_1
 group by d; # 最新回覆
@@ -28099,8 +28113,8 @@ drop table if exists actionlog._click_f_1;
 create table actionlog._click_f_1 engine = myisam
 select a.userid, a.uri, a.time, a.platform_type, (case when (locate('&',a.pf)=0) then a.pf else substr(a.pf,1,locate('&',a.pf)-1) end) as f
 from (
-	SELECT userid, uri, time, platform_type, substr(uri,locate('post_from',uri)+10,length(uri)) as pf
-	FROM actionlog._click_f) as a;
+    SELECT userid, uri, time, platform_type, substr(uri,locate('post_from',uri)+10,length(uri)) as pf
+    FROM actionlog._click_f) as a;
 
 drop table if exists actionlog._click_f_2;
 create table actionlog._click_f_2 engine = myisam
@@ -28125,8 +28139,8 @@ drop table if exists actionlog._click_f_4;
 create table actionlog._click_f_4 engine = myisam
 select a.abtest, a.d, a.platform_type, a.f, count(a.uri) as click
 from (
-	SELECT abtest, userid, uri, date(time) as d, platform_type, f 
-	FROM actionlog._click_f_3) as a 
+    SELECT abtest, userid, uri, date(time) as d, platform_type, f 
+    FROM actionlog._click_f_3) as a 
 group by a.abtest, a.d, a.platform_type, a.f;
 
 
@@ -28268,8 +28282,8 @@ drop table if exists plsport_playsport._forum_like_1;
 create table plsport_playsport._forum_like_1 engine = myisam
 select a.d, a.userid, count(a.subject_id) as push_count
 from (
-	SELECT userid, date(create_date) as d, subject_id 
-	FROM plsport_playsport._forum_like) as a
+    SELECT userid, date(create_date) as d, subject_id 
+    FROM plsport_playsport._forum_like) as a
 group by a.d, a.userid;
 
 ALTER TABLE plsport_playsport._forum_like_1 ADD INDEX (`userid`); 
@@ -28278,58 +28292,6 @@ drop table if exists plsport_playsport._forum_like_2;
 create table plsport_playsport._forum_like_2 engine = myisam
 SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.d, a.userid, a.push_count 
 FROM plsport_playsport._forum_like_1 a left join plsport_playsport.member b on a.userid = b.userid;
-
-
-
-# =================================================================================================
-# 監控即時比分app評價變化和廣告對使用者行為的影響http://redmine.playsport.cc/issues/1758
-# 目的: 
-# 1.從Android即時比分APP版本4.2.1開始之後, 開始於數據等頁面放入插頁式廣告,
-#         因擔心廣告對於使用者的負面影響, 所以開始監控評價的變化
-# 
-# 2. 網頁版的即時比分頁面和預測比例頁面因為置入的廣告內容變多, 需觀察這2個頁面行為上的變化
-# 
-# 方法:
-# 
-# 1. 監控評價
-#     在google play developer console有提供所有過去至今詳細評論資料的.csv檔可以下載,
-#     從這些評論資料可以做更細的評價整理和檢驗.
-#         例如:利用統計的方式來檢驗不同版本間的評價是否真的有顯著差異,
-#         如果沒有顯著, 那代表使用者對於版本的變動還有忍受的空間
-#         如果有顯著, 那代表版本的變動有影響到使用者
-# 2. 有置入廣告的數據頁面使用行為變化(即時比分APP)
-#         從app_action_log來統計不同版本間置入廣告的頁面在使用上有什麼變化
-# 3. 針對置入更多廣告內容的即時比分和預測比例頁面來觀察使用者在使用上有什麼變化(5月31日下午18:00上線)
-# =================================================================================================
-
-# 要先去執行C:\proc\python\googleplay\googleplay_reviews_import.py
-
-drop table if exists plsport_playsport._googleplay_reviews_1;
-create table plsport_playsport._googleplay_reviews_1 engine = myisam
-select concat(a.App_Version_Name,' (',a.App_Version_Code,')') as ver, 
-       round(avg(a.Star_Rating),1) as star_avg,
-       count(a.Star_Rating) as star_count,
-	   sum(a.positive) as star_good,
-       round(sum(a.positive)/count(a.Star_Rating),2) as star_good_percent
-from (
-	SELECT App_Version_Code, App_Version_Name, Star_Rating, (case when (Star_Rating>=4) then 1 else 0 end) as positive
-	FROM plsport_playsport.googleplay_reviews
-	where App_Version_Name <> '') as a
-group by a.App_Version_Code;
-
-drop table if exists plsport_playsport._googleplay_reviews_2;
-create table plsport_playsport._googleplay_reviews_2 engine = myisam
-SELECT concat(App_Version_Name,' (',App_Version_Code,')') as ver, Star_Rating, (case when (Star_Rating>=4) then 1 else 0 end) as positive
-FROM plsport_playsport.googleplay_reviews
-where App_Version_Name <> ''
-and App_Version_Code >= 87; # 版本87之後
-
-# 4.0.3 (87)	4.4	153	134	0.88
-# 4.1.1 (89)	4.7	32	29	0.91
-# 4.1.2 (90)	4.5	51	47	0.92
-# 4.1.3 (91)	4.0	48	36	0.75
-# 4.2.0 (92)	4.4	54	47	0.87
-# 4.2.1 (93)	4.0	26	18	0.69 目前最新的是4.2.2 (94)但google play console還捉不到資料
 
 
 
@@ -28420,10 +28382,10 @@ FROM plsport_playsport._qu_1 a left join actionlog._predictscale_2 b on a.userid
 # - 設定測試組別(50%)
 #  
 # - 觀察指標
-# 推薦專區點擊與購買次數
-# 推薦專區購買金額
-# 購牌區購買金額
-# 整體購買與儲值金額
+#      推薦專區點擊與購買次數
+#      推薦專區購買金額
+#      購牌區購買金額
+#      整體購買與儲值金額
 # =================================================================================================
 
 # 有點擊過購買後推廌專區的人, 那他們的購買金額有差嗎?
@@ -28431,19 +28393,19 @@ drop table if exists actionlog._brc_2_abtest_for_spent;
 create table actionlog._brc_2_abtest_for_spent engine = myisam
 select c.abtest, c.userid, sum(c.pv) as pv
 from (
-	SELECT a.abtest, a.userid, a.d, a.platform_type, a.pv, b.percent, b.update_time
-	FROM actionlog._brc_2 a left join plsport_playsport.buy_acquaintance_weight b on a.userid = b.userid 
-	where percent <= 0.642) as c
+    SELECT a.abtest, a.userid, a.d, a.platform_type, a.pv, b.percent, b.update_time
+    FROM actionlog._brc_2 a left join plsport_playsport.buy_acquaintance_weight b on a.userid = b.userid 
+    where percent <= 0.642) as c
 group by c.abtest, c.userid;
 
 drop table if exists actionlog._brc_2_abtest_for_spent_1;
 create table actionlog._brc_2_abtest_for_spent_1 engine = myisam
 select a.userid, a.d, sum(a.spent) as spent, count(a.spent) as spent_count
 from (
-	SELECT userid, date(date) as d, amount as spent
-	FROM plsport_playsport.pcash_log
-	where date between '2016-05-13 00:00:00' and now()
-	and payed = 1 and type = 1) as a
+    SELECT userid, date(date) as d, amount as spent
+    FROM plsport_playsport.pcash_log
+    where date between '2016-05-13 00:00:00' and now()
+    and payed = 1 and type = 1) as a
 group by a.userid, a.d;
 
 drop table if exists actionlog._brc_2_abtest_for_spent_2;
@@ -28462,22 +28424,110 @@ drop table if exists actionlog._all_2_abtest_for_spent;
 create table actionlog._all_2_abtest_for_spent engine = myisam
 select c.abtest, c.userid, sum(c.pv) as pv
 from (
-	SELECT a.abtest, a.userid, a.d, a.platform_type, a.pv, b.percent, b.update_time
-	FROM actionlog._temp a left join plsport_playsport.buy_acquaintance_weight b on a.userid = b.userid 
-	where percent <= 0.642) as c
+    SELECT a.abtest, a.userid, a.d, a.platform_type, a.pv, b.percent, b.update_time
+    FROM actionlog._temp a left join plsport_playsport.buy_acquaintance_weight b on a.userid = b.userid 
+    where percent <= 0.642) as c
 group by c.abtest, c.userid;
 
 drop table if exists actionlog._all_2_abtest_for_spent_1;
 create table actionlog._all_2_abtest_for_spent_1 engine = myisam
 select a.userid, a.d, sum(a.spent) as spent, count(a.spent) as spent_count
 from (
-	SELECT userid, date(date) as d, amount as spent
-	FROM plsport_playsport.pcash_log
-	where date between '2016-05-13 00:00:00' and now()
-	and payed = 1 and type = 1) as a
+    SELECT userid, date(date) as d, amount as spent
+    FROM plsport_playsport.pcash_log
+    where date between '2016-05-13 00:00:00' and now()
+    and payed = 1 and type = 1) as a
 group by a.userid, a.d;
 
 drop table if exists actionlog._all_2_abtest_for_spent_2;
 create table actionlog._all_2_abtest_for_spent_2 engine = myisam
 SELECT b.abtest, a.userid, a.d, a.spent, a.spent_count
 FROM actionlog._all_2_abtest_for_spent_1 a inner join actionlog._all_2_abtest_for_spent b on a.userid = b.userid;
+
+
+
+# =================================================================================================
+# 監控即時比分app評價變化和廣告對使用者行為的影響http://redmine.playsport.cc/issues/1758
+# 目的: 
+# 1.  從Android即時比分APP版本4.2.1開始之後, 開始於數據等頁面放入插頁式廣告,
+#     因擔心廣告對於使用者的負面影響, 所以開始監控評價的變化
+# 2.  網頁版的即時比分頁面和預測比例頁面因為置入的廣告內容變多, 需觀察這2個頁面行為上的變化
+# 
+# 方法:
+# 
+# 1. 監控評價
+#      在google play developer console有提供所有過去至今詳細評論資料的.csv檔可以下載,
+#      從這些評論資料可以做更細的評價整理和檢驗.
+# 
+#      例如:利用統計的方式來檢驗不同版本間的評價是否真的有顯著差異,
+#      如果沒有顯著, 那代表使用者對於版本的變動還有忍受的空間
+#      如果有顯著, 那代表版本的變動有影響到使用者
+# 
+# 2. 有置入廣告的數據頁面使用行為變化(即時比分APP)
+#      從app_action_log來統計不同版本間置入廣告的頁面在使用上有什麼變化
+#  
+# 3. 針對置入更多廣告內容的即時比分和預測比例頁面來觀察使用者在使用上有什麼變化(5月31日下午18:00上線)
+# =================================================================================================
+
+# 1. 先去google play developer console下載最近的評價, 放到:\proc\python\googleplay\
+# 2. 執行C:\proc\python\googleplay\googleplay_reviews_import.py
+
+# 執行後會跑以下SQL
+#      drop table if exists plsport_playsport._googleplay_reviews_1;
+#      create table plsport_playsport._googleplay_reviews_1 engine = myisam
+#      select concat(a.App_Version_Name,' (',a.App_Version_Code,')') as ver, 
+#             round(avg(a.Star_Rating),1) as star_avg,
+#             count(a.Star_Rating) as star_count,
+#             sum(a.positive) as star_good,
+#             round(sum(a.positive)/count(a.Star_Rating),2) as star_good_percent
+#      from (
+#          SELECT App_Version_Code, App_Version_Name, Star_Rating, (case when (Star_Rating>=4) then 1 else 0 end) as positive
+#          FROM plsport_playsport.googleplay_reviews
+#          where App_Version_Name <> '') as a
+#      group by a.App_Version_Code;     
+# 
+#      drop table if exists plsport_playsport._googleplay_reviews_2;
+#      create table plsport_playsport._googleplay_reviews_2 engine = myisam
+#      SELECT concat(App_Version_Name,' (',App_Version_Code,')') as ver, Star_Rating, (case when (Star_Rating>=4) then 1 else 0 end) as positive
+#      FROM plsport_playsport.googleplay_reviews
+#      where App_Version_Name <> ''
+#      and App_Version_Code >= 60; # 版本60之後,是學長接手後的版本
+
+
+# 2. 有置入廣告的數據頁面使用行為變化(即時比分APP)
+#      從app_action_log來統計不同版本間置入廣告的頁面在使用上有什麼變化
+
+# 步驟1, 先執行‪C:\proc\python\scripts\import_mongodb_csv_file.py
+
+drop table if exists actionlog._app_temp;
+create table actionlog._app_temp engine = myisam
+SELECT abtestgroup, action, remark, appversion, datetime, deviceid 
+FROM actionlog.app_action_log_temp
+where app = 1 and os = 1
+and action = 'enterGameDetail';
+
+drop table if exists actionlog._app_temp_1;
+create table actionlog._app_temp_1 engine = myisam
+SELECT abtestgroup, action, remark, appversion, DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR) as d, deviceid
+FROM actionlog._app_temp;
+
+ALTER TABLE actionlog._app_temp_1 ADD INDEX (`deviceid`);
+
+drop table if exists actionlog._app_temp_2;
+create table actionlog._app_temp_2 engine = myisam
+SELECT abtestgroup, action, substr(remark,1,locate('_',remark)-1) as remark, appversion, date(d) as d, deviceid
+FROM actionlog._app_temp_1;
+
+drop table if exists actionlog._app_temp_3;
+create table actionlog._app_temp_3 engine = myisam
+SELECT deviceid, d, appversion, remark, count(action) as screen 
+FROM actionlog._app_temp_2
+group by deviceid, d, appversion, remark;
+
+drop table if exists actionlog._app_temp_4;
+create table actionlog._app_temp_4 engine = myisam
+SELECT appversion, d, remark, count(deviceid) as user 
+FROM actionlog._app_temp_3
+group by appversion, d, remark;
+
+
