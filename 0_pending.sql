@@ -28867,6 +28867,71 @@ from (
 	SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, a.f 
 	FROM actionlog._temp_notify_2 a left join plsport_playsport.member b on a.userid = b.userid) as a
 group by a.abtest, a.f;
-    
+
+
+
+# =================================================================================================
+# 即時比分APP改版-問卷名單撈取http://redmine.playsport.cc/issues/1859
+# 內容
+# - 提供有使用過即時比分APP的名單
+# =================================================================================================  
+
+# 1. 記得先把nas上的app_action_log捉下來
+# 2. 再執行scripts\import_mongodb_csv_file.py
+
+drop table if exists actionlog._app_md5_1;
+create table actionlog._app_md5_1 engine = myisam
+SELECT * FROM actionlog.app_action_log_temp
+where app = 1 and os = 1;
+
+# 3. 執行scripts\slice08_actionlog_for_any_table_use_for_app_action_log.py
+
+drop table if exists actionlog._app_md5_2;
+create table actionlog._app_md5_2 engine = myisam
+SELECT deviceidMd5, sum(pv) as pv 
+FROM actionlog._temp
+where deviceidMd5 <> ''
+group by deviceidMd5;
+
+create table actionlog._app_md5_3 engine = myisam
+select deviceidMd5, pv, round((cnt-rank+1)/cnt,2) as pv_percentile
+from (SELECT deviceidMd5, pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._app_md5_2, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct deviceidMd5) as cnt from actionlog._app_md5_2) as ct;
+
+drop table if exists actionlog._list_1;
+create table actionlog._list_1 engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201603
+where uri like '%rp=MS%'
+and userid <> '';
+insert ignore into actionlog._list_1
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201604
+where uri like '%rp=MS%'
+and userid <> '';
+insert ignore into actionlog._list_1
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201605
+where uri like '%rp=MS%'
+and userid <> '';
+insert ignore into actionlog._list_1
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201606
+where uri like '%rp=MS%'
+and userid <> '';
+
+drop table if exists actionlog._list_2;
+create table actionlog._list_2 engine = myisam
+SELECT userid, count(uri) as c 
+FROM actionlog._list_1
+group by userid;
+
+SELECT 'userid' union (
+SELECT userid
+into outfile 'C:/Users/eddy/Desktop/_app_user_list.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._list_2);
 
 
