@@ -28222,10 +28222,10 @@ create table actionlog._click_f_3 engine = myisam
 SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, a.uri, a.time, a.platform_type, a.f 
 FROM actionlog._click_f_2 a left join plsport_playsport.member b on a.userid = b.userid;
 
-update actionlog._click_f_3 set f = '2_AL' where f = 'AL';
+update actionlog._click_f_3 set f = '2_AL'  where f = 'AL';
 update actionlog._click_f_3 set f = '1_FLA' where f = 'FLA';
 update actionlog._click_f_3 set f = '3_FMP' where f = 'FMP';
-update actionlog._click_f_3 set f = '4_MP' where f = 'MP';
+update actionlog._click_f_3 set f = '4_MP'  where f = 'MP';
 
 drop table if exists actionlog._click_f_4;
 create table actionlog._click_f_4 engine = myisam
@@ -28585,6 +28585,12 @@ FROM actionlog._all_2_abtest_for_spent_1 a inner join actionlog._all_2_abtest_fo
 #      where App_Version_Name <> ''
 #      and App_Version_Code >= 60; # 版本60之後,是學長接手後的版本
 
+select a.ver, round(a.avg_star,1) as avg_star, a.review_count, a.sum_positive, round(a.sum_positive/a.review_count,3) as percent
+from (
+	SELECT ver, avg(star_rating) as avg_star, count(star_rating) as review_count, sum(positive) as sum_positive
+	FROM plsport_playsport._googleplay_reviews_2
+	group by ver) as a;
+
 
 # 2. 有置入廣告的數據頁面使用行為變化(即時比分APP)
 #      從app_action_log來統計不同版本間置入廣告的頁面在使用上有什麼變化
@@ -28767,7 +28773,7 @@ drop table if exists actionlog._temp_1;
 create table actionlog._temp_1 engine = myisam
 SELECT userid, uri, time, platform_type
 FROM actionlog.action_201606
-where time between '2016-06-24 10:07:00' and now()
+where time between '2016-06-28 10:54:00' and now()
 and uri like '%forumdetail.php?%'
 and uri like '%from=%';
 
@@ -28812,7 +28818,7 @@ drop table if exists actionlog._temp_rp_1;
 create table actionlog._temp_rp_1 engine = myisam
 SELECT userid, uri, time, platform_type
 FROM actionlog.action_201606
-where time between '2016-06-24 10:07:00' and now()
+where time between '2016-06-28 10:54:00' and now()
 and uri like '%visit_member.php%'
 and uri like '%rp=%';
 
@@ -28935,3 +28941,174 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._list_2);
 
 
+
+# =================================================================================================
+# 巴西里約奧運-販售籃球數據任務-撈取殺手名單http://redmine.playsport.cc/issues/1816#change-9784
+# 要麻煩您協助撈取奧運男籃的殺手名單
+# 條件如下
+# 
+# 國際盤
+#    1.60名
+#    2.當過nba、中國職籃、日本職籃殺手
+#    3.近六期評選勝率曾達70%以上
+#    4.依照殺手次數排序
+# 
+# 運彩盤
+#    1.60名
+#    2.當過nba、中國職籃、日本職籃殺手
+#    3.近六期評選勝率曾達70%以上
+#    4.依照殺手次數排序
+# 
+# 近六期期數(國際運彩相同)
+# 
+# nba：165~170期
+# 中國職籃：159~164期
+# 日本職籃：163~168期
+# =================================================================================================
+
+# 要匯入(1)medal_fire (2)sell_deny
+
+# 國際盤
+create table plsport_playsport._medal_fire_basketball_int engine = myisam
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (3) # nba
+and winpercentage > 69  # 勝率達70%
+and vol in (165,166,167,168,169,170) # 近6期
+and mode = 2 # 國際盤
+order by vol desc;
+insert ignore into plsport_playsport._medal_fire_basketball_int
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (94) # 中國職籃
+and winpercentage > 69   # 勝率達70%
+and vol in (159,160,161,162,163,164) # 近6期
+and mode = 2 # 國際盤
+order by vol desc;
+insert ignore into plsport_playsport._medal_fire_basketball_int
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (97) # 日本職籃
+and winpercentage > 69   # 勝率達70%
+and vol in (163,164,165,166,167,168) # 近6期
+and mode = 2 # 國際盤
+order by vol desc;
+
+# 運彩盤
+create table plsport_playsport._medal_fire_basketball_twn engine = myisam
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (3) # nba
+and winpercentage > 69  # 勝率達70%
+and vol in (165,166,167,168,169,170) # 近6期
+and mode = 1 # 運彩盤
+order by vol desc;
+insert ignore into plsport_playsport._medal_fire_basketball_twn
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (94) # 中國職籃
+and winpercentage > 69   # 勝率達70%
+and vol in (159,160,161,162,163,164) # 近6期
+and mode = 1 # 運彩盤
+order by vol desc;
+insert ignore into plsport_playsport._medal_fire_basketball_twn
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (97) # 日本職籃
+and winpercentage > 69   # 勝率達70%
+and vol in (163,164,165,166,167,168) # 近6期
+and mode = 1 # 運彩盤
+order by vol desc;
+
+        # 禁售名單
+        # 本尊
+        CREATE TABLE plsport_playsport._block_list1 engine = myisam
+        SELECT master_userid as userid 
+        FROM plsport_playsport.sell_deny
+        WHERE date(time) between '2015-12-28' AND '2016-06-26';
+        # 分身
+        INSERT IGNORE INTO plsport_playsport._block_list1 
+        SELECT slave_userid as userid FROM plsport_playsport.sell_deny;
+        # 本尊+分身 then remove duplicate userid
+        CREATE TABLE plsport_playsport._block_list engine = myisam
+        SELECT userid
+        FROM plsport_playsport._block_list1
+        GROUP BY userid;
+        drop TABLE plsport_playsport._block_list1;
+        
+drop table if exists plsport_playsport._medal_fire_basketball_int_1;
+create table plsport_playsport._medal_fire_basketball_int_1 engine = myisam
+select a.userid, a.nickname, a.killer_count, a.avg_win, a.avg_winearn
+from (
+    SELECT userid, nickname, count(userid) as killer_count, round(avg(winpercentage),1) as avg_win, round(avg(winearn),1) as avg_winearn
+    FROM plsport_playsport._medal_fire_basketball_int
+    group by userid, nickname) as a
+order by a.killer_count desc, a.avg_win desc, a.avg_winearn desc;
+
+drop table if exists plsport_playsport._medal_fire_basketball_twn_1;
+create table plsport_playsport._medal_fire_basketball_twn_1 engine = myisam
+select a.userid, a.nickname, a.killer_count, a.avg_win, a.avg_winearn
+from (
+    SELECT userid, nickname, count(userid) as killer_count, round(avg(winpercentage),1) as avg_win, round(avg(winearn),1) as avg_winearn
+    FROM plsport_playsport._medal_fire_basketball_twn
+    group by userid, nickname) as a
+order by a.killer_count desc, a.avg_win desc, a.avg_winearn desc;
+
+# 國際盤
+drop table if exists plsport_playsport._medal_fire_basketball_int_2;
+create table plsport_playsport._medal_fire_basketball_int_2 engine = myisam
+SELECT a.userid, a.nickname, a.killer_count, a.avg_win, a.avg_winearn 
+FROM plsport_playsport._medal_fire_basketball_int_1 a left join plsport_playsport._block_list b on a.userid = b.userid
+where b.userid is null
+limit 0, 100;
+
+# 運彩盤
+drop table if exists plsport_playsport._medal_fire_basketball_twn_2;
+create table plsport_playsport._medal_fire_basketball_twn_2 engine = myisam
+SELECT a.userid, a.nickname, a.killer_count, a.avg_win, a.avg_winearn 
+FROM plsport_playsport._medal_fire_basketball_twn_1 a left join plsport_playsport._block_list b on a.userid = b.userid
+where b.userid is null
+limit 0, 100;
+
+SELECT 'userid', 'nickname', '殺手次數', '平均勝率', '平均獲利' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_medal_fire_basketball_int.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._medal_fire_basketball_int_2);
+
+SELECT 'userid', 'nickname', '殺手次數', '平均勝率', '平均獲利' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_medal_fire_basketball_twn.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._medal_fire_basketball_twn_2);
+
+
+
+# =================================================================================================
+# 搶救預測比例的提案
+# =================================================================================================
+drop table if exists actionlog._scale;
+create table actionlog._scale engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201606
+where uri like '%predictgame.php?action=scale%'
+and time between subdate(now(),80) and now();
+insert ignore into actionlog._scale
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201605
+where uri like '%predictgame.php?action=scale%'
+and time between subdate(now(),80) and now();
+insert ignore into actionlog._scale
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201604
+where uri like '%predictgame.php?action=scale%'
+and time between subdate(now(),80) and now();
+
+SELECT platform_type, count(uri) as pv 
+FROM actionlog._scale
+group by platform_type;
+
+SELECT platform_type, count(uri) as pv 
+FROM actionlog._scale
+where uri regexp '.*sid=(1|2|3)$'
+group by platform_type;
