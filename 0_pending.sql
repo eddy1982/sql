@@ -28236,26 +28236,26 @@ from (
 group by a.abtest, a.d, a.platform_type, a.f;
 
 
-# 整體看文章數
+# 整體看文章數 (看3個月資料跑太久了, 所以改成只撈6月的就好了)
 drop table if exists actionlog._click_f_all;
 create table actionlog._click_f_all engine = myisam
-SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201604
-where userid <> ''
-and time between '2016-04-29 18:00:00' and now()
-and uri regexp '^/forumdetail.*php.*';
-insert ignore into actionlog._click_f_all
-SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201605
-where userid <> ''
-and time between '2016-04-29 18:00:00' and now()
-and uri regexp '^/forumdetail.*php.*';
-insert ignore into actionlog._click_f_all
 SELECT userid, uri, time, platform_type 
 FROM actionlog.action_201606
 where userid <> ''
 and time between '2016-04-29 18:00:00' and now()
 and uri regexp '^/forumdetail.*php.*';
+# insert ignore into actionlog._click_f_all
+# SELECT userid, uri, time, platform_type 
+# FROM actionlog.action_201605
+# where userid <> ''
+# and time between '2016-04-29 18:00:00' and now()
+# and uri regexp '^/forumdetail.*php.*';
+# insert ignore into actionlog._click_f_all
+# SELECT userid, uri, time, platform_type 
+# FROM actionlog.action_201606
+# where userid <> ''
+# and time between '2016-04-29 18:00:00' and now()
+# and uri regexp '^/forumdetail.*php.*';
 
 update actionlog._click_f_all set platform_type = 1 where platform_type = 3;
 
@@ -28264,10 +28264,22 @@ create table actionlog._click_f_all_1 engine = myisam
 SELECT userid, uri, time, platform_type, substr(uri,locate('subjectid=',uri)+10,15) as s
 FROM actionlog._click_f_all;
 
+# 資料太大, 要改用script來跑, 會變成產出actionlog._temp
+
+# drop table if exists actionlog._click_f_all_2;
+# create table actionlog._click_f_all_2 engine = myisam
+# SELECT userid, min(time) as time, platform_type, s, count(s) as c
+# FROM actionlog._click_f_all_1
+# group by userid, platform_type, s;
+
+ALTER TABLE actionlog._temp ADD INDEX (`userid`);
+ALTER TABLE actionlog._temp ADD INDEX (`platform_type`);
+ALTER TABLE actionlog._temp ADD INDEX (`s`);
+
 drop table if exists actionlog._click_f_all_2;
 create table actionlog._click_f_all_2 engine = myisam
 SELECT userid, min(time) as time, platform_type, s, count(s) as c
-FROM actionlog._click_f_all_1
+FROM actionlog._temp
 group by userid, platform_type, s;
 
 drop table if exists actionlog._click_f_all_3;
@@ -28289,29 +28301,29 @@ SELECT abtest, userid, d, platform_type, count(s) as post_count
 FROM actionlog._click_f_all_4
 group by abtest, userid, d, platform_type;
 
-# 記錄此獨立頁面瀏覽量
+# 記錄此獨立頁面瀏覽量 (看3個月資料跑太久了, 所以改成只撈6月的就好了)
 #    (1)topPushedArticles.php
 #    (2)analysis_king.php
 drop table if exists actionlog._click_f_page;
 create table actionlog._click_f_page engine = myisam
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201604
-where userid <> ''
-and time between '2016-04-29 18:00:00' and now()
-and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
-insert ignore into actionlog._click_f_page
-SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201605
-where userid <> ''
-and time between '2016-04-29 18:00:00' and now()
-and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
-insert ignore into actionlog._click_f_page
-SELECT userid, uri, time, platform_type 
 FROM actionlog.action_201606
 where userid <> ''
 and time between '2016-04-29 18:00:00' and now()
 and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
-
+# insert ignore into actionlog._click_f_page
+# SELECT userid, uri, time, platform_type 
+# FROM actionlog.action_201605
+# where userid <> ''
+# and time between '2016-04-29 18:00:00' and now()
+# and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
+# insert ignore into actionlog._click_f_page
+# SELECT userid, uri, time, platform_type 
+# FROM actionlog.action_201606
+# where userid <> ''
+# and time between '2016-04-29 18:00:00' and now()
+# and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
+# 
 update actionlog._click_f_page set platform_type = 1 where platform_type = 3;
 ALTER TABLE actionlog._click_f_page convert to character set utf8 collate utf8_general_ci;
 
@@ -28368,7 +28380,7 @@ drop table if exists plsport_playsport._forum_like;
 create table plsport_playsport._forum_like engine = myisam
 SELECT *
 FROM plsport_playsport.forum_like
-where create_date between '2016-04-29 18:00:00' and now();
+where create_date between '2016-06-01 00:00:00' and now();
 
 drop table if exists plsport_playsport._forum_like_1;
 create table plsport_playsport._forum_like_1 engine = myisam
@@ -28378,7 +28390,7 @@ from (
     FROM plsport_playsport._forum_like) as a
 group by a.d, a.userid;
 
-ALTER TABLE plsport_playsport._forum_like_1 ADD INDEX (`userid`); 
+ALTER TABLE plsport_playsport._forum_like_1 ADD INDEX (`userid`);
 
 drop table if exists plsport_playsport._forum_like_2;
 create table plsport_playsport._forum_like_2 engine = myisam
@@ -29112,3 +29124,52 @@ SELECT platform_type, count(uri) as pv
 FROM actionlog._scale
 where uri regexp '.*sid=(1|2|3)$'
 group by platform_type;
+
+
+
+# =================================================================================================
+# 為什麼6月業績那麼好
+# =================================================================================================
+drop table if exists plsport_playsport._redeem_2016;
+create table plsport_playsport._redeem_2016 engine = myisam
+select a.m, a.userid, min(createon) as createon, sum(a.price) as redeem
+from (
+	SELECT userid, substr(createon,1,7) as m, price, createon
+	FROM plsport_playsport.order_data
+	where year(createon) = '2016'
+	and sellconfirm = 1) as a
+group by a.m, a.userid;
+
+drop table if exists plsport_playsport._redeem_2016_1;
+create table plsport_playsport._redeem_2016_1 engine = myisam
+SELECT a.m, a.userid, a.redeem, a.createon as redeemdate, b.createon as joindate, DATEDIFF(a.createon, b.createon) as d
+FROM plsport_playsport._redeem_2016 a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists plsport_playsport._redeem_2016_2;
+create table plsport_playsport._redeem_2016_2 engine = myisam
+SELECT m, userid, redeem, (case when (d<=31) then 'new' else 'existed' end) as status, redeemdate, joindate
+FROM plsport_playsport._redeem_2016_1;
+
+SELECT m, status, count(userid) as c 
+FROM plsport_playsport._redeem_2016_2
+group by m, status;
+
+# 購牌位置
+
+ALTER TABLE plsport_playsport.predict_buyer ADD INDEX (`id`);
+ALTER TABLE plsport_playsport.predict_buyer_cons_split ADD INDEX (`id_predict_buyer`);
+
+drop table if exists plsport_playsport._temp;
+create table plsport_playsport._temp engine = myisam
+SELECT a.buyerid, a.buy_date, substr(a.buy_date,1,7) as m, a.buy_price, b.position, substr(b.position,1,3) as p
+FROM plsport_playsport.predict_buyer a left join plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer
+where buy_date between '2016-01-01 00:00:00' and '2016-06-30 23:59:59';
+
+drop table if exists plsport_playsport._temp_1;
+create table plsport_playsport._temp_1 engine = myisam
+SELECT * FROM plsport_playsport._temp
+where p not in ('APB','HT1','HT2','HT3','MFA','MFI','US_');
+
+SELECT m, p, count(buyerid) as c 
+FROM plsport_playsport._temp_1
+group by m, p;
