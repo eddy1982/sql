@@ -23184,34 +23184,26 @@ FROM actionlog._friend_6);
 # =================================================================================================
 
 create table actionlog._s_p engine = myisam
-SELECT * FROM actionlog.action_201605
+SELECT * FROM actionlog.action_201606
 where uri like '%s=p%' ; # 最多推文
 create table actionlog._s_a engine = myisam
-SELECT * FROM actionlog.action_201605
+SELECT * FROM actionlog.action_201606
 where uri like '%s=a%' ; # 最新文章
 create table actionlog._s_r engine = myisam
-SELECT * FROM actionlog.action_201605
-where uri like '%s=r%' ; # 最新回覆
-
-insert ignore into actionlog._s_p
-SELECT * FROM actionlog.action_201606
-where uri like '%s=p%' ; # 最多推文
-insert ignore into actionlog._s_a
-SELECT * FROM actionlog.action_201606
-where uri like '%s=a%' ; # 最新文章
-insert ignore into actionlog._s_r
 SELECT * FROM actionlog.action_201606
 where uri like '%s=r%' ; # 最新回覆
 
 insert ignore into actionlog._s_p
-SELECT * FROM actionlog.action_201604
+SELECT * FROM actionlog.action_201607
 where uri like '%s=p%' ; # 最多推文
 insert ignore into actionlog._s_a
-SELECT * FROM actionlog.action_201604
+SELECT * FROM actionlog.action_201607
 where uri like '%s=a%' ; # 最新文章
 insert ignore into actionlog._s_r
-SELECT * FROM actionlog.action_201604
+SELECT * FROM actionlog.action_201607
 where uri like '%s=r%' ; # 最新回覆
+
+
 
 drop table if exists actionlog._s_p_1;
 create table actionlog._s_p_1 engine = myisam
@@ -27018,6 +27010,74 @@ from (
 where (c.price - c.total_redeem) = 0;
 
 
+#------------------------------------------------------------------
+# 5.三個月後，分析有得到優惠的消費者的arpu，是否較沒有得到優惠的使用者高
+#------------------------------------------------------------------
+
+# 活動時間為：4/14中午12點~4/15中午12點
+# and createon between '2016-04-14 12:00:00' and '2016-04-15 12:00:00'
+
+# 有在優惠期間儲值的人
+create table plsport_playsport._who_receive_offer engine = myisam
+SELECT userid, sum(amount) as redeem
+FROM plsport_playsport.pcash_log
+WHERE payed = 1 AND type in (3,4)
+AND date between '2016-04-14 12:00:00' AND '2016-04-15 12:00:00'
+AND amount > 998
+group by userid;
+
+# 在優惠期間儲值前後儲值的人
+create table plsport_playsport._who_dont_receive_offer engine = myisam
+SELECT userid, sum(amount) as redeem
+FROM plsport_playsport.pcash_log
+WHERE payed = 1 AND type in (3,4)
+AND date between '2016-04-04 12:00:00' AND '2016-04-25 12:00:00'
+AND amount > 998
+group by userid;
+
+create table plsport_playsport._who_dont_receive_offer_1 engine = myisam
+SELECT a.userid, a.redeem
+FROM plsport_playsport._who_dont_receive_offer a left join plsport_playsport._who_receive_offer b on a.userid = b.userid
+where b.userid is null;
+
+# 製作主要名單
+create table plsport_playsport._list_1 engine = myisam
+SELECT userid, (case when (redeem is not null) then 'received_offer' else '' end) as g 
+FROM plsport_playsport._who_receive_offer;
+insert ignore into plsport_playsport._list_1
+SELECT userid, (case when (redeem is not null) then 'not_received_offer' else '' end) as g 
+FROM plsport_playsport._who_dont_receive_offer_1;
+
+# 活動之後的消費金額
+create table plsport_playsport._spent engine = myisam
+SELECT userid, sum(amount) as redeem, count(amount) as redeem_count
+FROM plsport_playsport.pcash_log
+WHERE payed = 1 AND type in (3,4)
+AND date between '2015-04-25 12:00:00' AND now()
+group by userid;
+
+create table plsport_playsport._list_2 engine = myisam
+SELECT a.userid, a.g, b.redeem, b.redeem_count
+FROM plsport_playsport._list_1 a left join plsport_playsport._spent b on a.userid = b.userid
+where b.redeem is not null;
+
+SELECT 'userid', 'g', 'redeem', 'redeem_count' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_list_2.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._list_2);
+
+select a.g, a.redeem, a.users, round((a.redeem/a.users),1) as avg_redeem
+from (
+	SELECT g, sum(redeem) as redeem, count(userid) as users
+	FROM plsport_playsport._list_2
+	group by g) as a;
+
+# not_received_o	19350592	1000	19350.6
+# received_offer	14181951	558	    25415.7
+
+
+
 
 # =================================================================================================
 # http://redmine.playsport.cc/issues/1547#change-7773
@@ -29161,9 +29221,38 @@ ALTER TABLE plsport_playsport.predict_buyer_cons_split ADD INDEX (`id_predict_bu
 
 drop table if exists plsport_playsport._temp;
 create table plsport_playsport._temp engine = myisam
-SELECT a.buyerid, a.buy_date, substr(a.buy_date,1,7) as m, a.buy_price, b.position, substr(b.position,1,3) as p
+SELECT a.buyerid, a.buy_date, substr(a.buy_date,1,7) as m, a.buy_price, a.id_bought, b.position, substr(b.position,1,3) as p, b.cons
 FROM plsport_playsport.predict_buyer a left join plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer
 where buy_date between '2016-01-01 00:00:00' and '2016-06-30 23:59:59';
+
+drop table if exists plsport_playsport._temp_1;
+create table plsport_playsport._temp_1 engine = myisam
+SELECT a.buyerid, a.buy_date, a.m, b.sellerid, a.buy_price, a.position, a.p, a.cons
+FROM plsport_playsport._temp a left join plsport_playsport.predict_seller b on a.id_bought = b.id;
+
+drop table if exists plsport_playsport._temp_2;
+create table plsport_playsport._temp_2 engine = myisam
+SELECT a.buyerid, a.buy_date, a.m, a.sellerid, b.nickname, a.buy_price, a.position, a.p, a.cons
+FROM plsport_playsport._temp_1 a left join plsport_playsport.member b on a.sellerid = b.userid;
+
+
+drop table if exists plsport_playsport._temp_2_star;
+create table plsport_playsport._temp_2_star engine = myisam
+select *
+from (
+	SELECT p, cons, nickname, sum(buy_price) as buy_price
+	FROM plsport_playsport._temp_2
+	where m = '2016-06'
+    and sellerid in ('wowhaha1','a20646','qwe54778899','FB1453291146','pk24253356','FB1407415444')
+	group by p, cons) as a
+order by a.buy_price desc;
+
+SELECT nickname, p, sum(buy_price) 
+FROM plsport_playsport._temp_2_star
+where p is not null
+group  by nickname, p;
+
+
 
 drop table if exists plsport_playsport._temp_1;
 create table plsport_playsport._temp_1 engine = myisam
@@ -29173,3 +29262,7 @@ where p not in ('APB','HT1','HT2','HT3','MFA','MFI','US_');
 SELECT m, p, count(buyerid) as c 
 FROM plsport_playsport._temp_1
 group by m, p;
+
+
+
+
