@@ -28898,19 +28898,22 @@ order by a.c desc;
 #    **勝率榜/主推榜的所有時間區間(本賽季/本月/上月/本週/上週)都需要
 
 # 以下是撈資料的部分-------------------------------------------------------
+
+# to 學文:
+# 
+# 韋銘已經幫我修正了相關的問題, 時間是7/19 14:41,
+# 但因為現在買的人還不多, 所以我星期五會再檢查一次,
+# 如果星期五沒什麼問題, 我們就是以7/19 14:41這個時間點來開始a/b testing
+# 
+# 沒意外的話, a/b testing做到8/17(三), 我預計於8/19(五)完成報告, 3Q
 drop table if exists actionlog._temp_rp_1;
 create table actionlog._temp_rp_1 engine = myisam
 SELECT userid, uri, time, platform_type
-FROM actionlog.action_201606
-where time between '2016-06-28 10:54:00' and now()
-and uri like '%visit_member.php%'
-and uri like '%rp=%';
-insert ignore into actionlog._temp_rp_1
-SELECT userid, uri, time, platform_type
 FROM actionlog.action_201607
-where time between '2016-06-28 10:54:00' and now()
+where time between '2016-07-19 14:41:00' and now()
 and uri like '%visit_member.php%'
 and uri like '%rp=%';
+
 
 drop table if exists actionlog._temp_rp_2;
 create table actionlog._temp_rp_2 engine = myisam
@@ -29045,8 +29048,6 @@ fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._temp_2);
 
 
-
-
 # 如果以殺手的角度來看的話--(莊單殺/主推/勝率榜的業績)
 drop table if exists plsport_playsport._killer;
 create table plsport_playsport._killer engine = myisam
@@ -29087,7 +29088,6 @@ into outfile 'C:/proc/r/abtest/_test_3.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._temp_2);
 
-
 drop table if exists plsport_playsport._temp_2;
 create table plsport_playsport._temp_2 engine = myisam
 SELECT abtest, sellerid, sum(price) as spent, count(price) as spent_count 
@@ -29099,18 +29099,6 @@ SELECT *
 into outfile 'C:/proc/r/abtest/_test_3.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._temp_2);
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -29431,4 +29419,121 @@ group by m, p;
 
 
 
+# =================================================================================================
+# [201512-B-11]優化手機版預測比列-訪談名單撈取http://redmine.playsport.cc/issues/1975
+# 概述
+# 說明
+# 	了解使用者依舊選擇舊版的原因
+# 內容
+# 
+# 條件：
+# 	提供本次問卷第2題選擇舊版的使用者名單
+# 	上述名單在第1題的選項
+# 	區間：近一個月
+# 
+# 欄位：
+# 	帳號、暱稱、預測比例頁pv及全站佔比、手機/電腦使用比例、最後登入時間
+# =================================================================================================
+# 
+# 匯入plsport_playsport.questionnaire_201607051433558421_answer
+
+drop table if exists plsport_playsport._qu;
+create table plsport_playsport._qu engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201607051433558421_answer;
+
+ALTER TABLE plsport_playsport._qu CHANGE `1467700275` q1 VARCHAR(30);
+ALTER TABLE plsport_playsport._qu CHANGE `1467700384` q2 VARCHAR(30);
+
+drop table if exists plsport_playsport._qu_1;
+create table plsport_playsport._qu_1 engine = myisam
+SELECT userid, q1, q2
+FROM plsport_playsport._qu;
+
+update plsport_playsport._qu_1 set q1 = '非常喜歡' where q1 = '1';
+update plsport_playsport._qu_1 set q1 = '喜歡' where q1 = '2';
+update plsport_playsport._qu_1 set q1 = '無意見' where q1 = '3';
+update plsport_playsport._qu_1 set q1 = '不喜歡' where q1 = '4';
+update plsport_playsport._qu_1 set q1 = '非常不喜歡' where q1 = '5';
+
+update plsport_playsport._qu_1 set q2 = '新版' where q2 = '1';
+update plsport_playsport._qu_1 set q2 = '舊版' where q2 = '2';
+update plsport_playsport._qu_1 set q2 = '無意見' where q2 = '3';
+
+drop table if exists plsport_playsport._qu_2;
+create table plsport_playsport._qu_2 engine = myisam
+SELECT * 
+FROM plsport_playsport._qu_1
+where q2 = '舊版';
+
+
+# 以下是產生預測比例頁pv及全站佔比、手機/電腦使用比例、最後登入時間
+create table actionlog._predict_scale engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201606
+where time between subdate(now(),31) AND now()
+and uri like '%predictgame.php?action=scale%';
+
+insert ignore into actionlog._predict_scale
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201607
+where time between subdate(now(),31) AND now()
+and uri like '%predictgame.php?action=scale%';
+
+create table actionlog._predict_scale_1 engine = myisam
+SELECT * FROM actionlog._predict_scale
+where userid <> '';
+
+update actionlog._predict_scale_1 set platform_type = 1 where platform_type = 3;
+
+create table actionlog._predict_scale_2 engine = myisam
+select c.userid, (c.pc+c.mobile) as pv, round((c.pc/(c.pc+c.mobile)),3) as p_pc, round((c.mobile/(c.pc+c.mobile)),3) as p_mobile
+from (
+    select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
+    from (
+        select a.userid, (case when (a.platform_type = 1) then pv else 0 end) as pc,
+                         (case when (a.platform_type = 2) then pv else 0 end) as mobile
+        from (
+            SELECT userid, platform_type, count(uri) as pv
+            FROM actionlog._predict_scale_1
+            group by userid, platform_type) as a) as b
+    group by b.userid) as c;
+
+create table actionlog._predict_scale_3 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, p_pc, p_mobile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, p_pc, p_mobile
+      FROM actionlog._predict_scale_2, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._predict_scale_2) as ct;
+
+    ALTER TABLE actionlog._predict_scale_3 convert to character set utf8 collate utf8_general_ci;
+    ALTER TABLE actionlog._predict_scale_3 ADD INDEX (`userid`);
+
+create table actionlog._predict_scale_4 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.p_pc, a.p_mobile
+FROM actionlog._predict_scale_3 a left join plsport_playsport.member b on a.userid = b.userid
+where 1;
+
+drop table if exists plsport_playsport._last_login;
+CREATE TABLE plsport_playsport._last_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+    ALTER TABLE plsport_playsport._last_login convert to character set utf8 collate utf8_general_ci;
+
+create table actionlog._predict_scale_5 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.p_pc, a.p_mobile, date(b.signin_time) as signin_time
+FROM actionlog._predict_scale_4 a left join plsport_playsport._last_login b on a.userid = b.userid
+order by a.pv desc;
+
+drop table if exists plsport_playsport._qu_3;
+create table plsport_playsport._qu_3 engine = myisam
+SELECT a.userid, a.nickname, a.pv, a.pv_percentile, a.p_pc, a.p_mobile, a.signin_time, b.q1, b.q2
+FROM actionlog._predict_scale_5 a inner join plsport_playsport._qu_2 b on a.userid = b.userid;
+
+SELECT '帳號', '暱稱', '預測比例頁pv', '全站佔比', '電腦使用比例', '手機使用比例', '最後登入時間', '第1題', '第2題'  union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_qu_3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._qu_3);
 
