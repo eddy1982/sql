@@ -37,10 +37,13 @@ where spendminute>0.4;
     PART.2 轉換問券成樞紐的形式
 ---------------------------------------------*/
 # 篩選出ver4.0的, 也就是新版的問券
+
+# 2016-06已上了新版的問券(6.0)
 drop table if exists plsport_playsport.satisfactionquestionnaire_answer_ver_5;
 create table plsport_playsport.satisfactionquestionnaire_answer_ver_5 engine = myisam
 SELECT * FROM plsport_playsport.satisfactionquestionnaire_answer
-where version = 5.0;
+where version in ('5.0','6.0');
+
 
 drop table if exists plsport_playsport.satisfactionquestionnaire_answer_ver_5_edited;
 create table plsport_playsport.satisfactionquestionnaire_answer_ver_5_edited engine = myisam
