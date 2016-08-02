@@ -28906,6 +28906,7 @@ order by a.c desc;
 # 如果星期五沒什麼問題, 我們就是以7/19 14:41這個時間點來開始a/b testing
 # 
 # 沒意外的話, a/b testing做到8/17(三), 我預計於8/19(五)完成報告, 3Q
+
 drop table if exists actionlog._temp_rp_1;
 create table actionlog._temp_rp_1 engine = myisam
 SELECT userid, uri, time, platform_type
@@ -29389,7 +29390,6 @@ create table plsport_playsport._temp_2 engine = myisam
 SELECT a.buyerid, a.buy_date, a.m, a.sellerid, b.nickname, a.buy_price, a.position, a.p, a.cons
 FROM plsport_playsport._temp_1 a left join plsport_playsport.member b on a.sellerid = b.userid;
 
-
 drop table if exists plsport_playsport._temp_2_star;
 create table plsport_playsport._temp_2_star engine = myisam
 select *
@@ -29405,8 +29405,6 @@ SELECT nickname, p, sum(buy_price)
 FROM plsport_playsport._temp_2_star
 where p is not null
 group  by nickname, p;
-
-
 
 drop table if exists plsport_playsport._temp_1;
 create table plsport_playsport._temp_1 engine = myisam
@@ -29536,4 +29534,55 @@ SELECT *
 into outfile 'C:/Users/eddy/Desktop/_qu_3.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._qu_3);
+
+
+
+# =================================================================================================
+# [201512-C-4]開發回文回覆引用功能-使用狀況分析http://redmine.playsport.cc/issues/1974
+# 
+# TO EDDY
+#   麻煩提供我上線至今的使用狀況
+#   評估是否需要顯示提示
+# =================================================================================================
+# 
+# 麻煩請我把以下的內容貼給玉米, 3Q
+# -------------------------------------------------------
+# 想請玉米加入的[引用回覆]點擊時的event為:
+# 在events資料表中, 在name欄位中塞入forum_click_quote_reply
+# -------------------------------------------------------
+# 先匯入events和forumcontent
+
+drop table if exists plsport_playsport._forum_click_quote_reply;
+create table plsport_playsport._forum_click_quote_reply engine = myisam
+SELECT * 
+FROM plsport_playsport.events
+where name = 'forum_click_quote_reply';
+
+# 點擊情況
+select b.d, b.p, count(b.userid) as user_count
+	from (
+	select a.userid, a.p, a.d, count(userid) as c
+	from (
+		SELECT userid, platform_type as p, date(time) as d 
+		FROM plsport_playsport._forum_click_quote_reply) as a
+	group by a.userid, a.p, a.d) as b
+group by b.d, b.p;
+
+drop table if exists plsport_playsport._who_use_quote_reply;
+create table plsport_playsport._who_use_quote_reply engine = myisam
+SELECT * 
+FROM plsport_playsport.forumcontent
+where quote_articleid <> 0
+and postdate between '2016-07-21 00:00:00' and now()
+order by postdate desc;
+
+# 實際使用情況
+select b.d, count(b.userid) as user_count, sum(b.c) as use_total
+from (
+	select a.d, a.userid, count(a.userid) as c
+	from (
+		SELECT userid, date(postdate) as d 
+		FROM plsport_playsport._who_use_quote_reply) as a
+	group by a.d, a.userid) as b
+group by b.d;
 
