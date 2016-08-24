@@ -112,8 +112,91 @@ and date(d) between '2016-07-08' AND '2016-07-28';
 
 
 
+# 下面是用來處理回文通知的query
+drop table if exists actionlog._notif_click;
+create table actionlog._notif_click engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201605
+where uri regexp '^/forumdetail.*php.*from=notify.*';
+insert ignore into actionlog._notif_click
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201606
+where uri regexp '^/forumdetail.*php.*from=notify.*';
+insert ignore into actionlog._notif_click
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201607
+where uri regexp '^/forumdetail.*php.*from=notify.*';
+insert ignore into actionlog._notif_click
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201608
+where uri regexp '^/forumdetail.*php.*from=notify.*';
+
+drop table if exists calculate_pm.notify_click_2016;
+create table calculate_pm.notify_click_2016 engine = myisam
+select b.userid, b.d, b.platform_type, b.f
+from (
+	select a.userid, a.d, a.platform_type, (case when (locate('&',a.f)=0) then f else substr(a.f, 1, locate('&',a.f)-1) end) as f
+	from (
+		SELECT userid, uri, date(time) as d, platform_type,
+			   substr(uri, locate('from=',uri)+5, length(uri)) as f
+		FROM actionlog._notif_click
+		order by time) as a) as b
+where b.f in ('notify_reply_dropdown',
+              'notify_reply_page',
+			  'notify_trace_dropdown',
+			  'notify_trace_page');
+
+drop table if exists calculate_pm._notify_click_2016;
+create table calculate_pm._notify_click_2016
+SELECT d, platform_type, f, count(d) as click 
+FROM calculate_pm.notify_click_2016
+group by d, platform_type, f;
+
+drop table if exists calculate_pm._notify_click_2016_1;
+create table calculate_pm._notify_click_2016_1
+select a.d, a.platform_type, sum(notify_trace_dropdown) as notify_trace_dropdown,
+                             sum(notify_reply_dropdown) as notify_reply_dropdown,
+                             sum(notify_trace_page) as notify_trace_page,
+                             sum(notify_reply_page) as notify_reply_page
+from (
+	SELECT d, platform_type, 
+		   (case when (f='notify_trace_dropdown') then click else 0 end) as notify_trace_dropdown,
+		   (case when (f='notify_reply_dropdown') then click else 0 end) as notify_reply_dropdown,
+		   (case when (f='notify_trace_page') then click else 0 end) as notify_trace_page,
+		   (case when (f='notify_reply_page') then click else 0 end) as notify_reply_page
+	FROM calculate_pm._notify_click_2016) as a
+group by a.d, a.platform_type;
 
 
+
+
+
+
+
+
+drop table if exists calculate_pm._predict_buyer;
+CREATE TABLE calculate_pm._predict_buyer engine = myisam
+SELECT a.id, a.buyerid, a.id_bought, a.buy_date, a.buy_price, b.position, b.allianceid
+FROM plsport_playsport.predict_buyer a LEFT JOIN plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer
+WHERE a.buy_date between '2016-01-01 00:00:00' AND now();
+
+drop table if exists calculate_pm._predict_buyer_1;
+CREATE TABLE calculate_pm._predict_buyer_1 engine = myisam
+SELECT id, date(buy_date) as d, substr(buy_date,1,7) as ym, buy_price, position, substr(position,1,3) as p 
+FROM calculate_pm._predict_buyer;
+
+UPDATE calculate_pm._predict_buyer_1 SET p = REPLACE(p, '1', '') WHERE p LIKE '%HT%';
+UPDATE calculate_pm._predict_buyer_1 SET p = REPLACE(p, '2', '') WHERE p LIKE '%HT%';
+UPDATE calculate_pm._predict_buyer_1 SET p = REPLACE(p, '3', '') WHERE p LIKE '%HT%';
+UPDATE calculate_pm._predict_buyer_1 SET p = REPLACE(p, '_', '') WHERE p LIKE '%HT%';
+UPDATE calculate_pm._predict_buyer_1 SET p = REPLACE(p, '_', '') WHERE p LIKE '%BZ%';
+UPDATE calculate_pm._predict_buyer_1 SET p = REPLACE(p, '_', '') WHERE p LIKE '%US%';
+UPDATE calculate_pm._predict_buyer_1 SET p = 'EMP' WHERE p is null;
+
+
+SELECT p, count(id) 
+FROM calculate_pm._predict_buyer_1
+group by p;
 
 
 
