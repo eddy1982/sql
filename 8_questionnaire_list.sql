@@ -261,9 +261,15 @@ update plsport_playsport._q_all_feedback_export set buyprediction_other = replac
         (2)member_signin_log_archive
         (3)member
 ---------------------------------------------*/
-create table questionnaire.satisfactionquestionnaire engine = myisam            select * from plsport_playsport.satisfactionquestionnaire; #主要問卷版本
-create table questionnaire.satisfactionquestionnaire_answer engine = myisam     select * from plsport_playsport.satisfactionquestionnaire_answer; #問卷的答案
-create table questionnaire.satisfactionquestionnaire_memberlist engine = myisam select * from plsport_playsport.satisfactionquestionnaire_memberlist; #名單
+drop table if exists questionnaire.satisfactionquestionnaire;
+drop table if exists questionnaire.satisfactionquestionnaire_answer;
+drop table if exists questionnaire.satisfactionquestionnaire_memberlist;
+create table questionnaire.satisfactionquestionnaire engine = myisam            
+select * from plsport_playsport.satisfactionquestionnaire; #主要問卷版本
+create table questionnaire.satisfactionquestionnaire_answer engine = myisam     
+select * from plsport_playsport.satisfactionquestionnaire_answer; #問卷的答案
+create table questionnaire.satisfactionquestionnaire_memberlist engine = myisam 
+select * from plsport_playsport.satisfactionquestionnaire_memberlist; #名單
 
 use questionnaire;
 /*--------------------------------------------
@@ -298,7 +304,7 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2016-06-01' and '2016-06-30') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2016-07-01' and '2016-07-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
 
 use questionnaire;
