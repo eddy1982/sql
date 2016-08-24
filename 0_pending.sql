@@ -21153,7 +21153,6 @@ from (
     group by a.userid
     order by b.total_redeem desc) as c left join plsport_playsport.member d on c.userid = d.userid;
 
-
 # 這次儲值8888以上的人, 之前是否有參加過活動?
 create table plsport_playsport._who_has_join_campaign_1 engine = myisam
 select c.userid, d.nickname, c.createon, c.price, c.payway, c.create_from
@@ -21178,7 +21177,6 @@ from (
     FROM plsport_playsport.order_data a inner join plsport_playsport._who_has_redeem_more_than_8888 b on a.userid = b.userid
     where sellconfirm = 1
     and createon between '2015-04-01 12:00:00' and '2015-04-02 12:00:00') as c left join plsport_playsport.member d on c.userid = d.userid;
-
 
 # 2.收到簡訊回來儲值的人，是屬於哪一個名單規則內的。
 SELECT * FROM plsport_playsport._list_0
@@ -23184,39 +23182,40 @@ FROM actionlog._friend_6);
 # =================================================================================================
 
 create table actionlog._s_p engine = myisam
-SELECT * FROM actionlog.action_201606
+SELECT * FROM actionlog.action_201607
 where uri like '%s=p%' ; # 最多推文
 create table actionlog._s_a engine = myisam
-SELECT * FROM actionlog.action_201606
+SELECT * FROM actionlog.action_201607
 where uri like '%s=a%' ; # 最新文章
 create table actionlog._s_r engine = myisam
-SELECT * FROM actionlog.action_201606
+SELECT * FROM actionlog.action_201607
 where uri like '%s=r%' ; # 最新回覆
 
 insert ignore into actionlog._s_p
-SELECT * FROM actionlog.action_201607
+SELECT * FROM actionlog.action_201608
 where uri like '%s=p%' ; # 最多推文
 insert ignore into actionlog._s_a
-SELECT * FROM actionlog.action_201607
+SELECT * FROM actionlog.action_201608
 where uri like '%s=a%' ; # 最新文章
 insert ignore into actionlog._s_r
-SELECT * FROM actionlog.action_201607
+SELECT * FROM actionlog.action_201608
 where uri like '%s=r%' ; # 最新回覆
-
-
 
 drop table if exists actionlog._s_p_1;
 create table actionlog._s_p_1 engine = myisam
 SELECT id, userid, date(time) as d
-FROM actionlog._s_p;
+FROM actionlog._s_p
+where userid <> '';
 drop table if exists actionlog._s_a_1;
 create table actionlog._s_a_1 engine = myisam
 SELECT id, userid, date(time) as d
-FROM actionlog._s_a;
+FROM actionlog._s_a
+where userid <> '';
 drop table if exists actionlog._s_r_1;
 create table actionlog._s_r_1 engine = myisam
 SELECT id, userid, date(time) as d
-FROM actionlog._s_r;
+FROM actionlog._s_r
+where userid <> '';
 
 SELECT d, count(id) as c 
 FROM actionlog._s_p_1
@@ -23230,6 +23229,27 @@ SELECT d, count(id) as c
 FROM actionlog._s_r_1
 group by d; # 最新回覆
 
+
+select a.d, count(a.userid) as c
+from (
+    SELECT userid, d 
+    FROM actionlog._s_p_1
+    group by userid, d) as a
+group by a.d;
+
+select a.d, count(a.userid) as c
+from (
+    SELECT userid, d 
+    FROM actionlog._s_a_1
+    group by userid, d) as a
+group by a.d;
+
+select a.d, count(a.userid) as c
+from (
+    SELECT userid, d 
+    FROM actionlog._s_r_1
+    group by userid, d) as a
+group by a.d;
 
 
 # =================================================================================================
@@ -26618,11 +26638,6 @@ FROM actionlog._list_6);
 
 
 
-
-
-
-
-
 # =================================================================================================
 # 文章列表排序優化
 # =================================================================================================
@@ -27069,12 +27084,12 @@ FROM plsport_playsport._list_2);
 
 select a.g, a.redeem, a.users, round((a.redeem/a.users),1) as avg_redeem
 from (
-	SELECT g, sum(redeem) as redeem, count(userid) as users
-	FROM plsport_playsport._list_2
-	group by g) as a;
+    SELECT g, sum(redeem) as redeem, count(userid) as users
+    FROM plsport_playsport._list_2
+    group by g) as a;
 
-# not_received_o	19350592	1000	19350.6
-# received_offer	14181951	558	    25415.7
+# not_received_o    19350592    1000    19350.6
+# received_offer    14181951    558     25415.7
 
 
 # =================================================================================================
@@ -27380,7 +27395,6 @@ SELECT abtest, buyerid, date(buy_date) as d, buy_price, platform_type, position
 FROM plsport_playsport._predict_buyer_2
 where substr(position,1,2) = 'BZ';
 
-
 #以下是計算PV
 drop table if exists actionlog._BZ;
 create table actionlog._BZ engine = myisam
@@ -27464,7 +27478,6 @@ update plsport_playsport._forumcontent_1 set content = REPLACE(content, '<p>', '
 update plsport_playsport._forumcontent_1 set content = REPLACE(content, '</p>', '');
 update plsport_playsport._forumcontent_1 set content = REPLACE(content, '<br />', '');
 update plsport_playsport._forumcontent_1 set content = REPLACE(content, '&nbsp;', '');
-
 
 drop table if exists plsport_playsport._forumcontent_2;
 create table plsport_playsport._forumcontent_2 engine = myisam 
@@ -27752,7 +27765,6 @@ group by lv;
 # 依據問卷分析結果提供名單指的是這個:
 # http://www.playsport.cc/questionnaire.php?question=201604271658308268&action=statistics
 
-
 drop table if exists actionlog._all_log;
 create table actionlog._all_log engine = myisam
 SELECT userid, uri, time, platform_type 
@@ -28002,7 +28014,6 @@ ALTER TABLE actionlog._app_user_pv_1 convert to character set utf8 collate utf8_
 ALTER TABLE actionlog._all_log_app_click_2 ADD INDEX (`md5`);
 ALTER TABLE actionlog._app_user_pv_1 ADD INDEX (`deviceidMd5`);
 
-
 drop table if exists actionlog._all_log_app_click_3;
 create table actionlog._all_log_app_click_3 engine = myisam
 SELECT a.userid, a.md5, b.pv
@@ -28012,8 +28023,8 @@ drop table if exists actionlog._all_log_app_click_4;
 create table actionlog._all_log_app_click_4 engine = myisam
 select a.userid, sum(a.pv) as pv
 from (
-	SELECT userid, md5, COALESCE(pv, 0) as pv
-	FROM actionlog._all_log_app_click_3) as a
+    SELECT userid, md5, COALESCE(pv, 0) as pv
+    FROM actionlog._all_log_app_click_3) as a
 group by a.userid;
 
 drop table if exists actionlog._all_log_app_click_5;
@@ -28235,19 +28246,13 @@ where spent_percentile >= 0.00 and spent_percentile < 0.20;
 drop table if exists actionlog._click_f;
 create table actionlog._click_f engine = myisam
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201604
+FROM actionlog.action_201607
 where userid <> ''
 and time between '2016-04-29 18:00:00' and now()
 and uri regexp '^/forumdetail.*php.*post_from=.*';
 insert ignore into actionlog._click_f
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201605
-where userid <> ''
-and time between '2016-04-29 18:00:00' and now()
-and uri regexp '^/forumdetail.*php.*post_from=.*';
-insert ignore into actionlog._click_f
-SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201606
+FROM actionlog.action_201608
 where userid <> ''
 and time between '2016-04-29 18:00:00' and now()
 and uri regexp '^/forumdetail.*php.*post_from=.*';
@@ -28298,22 +28303,16 @@ group by a.abtest, a.d, a.platform_type, a.f;
 drop table if exists actionlog._click_f_all;
 create table actionlog._click_f_all engine = myisam
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201606
+FROM actionlog.action_201607
 where userid <> ''
 and time between '2016-04-29 18:00:00' and now()
 and uri regexp '^/forumdetail.*php.*';
-# insert ignore into actionlog._click_f_all
-# SELECT userid, uri, time, platform_type 
-# FROM actionlog.action_201605
-# where userid <> ''
-# and time between '2016-04-29 18:00:00' and now()
-# and uri regexp '^/forumdetail.*php.*';
-# insert ignore into actionlog._click_f_all
-# SELECT userid, uri, time, platform_type 
-# FROM actionlog.action_201606
-# where userid <> ''
-# and time between '2016-04-29 18:00:00' and now()
-# and uri regexp '^/forumdetail.*php.*';
+insert ignore into actionlog._click_f_all
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201608
+where userid <> ''
+and time between '2016-04-29 18:00:00' and now()
+and uri regexp '^/forumdetail.*php.*';
 
 update actionlog._click_f_all set platform_type = 1 where platform_type = 3;
 
@@ -28322,7 +28321,7 @@ create table actionlog._click_f_all_1 engine = myisam
 SELECT userid, uri, time, platform_type, substr(uri,locate('subjectid=',uri)+10,15) as s
 FROM actionlog._click_f_all;
 
-# 資料太大, 要改用script來跑, 會變成產出actionlog._temp
+# 資料太大, 要改用script來跑, 會變成產出actionlog._temp, slice08_actionlog_for_any_table.py
 
 # drop table if exists actionlog._click_f_all_2;
 # create table actionlog._click_f_all_2 engine = myisam
@@ -28365,23 +28364,17 @@ group by abtest, userid, d, platform_type;
 drop table if exists actionlog._click_f_page;
 create table actionlog._click_f_page engine = myisam
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201606
+FROM actionlog.action_201607
 where userid <> ''
 and time between '2016-04-29 18:00:00' and now()
 and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
-# insert ignore into actionlog._click_f_page
-# SELECT userid, uri, time, platform_type 
-# FROM actionlog.action_201605
-# where userid <> ''
-# and time between '2016-04-29 18:00:00' and now()
-# and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
-# insert ignore into actionlog._click_f_page
-# SELECT userid, uri, time, platform_type 
-# FROM actionlog.action_201606
-# where userid <> ''
-# and time between '2016-04-29 18:00:00' and now()
-# and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
-# 
+insert ignore into actionlog._click_f_page
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201608
+where userid <> ''
+and time between '2016-04-29 18:00:00' and now()
+and uri regexp '^/(topPushedArticles|analysis_king).*php.*';
+
 update actionlog._click_f_page set platform_type = 1 where platform_type = 3;
 ALTER TABLE actionlog._click_f_page convert to character set utf8 collate utf8_general_ci;
 
@@ -28420,6 +28413,7 @@ and pushcount >= 30;
 ALTER TABLE plsport_playsport._forum_push ADD INDEX (`subjectid`); 
 ALTER TABLE actionlog._click_f_all_4 ADD INDEX (`s`); 
 
+
 drop table if exists actionlog._click_f_all_4_;
 create table actionlog._click_f_all_4_ engine = myisam
 SELECT a.abtest, a.userid, a.d, a.platform_type, a.s, b.pushcount 
@@ -28438,7 +28432,7 @@ drop table if exists plsport_playsport._forum_like;
 create table plsport_playsport._forum_like engine = myisam
 SELECT *
 FROM plsport_playsport.forum_like
-where create_date between '2016-06-01 00:00:00' and now();
+where create_date between '2016-07-01 00:00:00' and now();
 
 drop table if exists plsport_playsport._forum_like_1;
 create table plsport_playsport._forum_like_1 engine = myisam
@@ -28657,9 +28651,9 @@ FROM actionlog._all_2_abtest_for_spent_1 a inner join actionlog._all_2_abtest_fo
 
 select a.ver, round(a.avg_star,1) as avg_star, a.review_count, a.sum_positive, round(a.sum_positive/a.review_count,3) as percent
 from (
-	SELECT ver, avg(star_rating) as avg_star, count(star_rating) as review_count, sum(positive) as sum_positive
-	FROM plsport_playsport._googleplay_reviews_2
-	group by ver) as a;
+    SELECT ver, avg(star_rating) as avg_star, count(star_rating) as review_count, sum(positive) as sum_positive
+    FROM plsport_playsport._googleplay_reviews_2
+    group by ver) as a;
 
 
 # 2. 有置入廣告的數據頁面使用行為變化(即時比分APP)
@@ -28838,8 +28832,12 @@ group by p, lv;
 #   MPB_LM    主推榜上月
 # 連結url之後加上&from=XXXX, 例子如下:
 # http://www.playsport.cc/forumdetail.php?subjectid=151104105845AMn&from=MPB_TM (就是從主推榜本月頁面點擊而來的)
-
 # 於6/28  10:55上線　的版本已經修正好了　
+
+# to 學文:
+#     韋銘已經幫我修正了相關的問題, 時間是7/19 14:41,
+#     但因為現在買的人還不多, 所以我星期五會再檢查一次,
+#     如果星期五沒什麼問題, 我們就是以7/19 14:41這個時間點來開始a/b testing
 
 drop table if exists actionlog._temp_1;
 create table actionlog._temp_1 engine = myisam
@@ -28848,24 +28846,28 @@ FROM actionlog.action_201606
 where time between '2016-06-28 10:54:00' and now()
 and uri like '%forumdetail.php?%'
 and uri like '%from=%';
-
 insert ignore into actionlog._temp_1
 SELECT userid, uri, time, platform_type
 FROM actionlog.action_201607
 where time between '2016-06-28 10:54:00' and now()
 and uri like '%forumdetail.php?%'
 and uri like '%from=%';
-
+insert ignore into actionlog._temp_1
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201608
+where time between '2016-06-28 10:54:00' and now()
+and uri like '%forumdetail.php?%'
+and uri like '%from=%';
 
 drop table if exists actionlog._temp_2;
 create table actionlog._temp_2 engine = myisam
 select a.userid, a.uri, a.time, a.platform_type, (case when (locate('&',a.f)=0) then a.f else substr(a.f,1,locate('&',a.f)-1) end) as f
 from (
-	SELECT userid, uri, time, platform_type, substr(uri, locate('from=',uri)+5, length(uri)) as f
-	FROM actionlog._temp_1) as a;
-    
-ALTER TABLE actionlog._temp_2 convert to character set utf8 collate utf8_general_ci;   
-    
+    SELECT userid, uri, time, platform_type, substr(uri, locate('from=',uri)+5, length(uri)) as f
+    FROM actionlog._temp_1) as a;
+
+ALTER TABLE actionlog._temp_2 convert to character set utf8 collate utf8_general_ci;
+
 drop table if exists actionlog._temp_3;
 create table actionlog._temp_3 engine = myisam 
 SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, a.f
@@ -28876,13 +28878,51 @@ drop table if exists actionlog._temp_4;
 create table actionlog._temp_4 engine = myisam
 select * 
 from (
-	SELECT abtest, f, count(userid) as c
-	FROM actionlog._temp_3
-	where f not like '%mdetail.php%'
-	and f not like '%IDX%'
-	group by abtest, f
-	order by abtest) as a
+    SELECT abtest, f, count(userid) as c
+    FROM actionlog._temp_3
+    where f not like '%mdetail.php%'
+    and f not like '%IDX%'
+    and f regexp '^(BZ|WPB|WPB).*'
+    group by abtest, f
+    order by abtest) as a
 order by a.c desc;
+
+# 在莊殺/單殺/勝率榜/主推榜的頁面中, 在熱門討論按紐的連結中, 加入變數from=XXXX 
+#   BZ_MF    莊家殺手全部殺手 (左側)
+#   BZ_SK    單場殺手全部殺手 (左側)
+#   WPB_TS    勝率榜本賽季
+#   WPB_TW    勝率榜本週
+#   WPB_LW    勝率榜上週
+#   WPB_TM    勝率榜本月
+#   WPB_LM    勝率榜上月
+#   MPB_TS    主推榜本賽季
+#   MPB_TW    主推榜本週
+#   MPB_LW    主推榜上週
+#   MPB_TM    主推榜本月
+#   MPB_LM    主推榜上月
+#   --------------------------------------
+#   有熱文 - 從7/19開始統計的結果
+#   --------------------------------------
+#   a	BZ_MF	104 莊家殺手全部殺手
+#   a	BZ_SK	59  單場殺手全部殺手
+#   a	WPB_TM	24  勝率榜本月
+#   a	WPB_TS	9   勝率榜本賽季
+#   a	WPB_TW	5   勝率榜本週
+#   a	WPB_LW	2   勝率榜上週
+#   --------------------------------------
+#   有熱文 - 從6/28開始統計的結果
+#   --------------------------------------
+#   a	BZ_MF	235 莊家殺手全部殺手
+#   a	BZ_SK	123 單場殺手全部殺手
+#   a	WPB_TM	86  勝率榜本月
+#   a	WPB_TS	22  勝率榜本賽季
+#   a	WPB_TW	11  勝率榜本週
+#   a	WPB_LW	7   勝率榜上週
+#   a	WPB_LM	1   勝率榜上月
+
+
+# 主推榜完成沒有點擊的記錄,出現的機率太低?
+
 
 # 實驗組的購牌位置追蹤碼, 請依條件新增以下:
 # 在莊殺/單殺/勝率榜/主推榜購牌頁面
@@ -28907,6 +28947,7 @@ order by a.c desc;
 # 
 # 沒意外的話, a/b testing做到8/17(三), 我預計於8/19(五)完成報告, 3Q
 
+# 這裡是撈出購牌位置的記錄
 drop table if exists actionlog._temp_rp_1;
 create table actionlog._temp_rp_1 engine = myisam
 SELECT userid, uri, time, platform_type
@@ -28914,16 +28955,21 @@ FROM actionlog.action_201607
 where time between '2016-07-19 14:41:00' and now()
 and uri like '%visit_member.php%'
 and uri like '%rp=%';
-
+insert ignore into actionlog._temp_rp_1
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201608
+where time between '2016-07-19 14:41:00' and now()
+and uri like '%visit_member.php%'
+and uri like '%rp=%';
 
 drop table if exists actionlog._temp_rp_2;
 create table actionlog._temp_rp_2 engine = myisam
 select a.userid, a.uri, a.time, a.platform_type, (case when (locate('&',a.f)=0) then a.f else substr(a.f,1,locate('&',a.f)-1) end) as f,
                                                  (case when (locate('&',a.v)=0) then a.v else substr(a.v,1,locate('&',a.v)-1) end) as v
 from (
-	SELECT userid, uri, time, platform_type, substr(uri, locate('rp=',uri)+3, length(uri)) as f, 
+    SELECT userid, uri, time, platform_type, substr(uri, locate('rp=',uri)+3, length(uri)) as f, 
                                              substr(uri, locate('visit=',uri)+6, length(uri)) as v
-	FROM actionlog._temp_rp_1) as a;
+    FROM actionlog._temp_rp_1) as a;
     
 ALTER TABLE actionlog._temp_rp_2 convert to character set utf8 collate utf8_general_ci; 
 
@@ -28933,68 +28979,89 @@ SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, 
 FROM actionlog._temp_rp_2 a left join plsport_playsport.member b on a.userid =  b.userid
 where a.userid <> '';
 
-drop table if exists actionlog._temp_rp_4;
-create table actionlog._temp_rp_4 engine = myisam   
-SELECT * 
-FROM actionlog._temp_rp_3
-where f regexp '.*(_n|_f|_fn)$';
+		# (a1)只留下是新增追蹤碼的購買記錄
+		drop table if exists actionlog._temp_rp_4;
+		create table actionlog._temp_rp_4 engine = myisam   
+		SELECT * 
+		FROM actionlog._temp_rp_3
+		where f regexp '.*(_n|_f|_fn)$';
+		# (b1)只留下是購牌專區/主推/勝率榜的購買記錄
+		drop table if exists actionlog._temp_rp_4_1;
+		create table actionlog._temp_rp_4_1 engine = myisam   
+		SELECT * 
+		FROM actionlog._temp_rp_3
+		where f regexp '^(BZ|MPB|WPB).*';
 
-	drop table if exists actionlog._temp_rp_4_1;
-	create table actionlog._temp_rp_4_1 engine = myisam   
-	SELECT * 
-	FROM actionlog._temp_rp_3
-	where f regexp '^(BZ|MPB|WPB).*';
+            # (a2)
+			drop table if exists actionlog._temp_rp_5;
+			create table actionlog._temp_rp_5 engine = myisam   
+			SELECT abtest, f, count(userid) as c
+			FROM actionlog._temp_rp_4
+			group by abtest, f;
+            # (b2)
+			drop table if exists actionlog._temp_rp_5_1;
+			create table actionlog._temp_rp_5_1 engine = myisam   
+			select * 
+			from (
+				SELECT abtest, f, count(userid) as c
+				FROM actionlog._temp_rp_4_1
+				group by abtest, f) as a
+			where a.c >= 10
+			order by a.c desc;
+            
+			SELECT * FROM actionlog._temp_rp_5
+			where abtest = 'a'
+			order by f;
+            
+            SELECT * FROM actionlog._temp_rp_5_1
+			where abtest = 'a'
+			order by f;
 
-drop table if exists actionlog._temp_rp_5;
-create table actionlog._temp_rp_5 engine = myisam   
-SELECT abtest, f, count(userid) 
-FROM actionlog._temp_rp_4
-group by abtest, f;
-
-	drop table if exists actionlog._temp_rp_5_1;
-	create table actionlog._temp_rp_5_1 engine = myisam   
-    select * 
-    from (
-		SELECT abtest, f, count(userid) as c
-		FROM actionlog._temp_rp_4_1
-		group by abtest, f) as a
-	where a.c >= 10
-	order by a.c desc;
-
-
-		# 另外檢查一下會員追蹤的功能(不用每次都執行)
-		drop table if exists actionlog._temp_notify_1;
-		create table actionlog._temp_notify_1 engine = myisam
-		SELECT userid, uri, time, platform_type
-		FROM actionlog.action_201606
-		where time between '2016-06-24 10:07:00' and now()
-		and uri like '%forumdetail.php?%'
-		and uri like '%notify_%';
-
-		drop table if exists actionlog._temp_notify_2;
-		create table actionlog._temp_notify_2 engine = myisam
-		select a.userid, a.uri, a.time, a.platform_type, (case when (locate('&',a.f)=0) then a.f else substr(a.f,1,locate('&',a.f)-1) end) as f
-		from (
-			SELECT userid, uri, time, platform_type, substr(uri, locate('from=',uri)+5, length(uri)) as f
-			FROM actionlog._temp_notify_1
-			where userid <> '') as a;
-
-		ALTER TABLE actionlog._temp_notify_2 convert to character set utf8 collate utf8_general_ci;  
-
-		select a.abtest, a.f, count(a.f)
-		from (
-			SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, a.f 
-			FROM actionlog._temp_notify_2 a left join plsport_playsport.member b on a.userid = b.userid) as a
-		group by a.abtest, a.f;
+        # 另外檢查一下會員追蹤的功能(不用每次都執行)
+		#         drop table if exists actionlog._temp_notify_1;
+		#         create table actionlog._temp_notify_1 engine = myisam
+		#         SELECT userid, uri, time, platform_type
+		#         FROM actionlog.action_201606
+		#         where time between '2016-06-24 10:07:00' and now()
+		#         and uri like '%forumdetail.php?%'
+		#         and uri like '%notify_%';
+		# 
+		#         drop table if exists actionlog._temp_notify_2;
+		#         create table actionlog._temp_notify_2 engine = myisam
+		#         select a.userid, a.uri, a.time, a.platform_type, (case when (locate('&',a.f)=0) then a.f else substr(a.f,1,locate('&',a.f)-1) end) as f
+		#         from (
+		#             SELECT userid, uri, time, platform_type, substr(uri, locate('from=',uri)+5, length(uri)) as f
+		#             FROM actionlog._temp_notify_1
+		#             where userid <> '') as a;
+		# 
+		#         ALTER TABLE actionlog._temp_notify_2 convert to character set utf8 collate utf8_general_ci;  
+		# 
+		#         select a.abtest, a.f, count(a.f)
+		#         from (
+		#             SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, a.f 
+		#             FROM actionlog._temp_notify_2 a left join plsport_playsport.member b on a.userid = b.userid) as a
+		#         group by a.abtest, a.f;
         
 # 以下是分析的部分
 # 先從最簡單的觀察開始做, A/B 2組有什麼不一樣
- 
+
+ALTER TABLE plsport_playsport.predict_buyer ADD INDEX (`id`);
+ALTER TABLE plsport_playsport.predict_buyer_cons_split ADD INDEX (`id_predict_buyer`);
+
+drop table if exists plsport_playsport._temp;
+create table plsport_playsport._temp engine = myisam
+select *  
+FROM plsport_playsport.predict_buyer
+where buy_date between '2016-07-19 14:41:00' and now();
+
 drop table if exists plsport_playsport._predict_buyer;
 create table plsport_playsport._predict_buyer engine = myisam
 SELECT a.id, a.buyerid as userid, a.buy_date, a.id_bought, a.buy_price, a.buy_allianceid, b.position
-FROM plsport_playsport.predict_buyer a left join plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer
-where buy_date between '2016-06-28 10:54:00' and now();
+FROM plsport_playsport._temp a left join plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer
+where buy_date between '2016-07-19 14:41:00' and now();
+
+ALTER TABLE plsport_playsport._predict_buyer ADD INDEX (`id_bought`);
+ALTER TABLE plsport_playsport.predict_seller ADD INDEX (`id`);
 
 drop table if exists plsport_playsport._predict_buyer_1;
 create table plsport_playsport._predict_buyer_1 engine = myisam
@@ -29007,46 +29074,50 @@ create table plsport_playsport._predict_buyer_2 engine = myisam
 SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, a.date, a.price, a.allianceid, a.p, substr(a.p,1,4) as p1, a.sellerid
 FROM plsport_playsport._predict_buyer_1 a left join plsport_playsport.member b on a.userid = b.userid;
 
-
 # 先來看找高手(莊單殺/主推/勝率榜的業績)
 drop table if exists plsport_playsport._killer;
 create table plsport_playsport._killer engine = myisam
 SELECT abtest, userid, date(date) as d, price, allianceid, p, p1, sellerid
 FROM plsport_playsport._predict_buyer_2
-where p regexp '^(MPB|WPB).*'; # <<< 這裡要調整'^(BZ|MPB|WPB).*'
+where p regexp '^(BZ).*'; # <<< 這裡要調整'^(BZ|MPB|WPB).*' 
 
-drop table if exists plsport_playsport._temp_1;
-create table plsport_playsport._temp_1 engine = myisam
-SELECT abtest, userid, sum(price) as spent, count(price) as spent_count 
-FROM plsport_playsport._killer
-group by abtest, userid;
+		drop table if exists plsport_playsport._list_BZ_only;
+		create table plsport_playsport._list_BZ_only engine = myisam
+		SELECT abtest, userid, d, sum(price) as spent, count(price) as spent_count 
+		FROM plsport_playsport._killer
+		group by abtest, userid, d;
 
-SELECT 'abtest', 'userid', 'spent', 'spent_count' union (
-SELECT *
-into outfile 'C:/proc/r/abtest/_test_0.txt'
-fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM plsport_playsport._temp_1);
+drop table if exists plsport_playsport._killer;
+create table plsport_playsport._killer engine = myisam
+SELECT abtest, userid, date(date) as d, price, allianceid, p, p1, sellerid
+FROM plsport_playsport._predict_buyer_2
+where p regexp '^(MPB|WPB).*'; # <<< 這裡要調整'^(BZ|MPB|WPB).*' 
 
+		drop table if exists plsport_playsport._list_MPBWPB_only;
+		create table plsport_playsport._list_MPBWPB_only engine = myisam
+		SELECT abtest, userid, d, sum(price) as spent, count(price) as spent_count 
+		FROM plsport_playsport._killer
+		group by abtest, userid, d;
 
 # 曾在找高手頁面買過的人, 他們在全站累績的消費金額有差異嗎?
+drop table if exists plsport_playsport._killer;
+create table plsport_playsport._killer engine = myisam
+SELECT abtest, userid, date(date) as d, price, allianceid, p, p1, sellerid
+FROM plsport_playsport._predict_buyer_2
+where p regexp '^(BZ).*'; # <<< 這裡要調整'^(BZ|MPB|WPB).*' 
+
 drop table if exists plsport_playsport._temp_1;
 create table plsport_playsport._temp_1 engine = myisam
-SELECT a.abtest, a.userid, a.date, a.price, a.allianceid, a.p, a.p1, a.sellerid 
+SELECT a.abtest, a.userid, date(a.date) as d, a.price, a.allianceid, a.p, a.p1, a.sellerid 
 FROM plsport_playsport._predict_buyer_2 a inner join (SELECT userid 
-													  FROM plsport_playsport._killer
-													  group by userid) b on a.userid = b.userid;
-
-drop table if exists plsport_playsport._temp_2;
-create table plsport_playsport._temp_2 engine = myisam
-SELECT abtest, userid, sum(price) as spent, count(price) as spent_count 
+                                                      FROM plsport_playsport._killer
+                                                      group by userid) b on a.userid = b.userid;
+                                                      
+drop table if exists plsport_playsport._list_BZ_only_all_site;
+create table plsport_playsport._list_BZ_only_all_site engine = myisam
+SELECT abtest, userid, d, sum(price) as spent, count(price) as spent_count 
 FROM plsport_playsport._temp_1
-group by abtest, userid;
-
-SELECT 'abtest', 'userid', 'spent', 'spent_count' union (
-SELECT *
-into outfile 'C:/proc/r/abtest/_test_1.txt'
-fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM plsport_playsport._temp_2);
+group by abtest, userid, d;
 
 
 # 如果以殺手的角度來看的話--(莊單殺/主推/勝率榜的業績)
@@ -29054,19 +29125,27 @@ drop table if exists plsport_playsport._killer;
 create table plsport_playsport._killer engine = myisam
 SELECT abtest, userid, date(date) as d, price, allianceid, p, p1, sellerid
 FROM plsport_playsport._predict_buyer_2
-where p regexp '^(BZ|MPB|WPB).*'; # <<< 這裡要調整'^(BZ|MPB|WPB).*'
+where p regexp '^(BZ).*'; # <<< 這裡要調整'^(BZ|MPB|WPB).*'
 
-drop table if exists plsport_playsport._temp_1;
-create table plsport_playsport._temp_1 engine = myisam
-SELECT abtest, sellerid, sum(price) as spent, count(price) as spent_count 
-FROM plsport_playsport._killer
-group by abtest, sellerid;
+drop table if exists plsport_playsport._list_BZ_only_for_killer;
+create table plsport_playsport._list_BZ_only_for_killer engine = myisam
+select a.abtest, a.sellerid as userid, a.d, a.spent, a.spent_count
+from (
+	SELECT abtest, sellerid, d, sum(price) as spent, count(price) as spent_count 
+	FROM plsport_playsport._killer
+	group by abtest, sellerid, d) as a;
 
-SELECT 'abtest', 'userid', 'spent', 'spent_count' union (
-SELECT *
-into outfile 'C:/proc/r/abtest/_test_2.txt'
-fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
-FROM plsport_playsport._temp_1);
+
+
+
+
+
+
+
+
+
+
+
 
 
 # 如果以殺手的角度來看的話--(曾在找高手頁面買過的人, 他們在全站累績的消費金額有差異嗎?)
@@ -29074,8 +29153,8 @@ drop table if exists plsport_playsport._temp_1;
 create table plsport_playsport._temp_1 engine = myisam
 SELECT a.abtest, a.userid, a.date, a.price, a.allianceid, a.p, a.p1, a.sellerid 
 FROM plsport_playsport._predict_buyer_2 a inner join (SELECT userid 
-													  FROM plsport_playsport._killer
-													  group by userid) b on a.userid = b.userid;
+                                                      FROM plsport_playsport._killer
+                                                      group by userid) b on a.userid = b.userid;
 
 drop table if exists plsport_playsport._temp_2;
 create table plsport_playsport._temp_2 engine = myisam
@@ -29349,10 +29428,10 @@ drop table if exists plsport_playsport._redeem_2016;
 create table plsport_playsport._redeem_2016 engine = myisam
 select a.m, a.userid, min(createon) as createon, sum(a.price) as redeem
 from (
-	SELECT userid, substr(createon,1,7) as m, price, createon
-	FROM plsport_playsport.order_data
-	where year(createon) = '2016'
-	and sellconfirm = 1) as a
+    SELECT userid, substr(createon,1,7) as m, price, createon
+    FROM plsport_playsport.order_data
+    where year(createon) = '2016'
+    and sellconfirm = 1) as a
 group by a.m, a.userid;
 
 drop table if exists plsport_playsport._redeem_2016_1;
@@ -29394,11 +29473,11 @@ drop table if exists plsport_playsport._temp_2_star;
 create table plsport_playsport._temp_2_star engine = myisam
 select *
 from (
-	SELECT p, cons, nickname, sum(buy_price) as buy_price
-	FROM plsport_playsport._temp_2
-	where m = '2016-06'
+    SELECT p, cons, nickname, sum(buy_price) as buy_price
+    FROM plsport_playsport._temp_2
+    where m = '2016-06'
     and sellerid in ('wowhaha1','a20646','qwe54778899','FB1453291146','pk24253356','FB1407415444')
-	group by p, cons) as a
+    group by p, cons) as a
 order by a.buy_price desc;
 
 SELECT nickname, p, sum(buy_price) 
@@ -29415,22 +29494,63 @@ SELECT m, p, count(buyerid) as c
 FROM plsport_playsport._temp_1
 group by m, p;
 
+# =================================================================================================
+# 7月的業績為什麼浮動很大, 7月初很高, 7月底很低
+# =================================================================================================
+
+# 先產生購牌位置
+ALTER TABLE plsport_playsport.predict_buyer ADD INDEX (`id`);
+ALTER TABLE plsport_playsport.predict_buyer_cons_split ADD INDEX (`id_predict_buyer`);
+
+# 撈出6,7月的消費額
+drop table if exists plsport_playsport._temp;
+create table plsport_playsport._temp engine = myisam
+SELECT a.buyerid, a.buy_date, substr(a.buy_date,1,7) as m, a.buy_price, a.id_bought, b.position, substr(b.position,1,3) as p, b.cons
+FROM plsport_playsport.predict_buyer a left join plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer
+where buy_date between '2016-06-01 00:00:00' and '2016-07-31 23:59:59';
+
+drop table if exists plsport_playsport._temp_1;
+create table plsport_playsport._temp_1 engine = myisam
+SELECT a.buyerid, a.buy_date, a.m, b.sellerid, a.buy_price, a.position, a.p, a.cons
+FROM plsport_playsport._temp a left join plsport_playsport.predict_seller b on a.id_bought = b.id;
+
+drop table if exists plsport_playsport._temp_2;
+create table plsport_playsport._temp_2 engine = myisam
+SELECT a.buyerid, a.buy_date, date(a.buy_date) as d, a.m, a.sellerid, b.nickname, a.buy_price, a.position, a.p, a.cons
+FROM plsport_playsport._temp_1 a left join plsport_playsport.member b on a.sellerid = b.userid;
+
+# 每天的業績
+SELECT d, sum(buy_price) as revenue 
+FROM plsport_playsport._temp_2
+group by d;
+
+# 6月份的明星殺手們...
+SELECT d, concat(sellerid,'(',nickname,')') as seller, sum(buy_price) as sale 
+FROM plsport_playsport._temp_2
+where sellerid in ('wowhaha1','a20646','qwe54778899','FB1453291146','pk24253356','FB1407415444')
+group by d, sellerid;
+
+# 7月份的明星殺手們...
+SELECT d, concat(sellerid,'(',nickname,')') as seller, sum(buy_price) as sale 
+FROM plsport_playsport._temp_2
+where sellerid in ('a20646','wowhaha1','ives7215','Q122004426','588588588','qwe54778899')
+group by d, sellerid;
 
 
 # =================================================================================================
 # [201512-B-11]優化手機版預測比列-訪談名單撈取http://redmine.playsport.cc/issues/1975
 # 概述
 # 說明
-# 	了解使用者依舊選擇舊版的原因
+#   了解使用者依舊選擇舊版的原因
 # 內容
 # 
 # 條件：
-# 	提供本次問卷第2題選擇舊版的使用者名單
-# 	上述名單在第1題的選項
-# 	區間：近一個月
+#   提供本次問卷第2題選擇舊版的使用者名單
+#   上述名單在第1題的選項
+#   區間：近一個月
 # 
 # 欄位：
-# 	帳號、暱稱、預測比例頁pv及全站佔比、手機/電腦使用比例、最後登入時間
+#   帳號、暱稱、預測比例頁pv及全站佔比、手機/電腦使用比例、最後登入時間
 # =================================================================================================
 # 
 # 匯入plsport_playsport.questionnaire_201607051433558421_answer
@@ -29560,12 +29680,12 @@ where name = 'forum_click_quote_reply';
 
 # 點擊情況
 select b.d, b.p, count(b.userid) as user_count
-	from (
-	select a.userid, a.p, a.d, count(userid) as c
-	from (
-		SELECT userid, platform_type as p, date(time) as d 
-		FROM plsport_playsport._forum_click_quote_reply) as a
-	group by a.userid, a.p, a.d) as b
+    from (
+    select a.userid, a.p, a.d, count(userid) as c
+    from (
+        SELECT userid, platform_type as p, date(time) as d 
+        FROM plsport_playsport._forum_click_quote_reply) as a
+    group by a.userid, a.p, a.d) as b
 group by b.d, b.p;
 
 drop table if exists plsport_playsport._who_use_quote_reply;
@@ -29579,10 +29699,364 @@ order by postdate desc;
 # 實際使用情況
 select b.d, count(b.userid) as user_count, sum(b.c) as use_total
 from (
-	select a.d, a.userid, count(a.userid) as c
-	from (
-		SELECT userid, date(postdate) as d 
-		FROM plsport_playsport._who_use_quote_reply) as a
-	group by a.d, a.userid) as b
+    select a.d, a.userid, count(a.userid) as c
+    from (
+        SELECT userid, date(postdate) as d 
+        FROM plsport_playsport._who_use_quote_reply) as a
+    group by a.d, a.userid) as b
 group by b.d;
 
+
+
+# =================================================================================================
+# [201512-D-10]明燈改版-MVP名單提供http://redmine.playsport.cc/issues/2027
+# 提供MVP名單
+# 
+# 內容 - 撈取時間:近一個月
+# - 需求欄位:暱稱、ID、明燈頁PV(前50%)、明燈數、總儲值金額、裝置使用比列、最後登入時間
+# 請於下周二前提供，謝謝
+# =================================================================================================
+
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201608
+where uri like '%visit_member.php?action=friend%'
+and time between subdate(now(),93) and now();
+insert ignore into actionlog._temp
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201607
+where uri like '%visit_member.php?action=friend%'
+and time between subdate(now(),93) and now();
+insert ignore into actionlog._temp
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201606
+where uri like '%visit_member.php?action=friend%'
+and time between subdate(now(),93) and now();
+insert ignore into actionlog._temp
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201605
+where uri like '%visit_member.php?action=friend%'
+and time between subdate(now(),93) and now();
+
+drop table if exists actionlog._temp_1;
+create table actionlog._temp_1 engine = myisam
+SELECT userid, platform_type, count(uri) as pv
+FROM actionlog._temp
+where userid <> ''
+group by userid, platform_type;
+
+update actionlog._temp_1 set platform_type = 1 where platform_type = 3;
+
+drop table if exists actionlog._temp_2;
+create table actionlog._temp_2 engine = myisam
+select b.userid, (b.pc+b.mobile) as pv, b.pc, b.mobile 
+from (
+    select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+    from (
+        SELECT userid, (case when (platform_type = 1) then pv else 0 end) as pc,
+                       (case when (platform_type = 2) then pv else 0 end) as mobile
+        FROM actionlog._temp_1) as a
+    group by a.userid) as b;
+    
+drop table if exists actionlog._temp_3;
+create table actionlog._temp_3 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_percentile, pc, mobile
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank, pc, mobile
+      FROM actionlog._temp_2, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._temp_2) as ct;
+     
+drop table if exists actionlog._add_friend;
+create table actionlog._add_friend engine = myisam
+select a.userid, count(a.friendid) as add_friend
+from (
+    SELECT userid, friendid 
+    FROM plsport_playsport.friends_advance
+    where create_time between subdate(now(),93) and now()
+    and userid <> ''
+    group by userid, friendid) as a
+group by a.userid;
+
+drop table if exists actionlog._add_friend_1;
+create table actionlog._add_friend_1 engine = myisam
+select userid, add_friend, round((cnt-rank+1)/cnt,2) as add_friend_percentile
+from (SELECT userid, add_friend, @curRank := @curRank + 1 AS rank
+      FROM actionlog._add_friend, (SELECT @curRank := 0) r
+      order by add_friend desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._add_friend) as ct;
+     
+drop table if exists actionlog._all_friend;
+create table actionlog._all_friend engine = myisam
+select a.userid, count(a.friendid) as all_friend
+from (
+    SELECT userid, friendid 
+    FROM plsport_playsport.friends_advance
+    where userid <> ''
+    group by userid, friendid) as a
+group by a.userid;
+
+drop table if exists actionlog._all_friend_1;
+create table actionlog._all_friend_1 engine = myisam
+select userid, all_friend, round((cnt-rank+1)/cnt,2) as all_friend_percentile
+from (SELECT userid, all_friend, @curRank := @curRank + 1 AS rank
+      FROM actionlog._all_friend, (SELECT @curRank := 0) r
+      order by all_friend desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._all_friend) as ct;
+
+ALTER TABLE actionlog._temp_3 CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._add_friend_1 CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._all_friend_1 CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+drop table if exists actionlog._temp_4;
+create table actionlog._temp_4 engine = myisam
+SELECT a.userid, a.pv, a.pv_percentile, b.add_friend, b.add_friend_percentile, round((a.pc/(a.pc+a.mobile)),3) as pc,
+       round((a.mobile/(a.pc+a.mobile)),3) as mobile
+FROM actionlog._temp_3 a left join actionlog._add_friend_1 b on a.userid = b.userid
+order by pv desc;
+
+drop table if exists actionlog._temp_5;
+create table actionlog._temp_5 engine = myisam
+SELECT a.userid, a.pv, a.pv_percentile, a.add_friend, a.add_friend_percentile, b.all_friend, b.all_friend_percentile, a.pc, a.mobile
+FROM actionlog._temp_4 a left join actionlog._all_friend_1 b on a.userid = b.userid
+order by a.pv desc;
+
+create table actionlog._order_data engine = myisam
+SELECT userid, sum(price) as redeem
+FROM plsport_playsport.order_data
+where sellconfirm = 1
+and createon between subdate(now(),93) AND now()
+group by userid;
+
+create table actionlog._order_data_1 engine = myisam
+select userid, redeem, round((cnt-rank+1)/cnt,2) as redeem_percentile
+from (SELECT userid, redeem, @curRank := @curRank + 1 AS rank
+      FROM actionlog._order_data, (SELECT @curRank := 0) r
+      order by redeem desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._order_data) as ct;
+     
+ALTER TABLE actionlog._order_data_1 CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+drop table if exists actionlog._temp_6;
+create table actionlog._temp_6 engine = myisam
+SELECT a.userid, a.pv, a.pv_percentile, a.add_friend, a.add_friend_percentile, a.all_friend, a.all_friend_percentile, 
+       b.redeem, b.redeem_percentile, a.pc, a.mobile
+FROM actionlog._temp_5 a left join actionlog._order_data_1 b on a.userid = b.userid
+where a.all_friend is not null
+order by a.pv desc;
+
+drop table if exists plsport_playsport._last_time_login;
+CREATE TABLE plsport_playsport._last_time_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+ALTER TABLE actionlog._temp_6 CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE plsport_playsport._last_time_login CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._temp_6 ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport._last_time_login ADD INDEX (`userid`);
+
+drop table if exists actionlog._temp_7;
+create table actionlog._temp_7 engine = myisam
+SELECT a.userid, a.pv, a.pv_percentile, a.add_friend, a.add_friend_percentile, a.all_friend, a.all_friend_percentile, 
+       a.redeem, a.redeem_percentile, a.pc, a.mobile, date(b.signin_time) as signin_time
+FROM actionlog._temp_6 a left join plsport_playsport._last_time_login b on a.userid = b.userid
+order by a.pv desc;
+
+drop table if exists actionlog._temp_8;
+create table actionlog._temp_8 engine = myisam
+SELECT a.userid, b.nickname, a.pv, a.pv_percentile, a.add_friend, a.add_friend_percentile, a.all_friend, a.all_friend_percentile, 
+       a.redeem, a.redeem_percentile, a.pc, a.mobile, a.signin_time
+FROM actionlog._temp_7 a left join plsport_playsport.member b on a.userid = b.userid
+where a.pv_percentile >= 0.50
+order by a.pv desc;
+
+SELECT 'userid', '暱稱', '明燈頁PV', '佔比', '近3個月加明燈數', '佔比', '所有明燈數', '佔比', '近3個月儲值金額', '佔比', '電腦比例', '手機比例', '最後登入' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/list.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._temp_8);
+
+
+# http://redmine.playsport.cc/issues/2027
+# TO EDDY
+# 
+# 麻煩提供這些使用者的明燈PV
+# 時間8/11~8/15，謝謝
+# 帳號    暱稱
+# 0980122314    GALANT霖
+# evsh  SOP
+# coldberg  小豕者
+# chwarles17    chwarles17
+# queen58   姬財
+# FB1425398757  江勁霖
+# FB1400071685  林誼豪
+# show719   小修
+# m78785978 連續狂趴15回
+# z5rico    發摟米 
+
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201608
+where uri like '%friends.php%'
+and time between '2016-08-11 00:00:00' and '2016-08-15 23:59:59';
+
+drop table if exists actionlog._temp_1;
+create table actionlog._temp_1 engine = myisam
+SELECT userid, platform_type, count(uri) as pv
+FROM actionlog._temp
+where userid <> ''
+group by userid, platform_type;
+
+update actionlog._temp_1 set platform_type = 1 where platform_type = 3;
+
+drop table if exists actionlog._temp_2;
+create table actionlog._temp_2 engine = myisam
+select b.userid, (b.pc+b.mobile) as pv, b.pc, b.mobile 
+from (
+    select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+    from (
+        SELECT userid, (case when (platform_type = 1) then pv else 0 end) as pc,
+                       (case when (platform_type = 2) then pv else 0 end) as mobile
+        FROM actionlog._temp_1) as a
+    group by a.userid) as b;
+
+drop table if exists actionlog._temp_3;
+create table actionlog._temp_3 engine = myisam
+SELECT * 
+FROM actionlog._temp_2
+where userid in ('0980122314','evsh','coldberg','chwarles17','queen58','FB1425398757','FB1400071685','show719','m78785978','z5rico');
+
+ALTER TABLE actionlog._temp_3 CHANGE `userid` `userid` VARCHAR(22) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+SELECT a.userid, b.nickname, a.pv, a.pc, a.mobile 
+FROM actionlog._temp_3 a left join plsport_playsport.member b on a.userid = b.userid;
+
+
+
+# =================================================================================================
+# [201512-C-4]開發回文回覆引用功能-使用狀況分析http://redmine.playsport.cc/issues/1974#change-10295
+# 說明 了解該功能使用狀況
+# 
+# 內容¶
+# 引用回文點擊次數(電腦與手機)
+# 比較上線前後回文數量
+# 每月報告一次，共三個月
+# 上線時間：7/19 16:00
+# =================================================================================================
+
+drop table if exists plsport_playsport._reply_quote_click;
+create table plsport_playsport._reply_quote_click engine = myisam
+SELECT * 
+FROM plsport_playsport.events
+where name like '%forum%';
+
+update plsport_playsport._reply_quote_click set platform_type = 1 where platform_type = 3;
+
+select a.d, a.platform_type, count(a.userid) as click
+from (
+	SELECT userid, platform_type, date(time) as d 
+	FROM plsport_playsport._reply_quote_click) as a
+group by a.d, a.platform_type;
+
+
+
+# =================================================================================================
+# 奧運男籃開放預測分析任務http://redmine.playsport.cc/issues/2038
+# TO Eddy
+# 要麻煩您協助撈取下列的數據
+# 
+#     1.奧運男籃資格賽(7/5-7/10)、正式賽（8/7-8/22）販售的金額
+#     2.奧運男籃資格賽(7/5-7/10)、正式賽（8/7-8/22）每日有設定販售的殺手人數，國際和運彩分開
+#     3.奧運男籃資格賽(7/5-7/10)、正式賽（8/7-8/22）每日有點預測的人數，國際和運彩分開
+#     4.撈取2015/7月~8月、2016/6月~8月這兩個區間，逐日國際籃賽看板的文章數量、瀏覽量、回文數，請幫我排除感謝文
+#     （因為我們想了解今年奧運討論區相對於去年還有上月的差別）
+# 
+# 奧運比賽到8/22才結束
+# 再麻煩您壓個時間，謝謝喔
+# =================================================================================================
+# 117	奧運男籃
+
+# (1)奧運男籃資格賽(7/5-7/10)、正式賽（8/7-8/22）販售的金額
+select a.d, count(a.buy_price) as buy_count, sum(a.buy_price) as buy_total
+from (
+	SELECT buyerid, date(buy_date) as d, buy_price 
+	FROM plsport_playsport.predict_buyer
+	where buy_allianceid = 117) as a
+group by a.d;
+
+# (2)奧運男籃資格賽(7/5-7/10)、正式賽（8/7-8/22）每日有設定販售的殺手人數，國際和運彩分開
+drop table if exists plsport_playsport._temp;
+create table plsport_playsport._temp engine = myisam
+select a.d, a.mode, a.sellerid, sum(a.buyer_count) as buyer_count
+from (
+	SELECT sellerid, mode, date(sale_date) as d, buyer_count
+	FROM plsport_playsport.predict_seller
+	where sale_allianceid = 117) as a
+group by a.d, a.mode, a.sellerid;
+
+drop table if exists plsport_playsport._temp_1;
+create table plsport_playsport._temp_1 engine = myisam
+select b.d, sum(b.m1_seller) as m1_seller, sum(b.m2_seller) as m2_seller
+	from (
+	select a.d, (case when (a.mode = 1) then a.seller_count else 0 end) as m1_seller, # 運彩
+				(case when (a.mode = 2) then a.seller_count else 0 end) as m2_seller  # 國際
+	from (
+		SELECT d, mode, count(sellerid) as seller_count
+		FROM plsport_playsport._temp
+		group by d, mode) as a) as b
+group by b.d;
+
+# # 運彩國際一起算看有多少殺手設定販售
+# select a.d, count(a.sellerid) as seller_count
+# from (
+# 	SELECT d, sellerid 
+# 	FROM plsport_playsport._temp
+# 	group by d, sellerid) as a
+# group by a.d;
+
+# (3) 3.奧運男籃資格賽(7/5-7/10)、正式賽（8/7-8/22）每日有點預測的人數，國際和運彩分開
+drop table if exists plsport_playsport._prediction;
+create table plsport_playsport._prediction engine = myisam
+SELECT id, userid, allianceid, gametype, date(createon) as d, 
+       (case when (gametype>10) then 'int' else 'twn' end) as m
+FROM calculate_pm.prediction_2016
+where allianceid = 117;
+
+drop table if exists plsport_playsport._prediction_1;
+create table plsport_playsport._prediction_1 engine = myisam
+select a.m, a.d, count(a.userid) as user_count
+from (
+	SELECT m, d, userid, count(id) as c 
+	FROM plsport_playsport._prediction
+	group by m, d, userid) as a
+group by a.m, a.d;
+
+drop table if exists plsport_playsport._prediction_2;
+create table plsport_playsport._prediction_2 engine = myisam
+select a.d, sum(a.int_user_count) as int_user_count, sum(a.twn_user_count) as twn_user_count
+from (
+	SELECT d, (case when (m='int') then user_count else 0 end) as int_user_count,
+			  (case when (m='twn') then user_count else 0 end) as twn_user_count
+	FROM plsport_playsport._prediction_1) as a
+group by a.d;
+
+# (4)4.撈取2015/7月~8月、2016/6月~8月這兩個區間，逐日國際籃賽看板的文章數量、瀏覽量、回文數，請幫我排除感謝文
+drop table if exists plsport_playsport._forum;
+create table plsport_playsport._forum engine = myisam
+SELECT subjectid, allianceid, gametype, posttime, date(posttime) as d, year(posttime) as y, substr(posttime,6,5) as md,
+       postuser, viewtimes, replycount, pushcount
+FROM plsport_playsport.forum
+where substr(posttime,1,7) in ('2015-06','2015-07','2015-08','2016-06','2016-07','2016-08')
+and allianceid = 110
+and gametype <> 4
+order by posttime;
+
+drop table if exists plsport_playsport._forum_1;
+create table plsport_playsport._forum_1 engine = myisam
+SELECT d, y, md, count(subjectid) as post_count, sum(viewtimes) as viewtimes, sum(replycount) as replycount 
+FROM plsport_playsport._forum
+group by d;
+
+# 結果放在https://docs.google.com/spreadsheets/d/1NPknFUX6WFVZURa84xVi0XxvMKO-wuM9JRumzwCSnxc/edit#gid=0
