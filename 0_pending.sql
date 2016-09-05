@@ -29112,13 +29112,12 @@ SELECT a.abtest, a.userid, date(a.date) as d, a.price, a.allianceid, a.p, a.p1, 
 FROM plsport_playsport._predict_buyer_2 a inner join (SELECT userid 
                                                       FROM plsport_playsport._killer
                                                       group by userid) b on a.userid = b.userid;
-                                                      
+
 drop table if exists plsport_playsport._list_BZ_only_all_site;
 create table plsport_playsport._list_BZ_only_all_site engine = myisam
 SELECT abtest, userid, d, sum(price) as spent, count(price) as spent_count 
 FROM plsport_playsport._temp_1
 group by abtest, userid, d;
-
 
 # 如果以殺手的角度來看的話--(莊單殺/主推/勝率榜的業績)
 drop table if exists plsport_playsport._killer;
@@ -29598,7 +29597,8 @@ where time between subdate(now(),31) AND now()
 and uri like '%predictgame.php?action=scale%';
 
 create table actionlog._predict_scale_1 engine = myisam
-SELECT * FROM actionlog._predict_scale
+SELECT * 
+FROM actionlog._predict_scale
 where userid <> '';
 
 update actionlog._predict_scale_1 set platform_type = 1 where platform_type = 3;
@@ -30060,3 +30060,96 @@ FROM plsport_playsport._forum
 group by d;
 
 # 結果放在https://docs.google.com/spreadsheets/d/1NPknFUX6WFVZURa84xVi0XxvMKO-wuM9JRumzwCSnxc/edit#gid=0
+
+
+
+# =================================================================================================
+# 儲值優惠使用狀況了解http://redmine.playsport.cc/issues/2143
+# 說明
+# 了解儲值優惠的使用狀況
+# 內容
+# 
+#    - 提供有看到儲值優惠並且有完成儲值的比例
+#    - 統計區間：自行設定
+# =================================================================================================
+SELECT userid, createon, ordernumber, price, payway, sellconfirm, create_from, platform_type 
+FROM plsport_playsport.order_data
+order by id desc;
+
+SELECT userid, createon, ordernumber, price, payway, sellconfirm, create_from, platform_type 
+FROM plsport_playsport.order_data
+where create_from = 3
+and sellconfirm = 1
+order by id desc;
+
+# 快速結帳的記錄表
+SELECT * FROM plsport_playsport.quick_order_bonus_today
+where userid = 'ted7809'
+order by id desc;
+
+SELECT id, userid, createon, ordernumber, price, payway, sellconfirm, create_from, platform_type 
+FROM plsport_playsport.order_data
+where create_from = 3
+and sellconfirm = 1
+and userid = 'ted7809'
+order by id desc;
+
+drop table if exists plsport_playsport._temp;
+create table plsport_playsport._temp engine = myisam
+SELECT userid, bonus_for_price as levelup, year(create_time) as y, substr(create_time,1,7) as ym, order_data_id  
+FROM plsport_playsport.quick_order_bonus_today;
+
+select a.y, a.levelup, count(a.userid) as c
+from (
+	SELECT y, levelup, userid 
+	FROM plsport_playsport._temp
+	group by y, levelup, userid) as a
+group by a.y, a.levelup;
+
+select a.y, a.levelup, count(a.userid) as c
+from (
+	SELECT y, levelup, userid 
+	FROM plsport_playsport._temp
+    where order_data_id is not null
+	group by y, levelup, userid) as a
+group by a.y, a.levelup;
+
+select a.ym, a.levelup, count(a.userid) as c
+from (
+	SELECT ym, levelup, userid 
+	FROM plsport_playsport._temp
+    where ym = 2016
+	group by ym, levelup, userid) as a
+group by a.ym, a.levelup;
+
+select a.ym, a.levelup, count(a.userid) as c
+from (
+	SELECT ym, levelup, userid 
+	FROM plsport_playsport._temp
+    where ym = 2016 
+    and order_data_id is not null
+	group by ym, levelup, userid) as a
+group by a.ym, a.levelup;
+
+
+
+# =================================================================================================
+# TAG功能問卷名單撈取http://redmine.playsport.cc/issues/2166
+# 概述
+# 
+# TO Eddy
+# 
+# 我們要發問卷詢問討論區使用者對tag功能的需求狀況
+# 所以要麻煩您協助撈取名單
+# 條件：有發回文過的使用者，排除被永久禁文、被新人限制發文的人
+# 問卷預計發送一個禮拜，因為產品那邊預計9/14左右會跑明燈的問卷
+# 如果可以，希望能在他們之前將問卷跑完，那麼名單最晚9/5要出來
+# 但若來不急也沒關係，我們就排在明燈問卷後面
+# 
+# 再麻煩您押個時間，謝謝
+# =================================================================================================
+
+# 排除被永久禁文gobucket
+# 新人限制發文forum_new_user
+
+
