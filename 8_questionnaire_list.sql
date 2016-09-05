@@ -44,7 +44,6 @@ create table plsport_playsport.satisfactionquestionnaire_answer_ver_5 engine = m
 SELECT * FROM plsport_playsport.satisfactionquestionnaire_answer
 where version in ('5.0','6.0');
 
-
 drop table if exists plsport_playsport.satisfactionquestionnaire_answer_ver_5_edited;
 create table plsport_playsport.satisfactionquestionnaire_answer_ver_5_edited engine = myisam
 SELECT serialnumber, userid, version, completetime, spendminute, entrance, 
@@ -88,7 +87,7 @@ SELECT serialnumber, userid, version, completetime, spendminute, entrance,
        hearAboutUS, whereDoYouLive 
 FROM plsport_playsport.satisfactionquestionnaire_answer_ver_5_edited
 where userid not in ('yenhsun1982', 'monkey', 'chinginge', 'pauleanr', 'ydasam', 'n12232001', 'sakyla', 'wenchi') # 工友都要排除掉
-and spendminute > 0.5; # 小於30秒完成問卷的人就不計
+and spendminute > 0.4; # 小於30秒完成問卷的人就不計
 
 
 /*--------------------------------------------
@@ -286,7 +285,7 @@ use questionnaire;
 # group by a.userid;
 
 /*--------------------------------------------
-  (1.5)產生近6個月沒有寫過問券的人的名單
+  (1.5)產生近6個月有寫過問券的人的名單
 ---------------------------------------------*/
 drop table if exists questionnaire._fill_question_in_6_month;
 create table questionnaire._fill_question_in_6_month engine = myisam
@@ -296,7 +295,7 @@ where completeTime between subdate(now(),186) and now()
 group by userid;
 
 /*--------------------------------------------
-  (2)上個月有登入過的人
+  (2)上個月有登入過的人-主名單
 ---------------------------------------------*/
 drop table if exists questionnaire._signin_list;
 create table questionnaire._signin_list engine = myisam
@@ -304,30 +303,25 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2016-07-01' and '2016-07-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2016-08-01' and '2016-08-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
+
 
 use questionnaire;
 ALTER TABLE questionnaire._signin_list ADD INDEX (`userid`); 
 ALTER TABLE questionnaire._fill_question_in_6_month ADD INDEX (`userid`);
-# ALTER TABLE _existed_list ADD INDEX (`userid`);
 
 /*--------------------------------------------
   排除1: 上月份的名單, 但排除掉之前有做過問卷的人
 ---------------------------------------------*/
-# ALTER TABLE questionnaire._existed_list CHANGE `userid` `userid` VARCHAR(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 ALTER TABLE questionnaire._fill_question_in_6_month CHANGE `userid` `userid` VARCHAR(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 ALTER TABLE questionnaire._signin_list CHANGE `userid` `userid` VARCHAR(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 
 drop table if exists questionnaire._list;
 create table questionnaire._list engine = myisam /*上月份的名單, 但排除掉近4個月做過問卷的人*/
-SELECT a.userid FROM questionnaire._signin_list a left join questionnaire._fill_question_in_6_month b on a.userid = b.userid
+SELECT a.userid 
+FROM questionnaire._signin_list a left join questionnaire._fill_question_in_6_month b on a.userid = b.userid
 where b.userid is null;/*排除掉*/
-
-# create table questionnaire._list1 engine = myisam /*再排除掉有做過5.0問券的人*/
-# SELECT a.userid FROM questionnaire._list a left join questionnaire._existed_list b on a.userid = b.userid
-# where b.userid is null;
-
 
 /*--------------------------------------------
   排除2:
@@ -354,6 +348,7 @@ use questionnaire;
 ALTER TABLE questionnaire._list2 ADD INDEX (`userid`);
 ALTER TABLE questionnaire._list2 CHANGE  `userid`  `userid` VARCHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 
+drop table if exists questionnaire._list_full;
 create table questionnaire._list_full engine = myisam 
 SELECT b.userid # 完成的名單, 使用member資料表的userid, 要不然問卷系統不能判斷大小寫的差異, 此為問券的bug
 FROM questionnaire._list2 a left join plsport_playsport.member b on a.userid = b.userid;
@@ -395,6 +390,10 @@ ALTER TABLE  `_list_limit_3000` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER 
 ALTER TABLE  `_fill_question_in_6_month` CHANGE  `userid`  `userid` CHAR( 22 ) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ;
 select a.userid from _list_limit_3000 a inner join _fill_question_in_6_month b on a.userid = b.userid;
 # select的結果應該是空的
+
+
+
+
 
 
 
