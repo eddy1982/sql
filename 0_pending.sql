@@ -30150,6 +30150,327 @@ group by a.ym, a.levelup;
 # =================================================================================================
 
 # 排除被永久禁文gobucket
-# 新人限制發文forum_new_user
+# 新人限制發文  forum_new_user
+
+# 永久禁文名單
+drop table if exists plsport_playsport._gobucket_forever;
+CREATE TABLE plsport_playsport._gobucket_forever engine = myisam
+SELECT c.userid, c.nickname, (case when (c.gobucket_forever > 0) then 'yes' end) as gobucket_forever
+FROM (
+    SELECT b.userid, b.nickname, count(b.userid) as gobucket_forever
+    FROM (
+        SELECT a.userid, a.nickname, a.d, count(a.userid) as c
+        FROM (
+            SELECT userid, nickname, subjectid, date(startdate) as d 
+            FROM plsport_playsport.gobucket
+            WHERE type in (99)) as a
+        GROUP BY a.userid, a.nickname, a.d) as b
+    GROUP BY b.userid, b.nickname) as c;
+
+# 新人限制發文名單
+drop table if exists plsport_playsport._new_user_limit;
+CREATE TABLE plsport_playsport._new_user_limit engine = myisam
+SELECT userid 
+FROM plsport_playsport.forum_new_user
+where type = 0
+group by userid;
+
+# 主要名單
+drop table if exists plsport_playsport._forum_users;
+CREATE TABLE plsport_playsport._forum_users engine = myisam
+SELECT userid
+FROM plsport_playsport.forumcontent
+where postdate between '2015-09-01 00:00:00' and now()
+group by userid;
+
+ALTER TABLE plsport_playsport._forum_users ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport._new_user_limit ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport._gobucket_forever ADD INDEX (`userid`);
+
+drop table if exists plsport_playsport._forum_users_1;
+CREATE TABLE plsport_playsport._forum_users_1 engine = myisam
+select a.userid
+from plsport_playsport._forum_users a left join plsport_playsport._gobucket_forever b on a.userid = b.userid
+where b.userid is null;
+
+ALTER TABLE plsport_playsport._forum_users_1 ADD INDEX (`userid`);
+
+drop table if exists plsport_playsport._forum_users_2;
+CREATE TABLE plsport_playsport._forum_users_2 engine = myisam
+select a.userid
+from plsport_playsport._forum_users_1 a left join plsport_playsport._new_user_limit b on a.userid = b.userid
+where b.userid is null;
+
+SELECT 'userid' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_forum_users.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._forum_users_2);
 
 
+
+# =================================================================================================
+# [201512-D-12]明燈改版-ABtesting報告http://redmine.playsport.cc/issues/2131
+# 說明   目的：了解新版明燈的使用狀況
+# 
+# 內容   - 測試時間：8/30~9/30
+#  
+# - 設定測試組別
+#  
+# - 觀察指標
+# 明燈的使用率
+# 更換新版後，明燈使用率是否有增加
+# 明燈入口的點擊次數
+# 明燈的購買次數與金額
+# =================================================================================================
+
+# a/b testing名單: (userid%20)+1 in (11,12,13,14,15,16,17,18,19,20)
+
+drop table if exists actionlog._new_friend_page;
+create table actionlog._new_friend_page engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201608
+where userid <> ''
+and uri like '%friends.php%';
+insert ignore into actionlog._new_friend_page
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201609
+where userid <> ''
+and uri like '%friends.php%';
+
+create table actionlog._new_friend_page_list engine = myisam
+SELECT userid, count(uri) as c
+FROM actionlog._new_friend_page
+where userid not in ('a1','chinginge','h681009','ztwo79','a2') # 排除測試者
+and time between '2016-08-30 13:40:00' and now()
+group by userid;
+
+ALTER TABLE actionlog._new_friend_page_list convert to character set utf8 collate utf8_general_ci;
+
+#檢查分組的情況
+select c.g, count(c.userid)
+from (
+	SELECT (b.id%20)+1 as g, a.userid, a.c
+	FROM actionlog._new_friend_page_list a left join plsport_playsport.member b on a.userid = b.userid) as c
+group by c.g;
+
+SELECT 'userid' union (
+SELECT userid
+into outfile 'C:/Users/eddy/Desktop/_new_friend_page_list.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._new_friend_page_list);
+
+SELECT * 
+FROM actionlog._new_friend_page_list;
+
+
+
+# =================================================================================================
+# [201606-A-4]討論區APP改版-訪談名單提供http://redmine.playsport.cc/issues/2224
+# 說明 提供訪談名單
+# 內容
+# - 原本有使用討論區APP後來不再使用的人
+# - 欄位：
+#     帳號
+#     暱稱
+#     討論區app登入天數/開啟次數
+#     討論區app發回文
+#     討論區網站PV
+#     討論區網站發回文
+#     手機/電腦使用比例
+#     最後登入時間
+#     時間：近三個月
+# =================================================================================================
+
+# 先執行scripts/import_mongodb_csv_file_in_n_days_forumAPP_only.py
+
+drop table if exists actionlog._forum_app_use;
+create table actionlog._forum_app_use engine = myisam
+SELECT userid, os, action, remark, date(DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR)) as d 
+FROM actionlog.app_action_log_temp_forum_app;
+
+drop table if exists actionlog._forum_app_use_1;
+create table actionlog._forum_app_use_1 engine = myisam
+select a.userid, count(a.d) as app_use_days
+from (
+	SELECT userid, d, count(os) as c 
+	FROM actionlog._forum_app_use
+	where userid <> ''
+	group by userid, d) as a
+group by a.userid;
+
+drop table if exists actionlog._forum_app_use_2;
+create table actionlog._forum_app_use_2 engine = myisam
+SELECT userid, count(os) as open_count 
+FROM actionlog._forum_app_use
+where action = 'login'
+and userid <> ''
+group by userid;
+drop table if exists actionlog._forum_app_use_3;
+create table actionlog._forum_app_use_3 engine = myisam
+SELECT userid, count(os) as reply_count 
+FROM actionlog._forum_app_use
+where action = 'replyArticle'
+and userid <> ''
+group by userid;
+drop table if exists actionlog._forum_app_use_4;
+create table actionlog._forum_app_use_4 engine = myisam
+SELECT userid, count(os) as post_count 
+FROM actionlog._forum_app_use
+where action = 'postArticle'
+and userid <> ''
+group by userid;
+
+drop table if exists actionlog._forum_app_use_5;
+create table actionlog._forum_app_use_5 engine = myisam
+SELECT a.userid, a.app_use_days, COALESCE(b.open_count,0) as open_count
+FROM actionlog._forum_app_use_1 a left join actionlog._forum_app_use_2 b on a.userid = b.userid;
+
+drop table if exists actionlog._forum_app_use_6;
+create table actionlog._forum_app_use_6 engine = myisam
+SELECT a.userid, a.app_use_days, a.open_count, COALESCE(b.reply_count,0) as reply_count
+FROM actionlog._forum_app_use_5 a left join actionlog._forum_app_use_3 b on a.userid = b.userid;
+
+drop table if exists actionlog._forum_app_use_7;
+create table actionlog._forum_app_use_7 engine = myisam
+SELECT a.userid, a.app_use_days, a.open_count, a.reply_count, COALESCE(b.post_count,0) as post_count
+FROM actionlog._forum_app_use_6 a left join actionlog._forum_app_use_4 b on a.userid = b.userid;
+
+drop table if exists actionlog._forum_app_use_8;
+create table actionlog._forum_app_use_8 engine = myisam
+select userid, app_use_days, open_count, round((cnt-rank+1)/cnt,2) as open_count_percentile, reply_count, post_count
+from (SELECT userid, app_use_days, open_count, @curRank := @curRank + 1 AS rank, reply_count, post_count
+      FROM actionlog._forum_app_use_7, (SELECT @curRank := 0) r
+      order by open_count desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._forum_app_use_7) as ct;
+     
+
+drop table if exists actionlog._forum_log;
+create table actionlog._forum_log engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201609
+where uri like '%/forum%'
+and userid <> ''
+and time between subdate(now(),93) AND now();
+insert ignore into actionlog._forum_log
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201608
+where uri like '%/forum%'
+and userid <> ''
+and time between subdate(now(),93) AND now();
+insert ignore into actionlog._forum_log
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201607
+where uri like '%/forum%'
+and userid <> ''
+and time between subdate(now(),93) AND now();
+insert ignore into actionlog._forum_log
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201606
+where uri like '%/forum%'
+and userid <> ''
+and time between subdate(now(),93) AND now();
+
+update actionlog._forum_log set platform_type = 1 where platform_type = 3;
+
+# 在這裡執行slice08_actionlog_for_any_table.py加快速度
+
+drop table if exists actionlog._temp_1;
+create table actionlog._temp_1 engine = myisam
+SELECT userid, platform_type, sum(pv) as pv 
+FROM actionlog._temp
+group by userid, platform_type;
+
+drop table if exists actionlog._temp_2;
+create table actionlog._temp_2 engine = myisam
+select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+from (
+	SELECT userid, (case when (platform_type = 1) then pv else 0 end) as pc,
+				   (case when (platform_type = 2) then pv else 0 end) as mobile
+	FROM actionlog._temp_1) as a
+group by a.userid;
+
+drop table if exists actionlog._temp_3;
+create table actionlog._temp_3 engine = myisam
+SELECT userid, (pc+mobile) as forum_pv, 
+       round((pc/(pc+mobile)),2) as pc_p, round((mobile/(pc+mobile)),2) as mobile_p
+FROM actionlog._temp_2;
+
+drop table if exists actionlog._temp_4;
+create table actionlog._temp_4 engine = myisam
+select userid, forum_pv, round((cnt-rank+1)/cnt,2) as forum_pv_percentile, pc_p, mobile_p
+from (SELECT userid, forum_pv, @curRank := @curRank + 1 AS rank, pc_p, mobile_p
+      FROM actionlog._temp_3, (SELECT @curRank := 0) r
+      order by forum_pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._temp_3) as ct;
+
+drop table if exists actionlog._temp_5;
+create table actionlog._temp_5 engine = myisam
+SELECT postuser as userid, count(subjectid) as post_count
+FROM plsport_playsport.forum
+where posttime between subdate(now(),93) AND now()
+group by postuser;
+
+drop table if exists actionlog._temp_6;
+create table actionlog._temp_6 engine = myisam
+SELECT userid, count(articleid) as reply_count
+FROM plsport_playsport.forumcontent
+where postdate between subdate(now(),93) AND now()
+group by userid;
+
+ALTER TABLE actionlog._forum_app_use_8 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_4 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_5 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_6 convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists actionlog._temp_7;
+create table actionlog._temp_7 engine = myisam
+SELECT a.userid, a.app_use_days, a.open_count, a.open_count_percentile, a.reply_count, a.post_count,
+	   b.forum_pv, b.forum_pv_percentile, b.pc_p, b.mobile_p
+FROM actionlog._forum_app_use_8 a left join actionlog._temp_4 b on a.userid =  b.userid;
+
+drop table if exists actionlog._temp_8;
+create table actionlog._temp_8 engine = myisam
+SELECT a.userid, a.app_use_days, a.open_count, a.open_count_percentile,  a.post_count as app_post_count, a.reply_count as app_reply_count,
+	   a.forum_pv, a.forum_pv_percentile, b.post_count, a.pc_p, a.mobile_p
+FROM actionlog._temp_7 a left join actionlog._temp_5 b on a.userid = b.userid;
+
+drop table if exists actionlog._temp_9;
+create table actionlog._temp_9 engine = myisam
+SELECT a.userid, a.app_use_days, a.open_count, a.open_count_percentile, a.app_post_count, a.app_reply_count,
+	   a.forum_pv, a.forum_pv_percentile, COALESCE(a.post_count,0) as post_count, COALESCE(b.reply_count,0) as reply_count, 
+       a.pc_p, a.mobile_p
+FROM actionlog._temp_8 a left join actionlog._temp_6 b on a.userid = b.userid;
+
+drop table if exists actionlog._temp_9_1;
+create table actionlog._temp_9_1 engine = myisam
+SELECT a.userid, b.nickname, a.app_use_days, a.open_count, a.open_count_percentile, a.app_post_count, a.app_reply_count,
+	   a.forum_pv, a.forum_pv_percentile, a.post_count, a.reply_count, a.pc_p, a.mobile_p
+FROM actionlog._temp_9 a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists plsport_playsport._last_time_login;
+CREATE TABLE plsport_playsport._last_time_login engine = myisam
+SELECT userid, max(signin_time) as signin_time 
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+ALTER TABLE plsport_playsport._last_time_login convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_9_1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._last_time_login ADD INDEX (`userid`);
+ALTER TABLE actionlog._temp_9_1 ADD INDEX (`userid`);
+
+drop table if exists actionlog._temp_9_2;
+create table actionlog._temp_9_2 engine = myisam
+SELECT a.userid, a.nickname, a.app_use_days, a.open_count, a.open_count_percentile, a.app_post_count, a.app_reply_count,
+	   a.forum_pv, a.forum_pv_percentile, a.post_count, a.reply_count, a.pc_p, a.mobile_p, date(b.signin_time) as signin_time
+FROM actionlog._temp_9_1 a left join plsport_playsport._last_time_login b on a.userid = b.userid;
+
+
+SELECT 'userid', 'nickname', '使用app天數', '登入app次數', '登入app次數全站佔比', 'app貼文數', 'app回文數', 
+       '網站討論區pv', '網站討論區pv全站佔比', '貼文數', '回文數', '使用電腦', '使用手機', '最後登入' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_temp_9_2.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._temp_9_2);
+
+SELECT * FROM actionlog._temp_9_2;
