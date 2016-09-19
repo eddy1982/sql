@@ -137,8 +137,6 @@ where recentlyday = 1460
 and gametype = 11
 and alliance = 3;
 
-
-
 SELECT count(gameid) as game_count
 FROM ultron_killer._prediction_3_p3_3
 where gametype = 11
@@ -151,3 +149,58 @@ where gametype = 11
 and ratio_guest_small >= 0.5
 and ratio_guest_small < 0.55
 and win_result = 2;
+
+
+
+
+
+
+
+
+
+
+# 讓分和大小的盤分和賠率
+SELECT gameid, gsn, hometeam, visitteam, iaheadgame, iaheadgame_w, iaheadgame_result
+FROM plsport_playsport.games
+where gameid regexp '^201608[0-9][0-9]1.*';
+
+select a.iaheadgame, a.iaheadgame_w, count(gameid) as c
+from (
+	SELECT gameid, gsn, hometeam, visitteam, iaheadgame, iaheadgame_w, iaheadgame_result, ibiggame, ibiggame_w, ibiggame_result
+	FROM plsport_playsport.games
+	where gameid regexp '^201608[0-9][0-9]1.*') as a
+group by a.iaheadgame, a.iaheadgame_w;
+
+select a.ibiggame, a.ibiggame_w, count(gameid) as c
+from (
+	SELECT gameid, gsn, hometeam, visitteam, iaheadgame, iaheadgame_w, iaheadgame_result, ibiggame, ibiggame_w, ibiggame_result
+	FROM plsport_playsport.games
+	where gameid regexp '^201608[0-9][0-9]1.*') as a
+group by a.ibiggame, a.ibiggame_w;
+
+
+SELECT allianceid, gameid, gsn, hometeam, visitteam, iaheadgame, iaheadgame_w, iaheadgame_result, ibiggame, ibiggame_w, ibiggame_result
+FROM plsport_playsport.games
+where gameid regexp '^201608[0-9][0-9]1.*'
+and ibiggame > 100;
+
+
+
+SELECT iaheadgame, iaheadgame_w, count(gameid) as c 
+FROM ultron_killer.__game_1
+group by iaheadgame, iaheadgame_w;
+
+
+SELECT ibiggame, ibiggame_w, count(gameid) as c 
+FROM ultron_killer.__game_1
+group by ibiggame, ibiggame_w;
+
+
+
+
+
+
+
+
+
+
