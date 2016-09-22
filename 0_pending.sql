@@ -29135,18 +29135,6 @@ from (
 	group by abtest, sellerid, d) as a;
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 # 如果以殺手的角度來看的話--(曾在找高手頁面買過的人, 他們在全站累績的消費金額有差異嗎?)
 drop table if exists plsport_playsport._temp_1;
 create table plsport_playsport._temp_1 engine = myisam
@@ -29178,6 +29166,46 @@ SELECT *
 into outfile 'C:/proc/r/abtest/_test_3.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM plsport_playsport._temp_2);
+
+
+
+# =================================================================================================
+# TO Eddy http://redmine.playsport.cc/issues/578
+# 
+# 由於主推榜、勝率榜要加上小叮嚀標示
+# 所以這個部分的追蹤碼要再麻煩您了
+# 
+# 謝謝
+# =================================================================================================
+
+# 這裡是撈出購牌位置的記錄
+drop table if exists actionlog._temp_rp_1;
+create table actionlog._temp_rp_1 engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201609
+where time between '2016-09-19 10:00:00' and now()
+and uri like '%visit_member.php%'
+and uri regexp '^.*rp=(MPB|WPB).*';
+
+drop table if exists actionlog._temp_rp_2;
+create table actionlog._temp_rp_2 engine = myisam
+select a.p, count(a.time) as c
+from (
+	SELECT userid, substr(uri,locate('rp=',uri)+3, length(uri)) as p, time
+	FROM actionlog._temp_rp_1) as a
+group by a.p;
+
+# pv點擊
+SELECT * FROM actionlog._temp_rp_2
+order by c desc;
+
+# 購牌位置
+select a.position, count(id)
+from (
+	SELECT * 
+	FROM plsport_playsport.predict_buyer_cons_split
+	where position regexp '^.*(MPB|WPB).*N$') as a
+group by a.position;
 
 
 
@@ -30472,5 +30500,3 @@ SELECT *
 into outfile 'C:/Users/eddy/Desktop/_temp_9_2.csv'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._temp_9_2);
-
-SELECT * FROM actionlog._temp_9_2;
