@@ -30500,3 +30500,75 @@ SELECT *
 into outfile 'C:/Users/eddy/Desktop/_temp_9_2.csv'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._temp_9_2);
+
+
+
+# =================================================================================================
+# app_action_log空值很多http://redmine.playsport.cc/issues/1787
+# to 學長:
+# 
+# 我剛剛在撈mangodb中的app_action_log發現超級多的空值log被寫入, 
+# 再麻煩你撥空檢查一下此狀況是否正常, 並修正
+# 
+# 下表近45天內action, 和remark的log數量統計, 可以看到空值的log真的佔了很多:
+# =================================================================================================
+
+# 先使用import_mongodb_csv_file_in_n_days.py匯入近2週的app_action_log
+
+drop table if exists actionlog._temp_app;
+create table actionlog._temp_app engine = myisam
+SELECT * 
+FROM actionlog._app_action_log_temp
+where app = 1 
+and os = 1;
+
+drop table if exists actionlog._temp_app_1;
+create table actionlog._temp_app_1 engine = myisam
+SELECT appversion, action, remark, count(abtestgroup) as c 
+FROM actionlog._temp_app
+group by appversion, action, remark
+order by appversion;
+
+
+
+# =================================================================================================
+# iOS - 即時比分app的actionlog整理http://redmine.playsport.cc/issues/2212
+# 
+# TO Eddy
+# 2.4.4 已上架囉！
+# 再麻煩你觀察 Log 後續狀況，謝謝
+# 
+# openApp	(blank)	開啟 APP
+# clickTitle	Click_Title_Head3Alliance_BestRecommend
+# Click_Title_Head3Alliance_MainRecommend
+# Click_Title_Head3Alliance_MonthWinRatio
+# Click_Title_Head3Alliance_RunLineWin
+# go_to_buy_predict_app	點選版標
+# openConsMenu	(blank)	打開版標選單
+# goWebFromMenu	(blank)	選單 - 前往玩運彩網站
+# goForumAppFromMenu	(blank)	選單 - 玩運彩討論區APP
+# goBuyPredictAppFromMenu	(blank)	選單 - 玩運彩殺手報牌APP
+# switchAlliance	{$allianceid}	切換聯盟
+# enterGameDetail	GameLive_{$allianceid}	進入實況
+# enterGameDetail	GameStatistics_{$allianceid}	進入數據
+# =================================================================================================
+
+drop table if exists actionlog._temp_app;
+create table actionlog._temp_app engine = myisam
+SELECT *
+FROM actionlog._app_action_log_temp
+where os = 2 
+and app = 1
+and appversion = '2.4.4';
+
+drop table if exists actionlog._temp_app_1;
+create table actionlog._temp_app_1 engine = myisam
+SELECT appversion, action, remark, count(abtestgroup) as c 
+FROM actionlog._temp_app
+group by appversion, action, remark
+order by appversion;
+
+
+
+
+
