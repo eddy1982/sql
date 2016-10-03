@@ -77,15 +77,22 @@ use function STR_TO_DATE to convert MongeDB datetime value to MySQL
 DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR) as d
 ```
 
+Add Auto-Increment ID to existing table
+---------------------------------------
+```
+ALTER TABLE db.table ADD COLUMN id INT NOT NULL auto_increment PRIMARY KEY
+```
+
+
+
+
+
 
 PURGE BINARY LOGS Syntax
 -------------------------
 ```sh
 PURGE BINARY LOGS BEFORE '2014-12-31 00:00:00';
 ```
-
-
-
 
 actionlog_uri mapping
 -------------------------
