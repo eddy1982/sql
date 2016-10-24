@@ -24,9 +24,6 @@ group by a.predict;
 
 
 
-
-
-
 # 檢查預測內容, 如果winner被update為0, 那要不要依其它人的結果來rewrite回去呢?
 SELECT * 
 FROM ultron_killer._prediction_1_p1
@@ -185,21 +182,209 @@ where gameid regexp '^201608[0-9][0-9]1.*'
 and ibiggame > 100;
 
 
-
+# 讓分
 SELECT iaheadgame, iaheadgame_w, count(gameid) as c 
-FROM ultron_killer.__game_1
+FROM ultron_killer._game_2_detail_1
 group by iaheadgame, iaheadgame_w;
-
-
+# 大小
 SELECT ibiggame, ibiggame_w, count(gameid) as c 
-FROM ultron_killer.__game_1
+FROM ultron_killer._game_2_detail_1
 group by ibiggame, ibiggame_w;
 
 
+# 讓分
+SELECT iaheadgame_1, iaheadgame_w_1, count(gameid) as c 
+FROM ultron_killer._game_1_detail_2
+group by iaheadgame_1, iaheadgame_w_1;
+# 大小
+SELECT ibiggame_1, ibiggame_w_1, count(gameid) as c 
+FROM ultron_killer._game_1_detail_2
+group by ibiggame_1, ibiggame_w_1;
+
+ALTER TABLE ultron_killer._game_1_detail_2 ADD INDEX (`gameid`);
+
+drop table if exists ultron_killer._prediction_1_p3_temp_1;
+create table ultron_killer._prediction_1_p3_temp_1 engine = myisam
+SELECT a.gameid, a.d, a.gt, a.gtName, a.gut_sml, a.hom_big, a.r_gut_sml, a.r_hom_big, a.usrCount, a.winCount, 
+       a.winRatio, a.winResult, a.r_gut_sml1, a.r_hom_big1, 
+       b.iaheadgame_1, b.iaheadgame_w_1, b.ibiggame_1, b.ibiggame_w_1
+FROM ultron_killer._prediction_1_p3_temp a left join ultron_killer._game_1_detail_3 b on a.gameid = b.gameid;
+
+SELECT r_gut_sml1, iaHead1, iaHeadw1, count(gameid) as c 
+FROM ultron_killer._prediction_1_p3_temp_1
+where gt = 11
+group by r_gut_sml1, iaHead1, iaHeadw1;
+
+SELECT r_gut_sml1, iaHead1, iaHeadw1, count(gameid) as c 
+FROM ultron_killer._prediction_1_p3_temp_1
+where gt = 11
+and winResult = 1
+group by r_gut_sml1, iaHead1, iaHeadw1;
+
+SELECT r_gut_sml1, iaHead1, iaHeadw1, count(gameid) as win_c 
+FROM ultron_killer._prediction_1_p3_temp_1
+WHERE gt = 11
+and winResult = 2
+group by r_gut_sml1, iaHead1, iaHeadw1;
 
 
 
 
+
+
+
+
+
+drop table if exists ultron_killer._prediction_1_p3_temp_2;
+create table ultron_killer._prediction_1_p3_temp_2 engine = myisam
+select c.r_gut_sml1, c.iaHead1, c.iaHeadw1, c.c, c.win_c, round((c.win_c/c.c),2) as r
+from 
+	(SELECT a.r_gut_sml1, a.iaHead1, a.iaHeadw1, count(a.gameid) as c, COALESCE(b.win_c,0) as win_c
+	 FROM ultron_killer._prediction_1_p3_temp_1 as a left join 
+												(SELECT r_gut_sml1, iaHead1, iaHeadw1, count(gameid) as win_c 
+												 FROM ultron_killer._prediction_1_p3_temp_1
+												 WHERE gt = 11
+												 and winResult = 2
+												 group by r_gut_sml1, iaHead1, iaHeadw1) as b 
+												 on a.r_gut_sml1 = b.r_gut_sml1
+												 and a.iaHead1 = b.iaHead1
+												 and a.iaHeadw1 = b.iaHeadw1
+	 WHERE a.gt = 11
+	 group by a.r_gut_sml1, a.iaHead1, a.iaHeadw1) as c;
+
+
+SELECT r_gut_sml1, iaHead1, iaHeadw1, count(gameid) as win_c 
+FROM ultron_killer._prediction_1_p3_temp_1
+WHERE gt = 11
+group by r_gut_sml1, iaHead1, iaHeadw1;
+
+
+# 產生的新規則 - 以國際讓分為例
+drop table if exists ultron_killer.__new_rule;
+create table ultron_killer.__new_rule engine = myisam
+SELECT * 
+FROM ultron_killer._prediction_1_p4
+where r >= 0.55
+and c >= 15
+and gametype = 11;
+
+drop table if exists ultron_killer.__sample;
+create table ultron_killer.__sample engine = myisam
+SELECT * 
+FROM ultron_killer._prediction_1_p3_temp_1
+where d between '2016-04-01' and '2016-09-18'
+and gt = 11;
+
+drop table if exists ultron_killer.__result;
+create table ultron_killer.__result engine = myisam
+SELECT a.gameid, a.d, a.gt, a.gtName, a.r_gut_sml, a.r_hom_big, a.usrCount, a.winCount, a.winRatio, a.r_gut_sml1, a.r_hom_big1, a.winResult, a.winR,
+       b.c, b.win_c, b.r, b.winResult as ourPredict, b.winR as ourPredictR
+FROM ultron_killer.__sample a left join ultron_killer.__new_rule b 
+on a.iaHead1 = b.info1
+and a.iaHeadw1 = b.info2 
+and a.r_hom_big1 = b.scale
+where b.winResult = 1;
+insert ignore into ultron_killer.__result
+SELECT a.gameid, a.d, a.gt, a.gtName, a.r_gut_sml, a.r_hom_big, a.usrCount, a.winCount, a.winRatio, a.r_gut_sml1, a.r_hom_big1, a.winResult, a.winR,
+       b.c, b.win_c, b.r, b.winResult as ourPredict, b.winR as ourPredictR
+FROM ultron_killer.__sample a left join ultron_killer.__new_rule b 
+on a.iaHead1 = b.info1
+and a.iaHeadw1 = b.info2 
+and a.r_gut_sml1 = b.scale
+where b.winResult = 2;
+
+select c.totalgame, c.corPredict, (c.corPredict/c.totalgame) as corRate
+from (
+	SELECT count(a.gameid) as totalgame, b.corPredict 
+	FROM ultron_killer.__result as a, (SELECT count(gameid) as corPredict
+										FROM ultron_killer.__result
+										where winR = ourPredictR) as b) as c;
+
+
+# 產生的新規則 - 以國際大小為例
+# 所有的規則
+drop table if exists ultron_killer.__new_rule;
+create table ultron_killer.__new_rule engine = myisam
+SELECT * 
+FROM ultron_killer._prediction_1_p4
+where r >= 0.55
+and c >= 15
+and gametype = 12;
+
+# 決定要模擬預測的區間
+drop table if exists ultron_killer.__sample;
+create table ultron_killer.__sample engine = myisam
+SELECT * 
+FROM ultron_killer._prediction_1_p3_temp_1
+where d between '2016-04-01' and '2016-10-03'
+and gt = 12;
+
+# 計算
+drop table if exists ultron_killer.__result;
+create table ultron_killer.__result engine = myisam
+SELECT a.gameid, a.d, a.gt, a.gtName, a.r_gut_sml, a.r_hom_big, a.usrCount, a.winCount, a.winRatio, a.r_gut_sml1, a.r_hom_big1, a.winResult, a.winR,
+       b.c, b.win_c, b.r, b.winResult as ourPredict, b.winR as ourPredictR
+FROM ultron_killer.__sample a left join ultron_killer.__new_rule b 
+on a.iBig1 = b.info1
+and a.iBigw1 = b.info2 
+and a.r_hom_big1 = b.scale
+where b.winResult = 1; #押主大
+insert ignore into ultron_killer.__result
+SELECT a.gameid, a.d, a.gt, a.gtName, a.r_gut_sml, a.r_hom_big, a.usrCount, a.winCount, a.winRatio, a.r_gut_sml1, a.r_hom_big1, a.winResult, a.winR,
+       b.c, b.win_c, b.r, b.winResult as ourPredict, b.winR as ourPredictR
+FROM ultron_killer.__sample a left join ultron_killer.__new_rule b 
+on a.iBig1 = b.info1
+and a.iBigw1 = b.info2 
+and a.r_gut_sml1 = b.scale
+where b.winResult = 2; #押客小
+
+select c.totalgame, c.corPredict, (c.corPredict/c.totalgame) as corRate
+from (
+	SELECT count(a.gameid) as totalgame, b.corPredict 
+	FROM ultron_killer.__result as a, (SELECT count(gameid) as corPredict
+										FROM ultron_killer.__result
+										where winR = ourPredictR) as b) as c;
+
+
+
+
+
+
+# 所以賽季的詳細資料/時間/結束
+SELECT id, year, allianceid, alliancename, pre_start, start, end
+FROM plsport_playsport.season
+where allianceid in (1,2,3,91,92)
+order by allianceid, id ;
+
+
+SELECT dur, win_condition, avg(correct_rate) 
+FROM ultron_killer._prediction_3_p5
+where gametype = 11
+group by dur, win_condition;
+SELECT dur, win_condition, avg(correct_rate) 
+FROM ultron_killer._prediction_3_p5
+where gametype = 12
+group by dur, win_condition;
+
+SELECT dur, win_condition, avg(correct_rate) 
+FROM ultron_killer._prediction_91_p5
+where gametype = 11
+group by dur, win_condition;
+SELECT dur, win_condition, avg(correct_rate) , avg(apply_rate) 
+FROM ultron_killer._prediction_91_p5
+where gametype = 12
+group by dur, win_condition;
+
+
+
+
+# 正式的規則
+drop table if exists ultron_killer_rules._alliance_91_rules;
+create table ultron_killer_rules._alliance_91_rules
+SELECT * 
+FROM ultron_killer._prediction_91_p4
+where c >= 15
+and r >= 0.6;
 
 
 
