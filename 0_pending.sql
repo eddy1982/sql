@@ -30611,25 +30611,81 @@ FROM temp._spent_who_use_friend_1_a a left join plsport_playsport.member b on a.
 # 2.再執行scripts/import_mongodb_csv_file_in_n_days_forumAPP_only_1.py
 #   把整月2016/1~4月的一個個匯進來
 
+
+create table actionlog.app_action_log_temp_forum_app_201509_ engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, userid, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5,
+       date(DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR)) as d
+FROM actionlog.app_action_log_temp_forum_app_201509;
+create table actionlog.app_action_log_temp_forum_app_201510_ engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, userid, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5,
+       date(DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR)) as d
+FROM actionlog.app_action_log_temp_forum_app_201510;
+create table actionlog.app_action_log_temp_forum_app_201511_ engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, userid, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5,
+       date(DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR)) as d
+FROM actionlog.app_action_log_temp_forum_app_201511;
+create table actionlog.app_action_log_temp_forum_app_201512_ engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, userid, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5,
+       date(DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR)) as d
+FROM actionlog.app_action_log_temp_forum_app_201512;
+create table actionlog.app_action_log_temp_forum_app_201601_ engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, userid, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5,
+       date(DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR)) as d
+FROM actionlog.app_action_log_temp_forum_app_201601;
+create table actionlog.app_action_log_temp_forum_app_201602_ engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, userid, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5,
+       date(DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR)) as d
+FROM actionlog.app_action_log_temp_forum_app_201602;
+create table actionlog.app_action_log_temp_forum_app_201603_ engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, userid, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5,
+       date(DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR)) as d
+FROM actionlog.app_action_log_temp_forum_app_201603;
+create table actionlog.app_action_log_temp_forum_app_201604_ engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, userid, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5,
+       date(DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR)) as d
+FROM actionlog.app_action_log_temp_forum_app_201604;
+create table actionlog.app_action_log_temp_forum_app_20160422_20160926_ engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, userid, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5,
+       date(DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR)) as d
+FROM actionlog.app_action_log_temp_forum_app_20160422_20160926;
+create table actionlog.app_action_log_temp_forum_app_20160915_20161022_ engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, userid, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5,
+       date(DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR)) as d
+FROM actionlog.app_action_log_temp_forum_app_20160915_20161022;
+
+create table actionlog.app_action_log_temp_forum_app_part_1 engine = myisam
+SELECT * FROM actionlog.app_action_log_temp_forum_app_201604_
+where d between '2016-04-01' and '2016-04-19';
+create table actionlog.app_action_log_temp_forum_app_part_2 engine = myisam
+SELECT * FROM actionlog.app_action_log_temp_forum_app_20160422_20160926_
+where d between '2016-04-23' and '2016-09-27';
+create table actionlog.app_action_log_temp_forum_app_part_3 engine = myisam
+SELECT * FROM actionlog.app_action_log_temp_forum_app_20160915_20161022_
+where d between '2016-09-28' and '2016-10-22';
+
 drop table if exists actionlog.app_action_log_temp_forum_app_all;
 create table actionlog.app_action_log_temp_forum_app_all engine = myisam
-SELECT * FROM actionlog.app_action_log_temp_forum_app_201509;
+SELECT * FROM actionlog.app_action_log_temp_forum_app_201509_;
 insert ignore into actionlog.app_action_log_temp_forum_app_all
-SELECT * FROM actionlog.app_action_log_temp_forum_app_201510;
+SELECT * FROM actionlog.app_action_log_temp_forum_app_201510_;
 insert ignore into actionlog.app_action_log_temp_forum_app_all
-SELECT * FROM actionlog.app_action_log_temp_forum_app_201511;
+SELECT * FROM actionlog.app_action_log_temp_forum_app_201511_;
 insert ignore into actionlog.app_action_log_temp_forum_app_all
-SELECT * FROM actionlog.app_action_log_temp_forum_app_201512;
+SELECT * FROM actionlog.app_action_log_temp_forum_app_201512_;
 insert ignore into actionlog.app_action_log_temp_forum_app_all
-SELECT * FROM actionlog.app_action_log_temp_forum_app_201601;
+SELECT * FROM actionlog.app_action_log_temp_forum_app_201601_;
 insert ignore into actionlog.app_action_log_temp_forum_app_all
-SELECT * FROM actionlog.app_action_log_temp_forum_app_201602;
+SELECT * FROM actionlog.app_action_log_temp_forum_app_201602_;
 insert ignore into actionlog.app_action_log_temp_forum_app_all
-SELECT * FROM actionlog.app_action_log_temp_forum_app_201603;
+SELECT * FROM actionlog.app_action_log_temp_forum_app_201603_;
 insert ignore into actionlog.app_action_log_temp_forum_app_all
-SELECT * FROM actionlog.app_action_log_temp_forum_app_201604;
+SELECT * FROM actionlog.app_action_log_temp_forum_app_201604_;
 insert ignore into actionlog.app_action_log_temp_forum_app_all
-SELECT * FROM actionlog.app_action_log_temp_forum_app;
+SELECT * FROM actionlog.app_action_log_temp_forum_app_part_1;
+insert ignore into actionlog.app_action_log_temp_forum_app_all
+SELECT * FROM actionlog.app_action_log_temp_forum_app_part_2;
+insert ignore into actionlog.app_action_log_temp_forum_app_all
+SELECT * FROM actionlog.app_action_log_temp_forum_app_part_3;
 
 drop table if exists actionlog._temp;
 create table actionlog._temp engine = myisam
@@ -30691,6 +30747,8 @@ where userid in (select userid
 
 ALTER TABLE actionlog._temp_4 ADD COLUMN id INT NOT NULL auto_increment PRIMARY KEY;
 
+# 在這裡要去執行scripts\task_2224.py
+
 drop table if exists actionlog._temp_5_app_info;
 create table actionlog._temp_5_app_info engine = myisam
 select *
@@ -30699,9 +30757,22 @@ SELECT a.userid, a.d1, a.d2, a.dif as useday, (b.pv1+b.pv2) as pv, b.pv1, b.pv2,
 FROM actionlog._temp_4 a left join actionlog._temp_pv_count b on a.userid = b.userid) as a
 order by a.pv desc;
 
+drop table if exists actionlog._temp_pv_reply;
+create table actionlog._temp_pv_reply engine = myisam
+SELECT userid, count(action) as app_reply
+FROM actionlog._temp
+where userid <> ''
+and action <> 'login'
+group by userid;
+
+drop table if exists actionlog._temp_5_app_info_1;
+create table actionlog._temp_5_app_info_1 engine = myisam
+SELECT a.userid, d1, d2, useday, pv, pv1, pv2, flu, app_reply
+FROM actionlog._temp_5_app_info a left join actionlog._temp_pv_reply b on a.userid = b.userid;
+
+
 
 # 下面是主站討論區的資料
-
 drop table if exists actionlog._forum_log;
 create table actionlog._forum_log engine = myisam
 SELECT userid, uri, time, platform_type
@@ -30788,26 +30859,26 @@ ALTER TABLE actionlog._temp_6 convert to character set utf8 collate utf8_general
 
 drop table if exists actionlog._temp_7;
 create table actionlog._temp_7 engine = myisam
-SELECT a.userid, a.d1, a.d2, a.useday, a.pv, a.pv1, a.pv2, a.flu,
+SELECT a.userid, a.d1, a.d2, a.useday, a.pv, a.pv1, a.pv2, a.flu, a.app_reply,
 	   b.forum_pv, b.forum_pv_percentile, b.pc_p, b.mobile_p
-FROM actionlog._temp_5_app_info a left join actionlog._temp_4 b on a.userid =  b.userid;
+FROM actionlog._temp_5_app_info_1 a left join actionlog._temp_4 b on a.userid =  b.userid;
 
 drop table if exists actionlog._temp_8;
 create table actionlog._temp_8 engine = myisam
-SELECT a.userid, a.d1, a.d2, a.useday, a.pv, a.pv1, a.pv2, a.flu,
+SELECT a.userid, a.d1, a.d2, a.useday, a.pv, a.pv1, a.pv2, a.flu, a.app_reply,
 	   a.forum_pv, a.forum_pv_percentile, b.post_count, a.pc_p, a.mobile_p
 FROM actionlog._temp_7 a left join actionlog._temp_5 b on a.userid = b.userid;
 
 drop table if exists actionlog._temp_9;
 create table actionlog._temp_9 engine = myisam
-SELECT a.userid, a.d1, a.d2, a.useday, a.pv, a.pv1, a.pv2, a.flu,
+SELECT a.userid, a.d1, a.d2, a.useday, a.pv, a.pv1, a.pv2, a.flu, a.app_reply,
 	   a.forum_pv, a.forum_pv_percentile, COALESCE(a.post_count,0) as post_count, COALESCE(b.reply_count,0) as reply_count, 
        a.pc_p, a.mobile_p
 FROM actionlog._temp_8 a left join actionlog._temp_6 b on a.userid = b.userid;
 
 drop table if exists actionlog._temp_9_1;
 create table actionlog._temp_9_1 engine = myisam
-SELECT a.userid, b.nickname, a.d1, a.d2, a.useday, a.pv, a.pv1, a.pv2, a.flu,
+SELECT a.userid, b.nickname, a.d1, a.d2, a.useday, a.pv, a.pv1, a.pv2, a.flu, a.app_reply,
 	   a.forum_pv, a.forum_pv_percentile, a.post_count, a.reply_count, a.pc_p, a.mobile_p
 FROM actionlog._temp_9 a left join plsport_playsport.member b on a.userid = b.userid;
 
@@ -30824,13 +30895,12 @@ ALTER TABLE actionlog._temp_9_1 ADD INDEX (`userid`);
 
 drop table if exists actionlog._temp_9_2;
 create table actionlog._temp_9_2 engine = myisam
-SELECT a.userid, a.nickname, a.d1, a.d2, a.useday, a.pv, a.pv1, a.pv2, a.flu,
+SELECT a.userid, a.nickname, a.d1, a.d2, a.useday, a.pv, a.pv1, a.pv2, a.flu, a.app_reply,
 	   a.forum_pv, a.forum_pv_percentile, a.post_count, a.reply_count, a.pc_p, a.mobile_p, date(b.signin_time) as signin_time
 FROM actionlog._temp_9_1 a left join plsport_playsport._last_time_login b on a.userid = b.userid
 order by a.pv desc;
 
-
-SELECT 'userid', 'nickname', '最早使用app', '最後使用app', '總天數', '總使用app', '前半使用app', '後半使用app', '變化%', 
+SELECT 'userid', 'nickname', '最早使用app', '最後使用app', '總天數', '總使用app', '前半使用app', '後半使用app', '變化%', '發回文次數', 
        '網站討論區pv', '網站討論區pv全站佔比', '貼文數', '回文數', '使用電腦', '使用手機', '最後登入' union (
 SELECT *
 into outfile 'C:/Users/eddy/Desktop/_temp_9_2.csv'
