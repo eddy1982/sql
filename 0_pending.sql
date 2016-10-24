@@ -29735,6 +29735,88 @@ from (
 group by b.d;
 
 
+# 是由 郭 靜怡 於 4 天 前更新 
+# Comment Edit TO EDDY
+#
+# 麻煩在引用回文的區間加上每周、每月的平均數據，謝謝
+# 
+# http://192.168.1.42/pls/pm_forum_quote_reply.php?duration=10
+
+drop table if exists plsport_playsport._forumcontent_qoute_reply;
+create table plsport_playsport._forumcontent_qoute_reply engine = myisam
+select a.d, count(a.articleid) as qoute_reply
+from (
+	SELECT date(postdate) as d, articleid 
+	FROM calculate_pm.forumcontent
+	where quote_articleid <> 0
+	and postdate between '2016-07-19 00:00:00' and now()) as a
+group by a.d;
+drop table if exists plsport_playsport._forumcontent_all_reply;
+create table plsport_playsport._forumcontent_all_reply engine = myisam
+select a.d, count(a.articleid) as all_reply
+from (
+	SELECT date(postdate) as d, articleid 
+	FROM calculate_pm.forumcontent
+	where postdate between '2016-07-19 00:00:00' and now()) as a
+group by a.d;
+
+drop table if exists plsport_playsport._forumcontent_qoute_reply_w;
+create table plsport_playsport._forumcontent_qoute_reply_w engine = myisam
+select a.w, count(a.articleid) as qoute_reply
+from (
+	SELECT week(postdate) as w, articleid 
+	FROM calculate_pm.forumcontent
+	where quote_articleid <> 0
+	and postdate between '2016-07-19 00:00:00' and now()) as a
+group by a.w;
+drop table if exists plsport_playsport._forumcontent_all_reply_w;
+create table plsport_playsport._forumcontent_all_reply_w engine = myisam
+select a.w, count(a.articleid) as all_reply
+from (
+	SELECT week(postdate) as w, articleid 
+	FROM calculate_pm.forumcontent
+	where postdate between '2016-07-19 00:00:00' and now()) as a
+group by a.w;
+
+
+
+drop table if exists plsport_playsport._temp;
+create table plsport_playsport._temp engine = myisam
+SELECT postdate, articleid, userid, quote_articleid
+FROM calculate_pm.forumcontent
+where postdate between '2016-07-19 00:00:00' and now();
+
+drop table if exists plsport_playsport._temp_1;
+create table plsport_playsport._temp_1 engine = myisam
+SELECT a.userid, count(a.articleid) as reply, COALESCE(b.quote,0) as quote
+FROM plsport_playsport._temp a left join (SELECT userid, count(articleid) as quote 
+											FROM plsport_playsport._temp
+											where quote_articleid <> 0
+											group by userid) b on a.userid = b.userid
+group by userid;
+
+
+drop table if exists plsport_playsport._temp_2;
+create table plsport_playsport._temp_2 engine = myisam
+select userid, reply, round((cnt-rank+1)/cnt,2) as reply_p, quote
+from (SELECT userid, reply, quote, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._temp_1, (SELECT @curRank := 0) r
+      order by reply desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._temp_1) as ct;
+
+drop table if exists plsport_playsport._temp_3;
+create table plsport_playsport._temp_3 engine = myisam
+SELECT userid, reply, reply_p, quote, (case when (quote = 0) then 'b' else 'a' end) as ver 
+FROM plsport_playsport._temp_2;
+
+SELECT 'userid', 'reply', 'reply_p', 'quote', 'ver' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_temp_3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._temp_3);
+
+
+
 
 # =================================================================================================
 # [201512-D-10]明燈改版-MVP名單提供http://redmine.playsport.cc/issues/2027
@@ -30292,6 +30374,207 @@ SELECT *
 FROM actionlog._new_friend_page_list;
 
 
+# 以下是a/b testing的部分
+
+# 新明燈的pv
+drop table if exists temp._new_friend_page;
+create table temp._new_friend_page engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201608
+where userid <> ''
+and uri like '%friends.php%'
+and time between '2016-08-30 13:40:00' and now();
+insert ignore into temp._new_friend_page
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201609
+where userid <> ''
+and uri like '%friends.php%'
+and time between '2016-08-30 13:40:00' and now();
+insert ignore into temp._new_friend_page
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201610
+where userid <> ''
+and uri like '%friends.php%'
+and time between '2016-08-30 13:40:00' and now();
+
+# 舊明燈的pv
+drop table if exists temp._old_friend_page;
+create table temp._old_friend_page engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201608
+where userid <> ''
+and uri like '%visit_member.php?action=friend%'
+and time between '2016-08-30 13:40:00' and now();
+insert ignore into temp._old_friend_page
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201609
+where userid <> ''
+and uri like '%visit_member.php?action=friend%'
+and time between '2016-08-30 13:40:00' and now();
+insert ignore into temp._old_friend_page
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201610
+where userid <> ''
+and uri like '%visit_member.php?action=friend%'
+and time between '2016-08-30 13:40:00' and now();
+
+drop table if exists temp._all_friend_page;
+create table temp._all_friend_page engine = myisam
+SELECT userid, (case when (userid is not null) then 'new' end) as ver, uri, date(time) as d
+FROM temp._new_friend_page;
+insert ignore into temp._all_friend_page
+SELECT userid, (case when (userid is not null) then 'old' end) as ver, uri, date(time) as d
+FROM temp._old_friend_page;
+
+drop table if exists temp._all_friend_page_1;
+create table temp._all_friend_page_1 engine = myisam
+SELECT userid, d, ver, count(uri) as c 
+FROM temp._all_friend_page
+group by userid, d, ver;
+
+ALTER TABLE temp._all_friend_page_1 convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists temp._all_friend_page_2;
+create table temp._all_friend_page_2 engine = myisam
+SELECT (case when ((b.id%20)+1>=11) then 'a' else 'b' end) as abtest, a.userid, a.ver, a.c, a.d
+FROM temp._all_friend_page_1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists temp._all_friend_page_3;
+create table temp._all_friend_page_3 engine = myisam
+SELECT abtest, ver, userid, d, c 
+FROM temp._all_friend_page_2
+where concat(abtest,ver) <> 'bnew';
+
+select a.abtest, a.ver, count(a.userid) as user_count, sum(a.c) as total_pv
+from (
+	SELECT abtest, ver, userid, sum(c) as c 
+	FROM temp._all_friend_page_3
+	group by abtest, ver, userid) as a
+group by a.abtest, a.ver;
+# a	new	2776	109759
+# b	old	2092	53247
+
+
+# 靜怡要補充的, 那中重度使用者在使用明燈上行為有差異嗎?
+drop table if exists temp._all_friend_page_4;
+create table temp._all_friend_page_4 engine = myisam
+SELECT * 
+FROM temp._all_friend_page_3
+where userid in (select a.userid
+				from (
+					SELECT userid, sum(c) as c 
+					FROM temp._all_friend_page_3
+					group by userid) as a
+				where a.c > 10);
+
+
+
+
+# 明燈的使用率, 2組之間加明燈的數量有沒有不同
+drop table if exists temp._friends_advance;
+create table temp._friends_advance engine = myisam
+SELECT userid, friendid, date(create_time) as  d
+FROM plsport_playsport.friends_advance
+where create_time between '2016-08-30 13:40:00' and now();
+
+drop table if exists temp._friends_advance_1;
+create table temp._friends_advance_1 engine = myisam
+SELECT userid, friendid, d
+FROM temp._friends_advance
+where userid <> ''
+group by userid, friendid, d;
+
+drop table if exists temp._friends_advance_2;
+create table temp._friends_advance_2 engine = myisam
+SELECT userid, d, count(friendid) as friend_count 
+FROM temp._friends_advance_1
+group by userid, d;
+
+ALTER TABLE temp._friends_advance_2 convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists temp._friends_advance_3;
+create table temp._friends_advance_3 engine = myisam
+SELECT (case when ((b.id%20)+1>=11) then 'a' else 'b' end) as abtest, a.userid, a.d, a.friend_count as c
+FROM temp._friends_advance_2 a left join plsport_playsport.member b on a.userid = b.userid;
+
+
+drop table if exists temp._friends_advance_4;
+create table temp._friends_advance_4 engine = myisam
+SELECT * 
+FROM temp._friends_advance_3
+where userid in (select a.userid
+				from (
+					SELECT userid, sum(c) as c 
+					FROM temp._friends_advance_3
+					group by userid) as a
+				where a.c > 2);
+
+select a.abtest, count(a.userid) as user_count, sum(fcount) as total_count
+from (
+	SELECT abtest, userid, sum(fcount) as fcount 
+	FROM temp._friends_advance_3
+	group by abtest, userid) as a
+group by a.abtest;
+# a	1706	10548
+# b	1600	7518
+
+
+# 看消費的情況
+drop table if exists temp._spent;
+create table temp._spent engine = myisam
+SELECT a.buyerid as userid, date(a.buy_date) as d, a.buy_price, b.position
+FROM plsport_playsport.predict_buyer a left join plsport_playsport.predict_buyer_cons_split b on a.id = b.id_predict_buyer
+where a.buy_date between '2016-08-30 13:40:00' and now();
+
+drop table if exists temp._spent_who_use_friend; # 撈取限有使用過明燈的人
+create table temp._spent_who_use_friend engine = myisam
+SELECT * 
+FROM temp._spent
+where userid in (SELECT userid 
+				 FROM temp._all_friend_page_3
+				 group by userid);
+
+drop table if exists temp._spent_who_use_friend_1; # 撈取限有使用過明燈的人
+create table temp._spent_who_use_friend_1 engine = myisam
+SELECT userid, d, sum(buy_price) as spent, count(buy_price) as spent_count
+FROM temp._spent_who_use_friend
+group by userid, d;
+
+drop table if exists temp._spent_who_use_friend_2; 
+create table temp._spent_who_use_friend_2 engine = myisam
+SELECT (case when ((b.id%20)+1>=11) then 'a' else 'b' end) as abtest, a.userid, a.d, a.spent, a.spent_count 
+FROM temp._spent_who_use_friend_1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists temp._spent_who_use_friend_3; 
+create table temp._spent_who_use_friend_3 engine = myisam
+SELECT abtest, sum(spent), sum(spent_count)
+FROM temp._spent_who_use_friend_2
+group by abtest;
+
+drop table if exists temp._spent_who_use_friend_a; # 撈取限有使用過明燈的人(pv>10)
+create table temp._spent_who_use_friend_a engine = myisam
+SELECT * 
+FROM temp._spent
+where userid in (SELECT userid 
+				 FROM temp._all_friend_page_4
+				 group by userid);
+
+drop table if exists temp._spent_who_use_friend_1_a; # 撈取限有使用過明燈的人
+create table temp._spent_who_use_friend_1_a engine = myisam
+SELECT userid, d, sum(buy_price) as spent, count(buy_price) as spent_count
+FROM temp._spent_who_use_friend_a
+group by userid, d;
+
+drop table if exists temp._spent_who_use_friend_2_a; 
+create table temp._spent_who_use_friend_2_a engine = myisam
+SELECT (case when ((b.id%20)+1>=11) then 'a' else 'b' end) as abtest, a.userid, a.d, a.spent, a.spent_count 
+FROM temp._spent_who_use_friend_1_a a left join plsport_playsport.member b on a.userid = b.userid;
+
+# 比較pv:      temp._all_friend_page_3
+# 比較加好友數: temp._friends_advance_3
+# 比較花費:     temp._spent_who_use_friend_3
+
+
 
 # =================================================================================================
 # [201606-A-4]討論區APP改版-訪談名單提供http://redmine.playsport.cc/issues/2224
@@ -30636,10 +30919,9 @@ order by appversion;
 #    名單提供時間:9月30日
 # =================================================================================================
 
-
 drop table if exists plsport_playsport._order_data_1;
-create table plsport_playsport._order_data engine = myisam
-SELECT userid, createon, ordernumber, price, payway, create_from 
+create table plsport_playsport._order_data_1 engine = myisam
+SELECT userid, createon, ordernumber, price, payway, create_from, phone
 FROM plsport_playsport.order_data
 where sellconfirm = 1
 and year(createon) in (2015, 2016)
@@ -30648,15 +30930,15 @@ and userid <> 'wenting0403lin';
 
 drop table if exists plsport_playsport._list_1;
 create table plsport_playsport._list_1 engine = myisam
-SELECT userid 
+SELECT userid, phone
 FROM plsport_playsport._order_data_1
 where substr(createon,1,7) <> '2015-04'
 and price >= 3999
-group by userid;
+group by userid, phone;
 
 drop table if exists plsport_playsport._order_data_2;
 create table plsport_playsport._order_data_2 engine = myisam
-SELECT userid, createon, ordernumber, price, payway, create_from 
+SELECT userid, createon, ordernumber, price, payway, create_from, phone
 FROM plsport_playsport.order_data
 where createon between subdate(now(),186) AND now()
 and price >= 3999
@@ -30664,13 +30946,13 @@ and sellconfirm = 1;
 
 drop table if exists plsport_playsport._list_2;
 create table plsport_playsport._list_2 engine = myisam
-SELECT userid 
+SELECT userid, phone
 FROM plsport_playsport._order_data_2
-group by userid;
+group by userid, phone;
 
 drop table if exists plsport_playsport._order_data_3;
 create table plsport_playsport._order_data_3 engine = myisam
-SELECT userid, createon, ordernumber, price, payway, create_from 
+SELECT userid, createon, ordernumber, price, payway, create_from, phone
 FROM plsport_playsport.order_data
 where createon between '2015-10-01 00:00:00' AND '2016-04-30 23:59:59'
 and price >= 3999
@@ -30678,9 +30960,9 @@ and sellconfirm = 1;
 
 drop table if exists plsport_playsport._list_3;
 create table plsport_playsport._list_3 engine = myisam
-SELECT userid 
+SELECT userid, phone
 FROM plsport_playsport._order_data_3
-group by userid;
+group by userid, phone;
 
 drop table if exists plsport_playsport._list_all;
 create table plsport_playsport._list_all engine = myisam
@@ -30692,8 +30974,15 @@ SELECT * FROM plsport_playsport._list_3;
 
 drop table if exists plsport_playsport._list_ok;
 create table plsport_playsport._list_ok engine = myisam
-SELECT userid 
+SELECT phone, userid
 FROM plsport_playsport._list_all
-group by userid;
+where length(phone) = 10
+group by phone;
 
+# 給yoyo8簡訊發送
+SELECT '手機號碼(必填)', '姓名', '群組' union (
+SELECT a.phone, b.id, (case when (a.userid is not null) then 'buyPcashBonus201610' else '' end) as text_campaign
+into outfile 'C:/Users/eddy/Desktop/_all_list_ok_yoyo8.txt'
+CHARACTER SET big5 fields terminated by ',' enclosed by '' lines terminated by '\r\n'
+FROM plsport_playsport._list_ok a left join plsport_playsport.member b on a.userid = b.userid);
 
