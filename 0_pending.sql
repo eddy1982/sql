@@ -31056,3 +31056,74 @@ into outfile 'C:/Users/eddy/Desktop/_all_list_ok_yoyo8.txt'
 CHARACTER SET big5 fields terminated by ',' enclosed by '' lines terminated by '\r\n'
 FROM plsport_playsport._list_ok a left join plsport_playsport.member b on a.userid = b.userid);
 
+
+
+
+# =================================================================================================
+# 分析電腦版使用者於討論區嵌入youtube的比例http://redmine.playsport.cc/issues/2410#change-12797
+# 概述
+# 1. 分析電腦版使用者於討論區嵌入youtube的比例
+# 
+#    請分別提供發文、回文的嵌入比例
+#    忘了說，請分析近一年的數據即可
+# =================================================================================================
+
+drop table if exists plsport_playsport._find_roof;
+create table plsport_playsport._find_roof engine = myisam
+SELECT * 
+FROM plsport_playsport.forumcontent
+where userid <> ''
+and postdate between '2015-10-01 00:00:00' and '2016-10-31 23:59:59';
+
+ALTER TABLE plsport_playsport._find_roof ADD INDEX (`subjectid`);
+
+drop table if exists plsport_playsport._find_roof_1;
+create table plsport_playsport._find_roof_1 engine = myisam
+SELECT subjectid, articleid, min(postdate) as postdate, (case when (subjectid is not null) then 'post' end) as t
+FROM plsport_playsport._find_roof
+group by subjectid;
+
+ALTER TABLE plsport_playsport._find_roof_1 ADD INDEX (`articleid`);
+
+
+drop table if exists plsport_playsport._yt;
+create table plsport_playsport._yt engine = myisam
+SELECT * 
+FROM plsport_playsport.forumcontent
+where userid <> ''
+and content like '%youtube%' or content like '%youtu.be%'
+and postdate between '2015-10-01 00:00:00' and '2016-10-31 23:59:59';
+
+drop table if exists plsport_playsport._yt_1;
+create table plsport_playsport._yt_1 engine = myisam
+SELECT articleid, subjectid, userid, content, postdate 
+FROM plsport_playsport._yt
+where content like '%embed%'
+and postdate between '2015-10-01 00:00:00' and '2016-10-31 23:59:59';
+
+drop table if exists plsport_playsport._yt_2;
+create table plsport_playsport._yt_2 engine = myisam
+SELECT a.articleid, a.subjectid, a.userid, a.content, a.postdate, ifnull(b.t, 'reply') as t
+FROM plsport_playsport._yt_1 a left join plsport_playsport._find_roof_1 b on a.articleid = b.articleid;
+
+# 有牽入youtube
+select a.ym, a.t, count(articleid) as youtube
+from (
+	SELECT articleid, substr(postdate,1,7) as ym, t 
+	FROM plsport_playsport._yt_2) as a
+group by a.ym, a.t;
+
+# 所有發回文
+select c.ym, c.t, count(c.articleid) as all_post
+from (
+	SELECT a.articleid, a.userid, substr(a.postdate,1,7) as ym, ifnull(b.t, 'reply') as t
+	FROM plsport_playsport._find_roof a left join plsport_playsport._find_roof_1 b on a.articleid = b.articleid) as c
+group by c.ym, c.t;
+
+
+
+
+
+
+
+
