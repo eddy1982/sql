@@ -31122,8 +31122,71 @@ group by c.ym, c.t;
 
 
 
+# =================================================================================================
+# 自己的研究任務
+#     預測通知和殺手售牌預測通知的使用估計
+# =================================================================================================
 
+# 新版明燈10/14全面上線
 
+# 每天有在用明燈的人
+drop table if exists actionlog._new_friend_page;
+create table actionlog._new_friend_page engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201610
+where userid <> ''
+and uri like '%friends.php%'
+and time between '2016-10-14 00:00:00' and now();
+
+select b.d, count(b.userid) as user_use_friend
+from (
+	select a.userid, a.d
+	from (
+		SELECT userid, date(time) as d 
+		FROM actionlog._new_friend_page) as a
+	group by a.userid, a.d) as b
+group by b.d;
+
+# 每天有在買牌的人
+select b.d, count(b.userid) as user_buy_predict
+from (
+	select a.d, a.userid
+	from (
+		SELECT userid, amount, date(date) as d 
+		FROM plsport_playsport.pcash_log
+		where date between '2016-10-14 00:00:00' and now()
+		and payed = 1 and type = 1) as a
+	group by a.d, a.userid) as b
+group by b.d;
+
+# 誰有用明燈又有在買牌
+create table actionlog._user_friend_list engine = myisam
+select a.userid, a.d
+from (
+	SELECT userid, date(time) as d 
+	FROM actionlog._new_friend_page) as a
+group by a.userid, a.d
+
+create table actionlog._user_buy_list engine = myisam
+select a.d, a.userid
+from (
+	SELECT userid, amount, date(date) as d 
+	FROM plsport_playsport.pcash_log
+	where date between '2016-10-14 00:00:00' and now()
+	and payed = 1 and type = 1) as a
+group by a.d, a.userid;
+
+ALTER TABLE actionlog._user_friend_list convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._user_buy_list convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._user_friend_list ADD INDEX (`userid`);
+ALTER TABLE actionlog._user_buy_list ADD INDEX (`userid`);
+
+select c.d, count(c.userid)
+from (
+	SELECT a.userid, a.d
+	FROM actionlog._user_friend_list  a inner join actionlog._user_buy_list b on a.userid = b.userid
+	and a.d = b.d) as c
+group by c.d;
 
 
 
