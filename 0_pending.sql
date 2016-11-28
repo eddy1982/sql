@@ -31594,6 +31594,166 @@ where q2 is not null;
 
 
 
+# =================================================================================================
+# TAG功能問卷名單撈取http://redmine.playsport.cc/issues/2166#change-11477
+# 這個問卷(201608311705051094)的結果出來了
+#  
+# 需要 50.4%
+# 不需要14.7%
+# 沒意見28%
+# 
+# 由於有點無法解讀這個結果
+# 想麻煩您幫我們分析一下
+# 想分別針對討論區使用程度（pv、回文）重度、中度、輕度以及買牌客、殺手，這些身分對這個功能的需求
+# =================================================================================================
+
+# 結束時間2016-09-15 10:00:00
+# 若討論區新增標記功能（被標記的人能收到通知），您覺得如何？（示意圖如下）
+# 需要   350  50.4%
+# 不需要 102  14.7%
+# 沒意見 194  28%
+
+# 問券
+drop table if exists plsport_playsport._qu;
+create table plsport_playsport._qu engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201608311705051094_answer;
+
+ALTER TABLE plsport_playsport._qu CHANGE `1472633476` q1 VARCHAR(30);
+
+drop table if exists plsport_playsport._qu_1;
+create table plsport_playsport._qu_1 engine = myisam
+SELECT userid, q1 FROM plsport_playsport._qu where q1 in (1,2,3);
+
+SELECT q1, count(userid) as c 
+FROM plsport_playsport._qu_1
+group by q1;
+
+
+# 回文
+drop table if exists plsport_playsport._forumcontent;
+create table plsport_playsport._forumcontent engine = myisam
+SELECT articleid, subjectid, userid, postdate, quote_articleid
+FROM plsport_playsport.forumcontent
+where postdate between subdate(now(),60) AND now()
+order by postdate;
+
+drop table if exists plsport_playsport._reply_count;
+create table plsport_playsport._reply_count engine = myisam
+SELECT userid, count(articleid) as reply 
+FROM plsport_playsport._forumcontent
+group by userid;
+
+drop table if exists plsport_playsport._reply_count1;
+create table plsport_playsport._reply_count1 engine = myisam
+select userid, reply, round((cnt-rank+1)/cnt,2) as reply_p
+from (SELECT userid, reply, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._reply_count, (SELECT @curRank := 0) r
+      order by reply desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._reply_count) as ct;
+     
+drop table if exists plsport_playsport._reply_count2;
+create table plsport_playsport._reply_count2 engine = myisam
+SELECT userid, reply, reply_p, (case when (reply_p>=0.95) then 'lv4'
+                                     when (reply_p>=0.80) then 'lv3'
+									 when (reply_p>=0.60) then 'lv2' else 'lv1' end) as lv
+FROM plsport_playsport._reply_count1;
+
+select c.lv, c.q1, count(c.userid) as c
+from (
+	SELECT a.userid, reply, reply_p, lv, b.q1
+	FROM plsport_playsport._reply_count2 a inner join plsport_playsport._qu_1 b on a.userid = b.userid) as c
+group by c.lv, c.q1; 
+
+
+# 討論區pv
+drop table if exists plsport_playsport._forum_pv;
+create table plsport_playsport._forum_pv engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201611
+where userid <> ''
+and substr(uri,1,6) = '/forum'
+and time between subdate(now(),60) AND now();
+insert ignore into plsport_playsport._forum_pv
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201610
+where userid <> ''
+and substr(uri,1,6) = '/forum'
+and time between subdate(now(),60) AND now();
+
+#執行slice08_actionlog_for_any_table.py
+
+drop table if exists plsport_playsport._forum_pv_1;
+create table plsport_playsport._forum_pv_1 engine = myisam
+SELECT userid, sum(pv) as pv 
+FROM plsport_playsport._temp
+group by userid;
+
+drop table if exists plsport_playsport._forum_pv_2;
+create table plsport_playsport._forum_pv_2 engine = myisam
+select userid, pv, round((cnt-rank+1)/cnt,2) as pv_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._forum_pv_1, (SELECT @curRank := 0) r
+      order by pv desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._forum_pv_1) as ct;
+     
+drop table if exists plsport_playsport._forum_pv_3;
+create table plsport_playsport._forum_pv_3 engine = myisam
+SELECT userid, pv, pv_p, (case when (pv_p>=0.95) then 'lv4'
+                               when (pv_p>=0.80) then 'lv3'
+							   when (pv_p>=0.60) then 'lv2' else 'lv1' end) as lv
+FROM plsport_playsport._forum_pv_2;
+
+ALTER TABLE plsport_playsport._forum_pv_3 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._qu_1 convert to character set utf8 collate utf8_general_ci;
+
+select c.lv, c.q1, count(c.userid) as c
+from (
+	SELECT a.userid, pv, pv_p, lv, b.q1
+	FROM plsport_playsport._forum_pv_3 a inner join plsport_playsport._qu_1 b on a.userid = b.userid) as c
+group by c.lv, c.q1; 
+     
+
+# 買牌客
+drop table if exists plsport_playsport._buyer_1;
+create table plsport_playsport._buyer_1 engine = myisam
+SELECT buyerid as userid, sum(buy_price) as spent
+FROM plsport_playsport.predict_buyer
+where buy_date between subdate(now(),60) AND now()
+group by buyerid;
+
+select c.q1, count(c.userid) as c
+from (
+	SELECT a.userid, spent, b.q1
+	FROM plsport_playsport._buyer_1 a inner join plsport_playsport._qu_1 b on a.userid = b.userid) as c
+group by c.q1; 
+
+
+# 殺手
+drop table if exists plsport_playsport._seller_1;
+create table plsport_playsport._seller_1 engine = myisam
+select a.sellerid as userid, sum(a.income) as income
+from (
+	SELECT sellerid, sale_price*buyer_count as income
+	FROM plsport_playsport.predict_seller
+	where sale_date between subdate(now(),60) AND now()) as a
+group by a.sellerid;
+
+select c.q1, count(c.userid) as c
+from (
+	SELECT a.userid, income, b.q1
+	FROM plsport_playsport._seller_1 a inner join plsport_playsport._qu_1 b on a.userid = b.userid) as c
+group by c.q1; 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
