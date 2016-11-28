@@ -389,3 +389,252 @@ and r >= 0.6;
 
 
 
+
+# 模擬每小時的變化
+
+SELECT id, userid, gameid, allianceid, gametype, predict, winner, createon,  hour(date_add(createon, INTERVAL 1 HOUR)) as h
+FROM calculate_pm._test_
+where gameid = '20161024911001'
+order by createon ;
+
+drop table if exists calculate_pm._test_1;
+create table calculate_pm._test_1 engine = myisam
+SELECT id, userid, gameid, allianceid, gametype, predict, winner, createon,  substr(date_add(createon, INTERVAL 1 HOUR),1,13) as h
+FROM calculate_pm._test_
+where gameid = '20161024911001'
+order by createon ;
+
+SELECT h, gametype, predict, count(id) as c 
+FROM calculate_pm._test_1
+group by h, gametype, predict;
+
+
+
+
+
+# 把預測結果寫入google drive的文件中
+create table ultron_killer._scale_91_rulematch_export engine = myisam
+SELECT a.gameid, gsn, visitteam, hometeam, dateon, ihomeahead_p, ivisitahead_p, ihomebig_p, ivisitbig_p, 
+       scale, info1, info2, c, win_c, r, act
+FROM ultron_killer._scale_91_temp1 a left join ultron_killer._scale_91_rulematch b on a.gameid = b.gameid
+where a.dateon between subdate(now(),1) and subdate(now(),-2)
+and b.gameid is not null;
+
+SELECT * FROM ultron_killer._scale_91_rulematch_export;
+
+SELECT *
+into outfile 'C:/Users/eddy/Google Drive/note/_scale_91_rulematch_export.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM ultron_killer._scale_91_rulematch_export;
+
+
+
+# 只預測去年
+# 20161107970300 [300]
+# 2016-11-07 18:15
+# 秋田北部喜悅 
+# @ 東京電擊
+
+SELECT * 
+FROM ultron_killer._prediction_97_p4_gt11_sample
+where gt = 11
+and r_gut_sml1 = '0.35-0.40'
+and iaHead1 = '主讓15以上'
+and iaHeadw1 = '輸50%';
+
+SELECT * 
+FROM ultron_killer._prediction_97_p3_temp_1
+where gt = 11
+and r_gut_sml1 = '0.35-0.40'
+and iaHead1 = '主讓15以上'
+and iaHeadw1 = '輸50%';
+
+
+# 開賽前盤分變動後
+SELECT * 
+FROM ultron_killer._prediction_97_p3_temp_1
+where gt = 11
+and r_hom_big1 = '0.60-0.65'
+and iaHead1 = '主讓15以上'
+and iaHeadw1 = '贏50% ';
+
+
+SELECT * 
+FROM ultron_killer._prediction_97_p3_temp_1
+where gt = 11
+and r_hom_big1 = '0.60-0.65'
+and iaHead1 = '主讓15以上';
+
+
+
+SELECT iaHeadw1, winResult, winR, count(gameid)
+FROM ultron_killer._prediction_97_p3_temp_1
+where gt = 11
+and r_hom_big1 = '0.60-0.65'
+and iaHead1 = '主讓15以上'
+group by iaHeadw1, winResult;
+
+
+SELECT  winResult, winR, count(gameid)
+FROM ultron_killer._prediction_97_p3_temp_1
+where gt = 11
+and r_hom_big1 = '0.60-0.65'
+and iaHead1 = '主讓15以上'
+group by  winResult;
+
+
+
+
+
+
+# 奧創的勝率 (從2016-10-26開始)
+select c.allianceid, (c.win+c.lose) as c, round(c.win/(c.win+c.lose),2) as win_r
+from (
+	select b.allianceid, sum(b.win) as win, sum(b.lose) as lose
+	from (
+		select a.allianceid, (case when (a.winner = 1) then a.c else 0 end) as win,
+							 (case when (a.winner = 2) then a.c else 0 end) as lose
+		from (
+			SELECT allianceid, winner, count(id) as c
+			FROM ultron_killer_rules._ultron_history
+            WHERE date(createon) between '2016-10-00' and '2016-11-21'
+			group by allianceid, winner) as a) as b
+	group by b.allianceid) as c;
+    
+
+# 奧創的勝率-依玩法來分 (從2016-10-26開始)
+select c.allianceid, c.gametype, (c.win+c.lose) as c, round(c.win/(c.win+c.lose),2) as win_r
+from (
+	select b.allianceid, b.gametype, sum(b.win) as win, sum(b.lose) as lose
+	from (
+		select a.allianceid, a.gametype, (case when (a.winner = 1) then a.c else 0 end) as win,
+										 (case when (a.winner = 2) then a.c else 0 end) as lose
+		from (
+			SELECT allianceid, gametype, winner, count(id) as c
+			FROM ultron_killer_rules._ultron_history
+			WHERE date(createon) between '2016-10-00' and '2016-11-21'
+			and winner in (1,2)
+			group by allianceid, gametype, winner) as a) as b
+	group by b.allianceid, b.gametype) as c
+group by c.allianceid, c.gametype;
+
+
+
+
+
+    
+
+
+
+
+
+create database ultron_killer_lab;
+
+drop table if exists ultron_killer_lab._test;
+create table ultron_killer_lab._test engine = myisam
+SELECT * 
+FROM calculate_pm.prediction_2016
+where gameid = '2016110930400'
+and gametype in ('11', '12');
+
+
+drop table if exists ultron_killer_lab._test_1;
+create table ultron_killer_lab._test_1 engine = myisam
+select a.h, a.predict, count(a.id) as c
+from (
+	SELECT id, userid, gameid, predict, concat(substr(createon,1,13),':00:00') as h 
+	FROM ultron_killer_lab._test
+	where gametype = 11) as a
+group by a.h, a.predict;
+
+
+
+SELECT gameid 
+FROM ultron_killer_lab._games_3
+where date(createon) between '2016-11-07' and now();
+
+SELECT * 
+FROM ultron_killer_lab._prediction_alliance3
+where gameid = '2016110930404'
+and gametype = 12;
+
+SELECT * 
+FROM ultron_killer_lab._prediction_alliance3
+where date(createon) = '2016-11-04' ;
+
+SELECT * FROM ultron_killer_lab._games_3
+where gameid = '2016110930404';
+
+
+
+
+
+
+
+
+
+
+# 建立所有使用者點預測的原始資料
+drop table if exists ultron_killer_lab._prediction_alliance3_temp;
+create table ultron_killer_lab._prediction_alliance3_temp engine = myisam
+SELECT id, gameid, allianceid, gametype, predict, winner, createon 
+FROM calculate_pm.prediction_2016
+where gametype in (11,12)
+and gameid in (SELECT gameid
+				FROM ultron_killer_lab._games_3
+				where date(dateon) between '2016-06-10' and '2016-06-20'); #正規賽至賽季結束期間
+                
+insert ignore into ultron_killer_lab._prediction_alliance3
+SELECT id, gameid, allianceid, gametype, predict, winner, createon 
+FROM calculate_pm.prediction_2015
+where gametype in (11,12)
+and gameid in (SELECT gameid 
+				FROM ultron_killer_lab._games_3
+				where date(dateon) between '2016-06-10' and '2016-06-20'); #正規賽至賽季結束期間
+
+ALTER TABLE ultron_killer_lab._prediction_alliance3 ADD INDEX (`gameid`);
+
+
+
+
+
+
+
+
+
+
+
+
+# 先把上個賽季的預測資料準備好(NBA)
+drop table if exists ultron_killer_lab._prediction_y20152016_alliance3;
+create table ultron_killer_lab._prediction_y20152016_alliance3 engine = myisam
+SELECT id, gameid, allianceid, gametype, predict, winner, createon 
+FROM calculate_pm.prediction_2016
+where gametype in (11,12)
+and allianceid = 3
+and date(createon) between '2015-10-28' and '2016-06-20';
+insert ignore into ultron_killer_lab._prediction_y20152016_alliance3
+SELECT id, gameid, allianceid, gametype, predict, winner, createon 
+FROM calculate_pm.prediction_2015
+where gametype in (11,12)
+and allianceid = 3
+and date(createon) between '2015-10-28' and '2016-06-20';
+ALTER TABLE ultron_killer_lab._prediction_y20152016_alliance3 ADD INDEX (`gameid`);
+
+# 先把上個賽季的預測資料準備好(冰球)
+drop table if exists ultron_killer_lab._prediction_y20152016_alliance91;
+create table ultron_killer_lab._prediction_y20152016_alliance91 engine = myisam
+SELECT id, gameid, allianceid, gametype, predict, winner, createon 
+FROM calculate_pm.prediction_2016
+where gametype in (11,12)
+and allianceid = 91
+and date(createon) between '2015-10-08' and '2016-06-13';
+insert ignore into ultron_killer_lab._prediction_y20152016_alliance91
+SELECT id, gameid, allianceid, gametype, predict, winner, createon 
+FROM calculate_pm.prediction_2015
+where gametype in (11,12)
+and allianceid = 91
+and date(createon) between '2015-10-08' and '2016-06-13';
+ALTER TABLE ultron_killer_lab._prediction_y20152016_alliance91 ADD INDEX (`gameid`);
+
+
