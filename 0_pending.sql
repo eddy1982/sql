@@ -27768,12 +27768,12 @@ group by lv;
 drop table if exists actionlog._all_log;
 create table actionlog._all_log engine = myisam
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201606
+FROM actionlog.action_201611
 where userid <> ''
 and time between subdate(now(),31) and now();
 insert ignore into actionlog._all_log
 SELECT userid, uri, time, platform_type 
-FROM actionlog.action_201605
+FROM actionlog.action_201610
 where userid <> ''
 and time between subdate(now(),31) and now();
 
@@ -27791,7 +27791,7 @@ create table actionlog._all_log_livescore engine = myisam
 SELECT * FROM actionlog._all_log
 where uri like '%livescore.php%';
 
-# 再次執行slice08_actionlog_for_any_table.py (記得在._all_log_livescore)
+# 再次執行slice08_actionlog_for_any_table.py (記得在.py中把名稱換成_all_log_livescore)
 # 執行完會變成actionlog._temp
 
 drop table if exists actionlog._all_log_1_livescore;
@@ -27922,19 +27922,20 @@ FROM plsport_playsport._qu_1;
 
 drop table if exists plsport_playsport._qu_3;
 create table plsport_playsport._qu_3 engine = myisam
-SELECT userid, a1 as pls, a2 as sa8888, a3 as mlb, a9 as m7, a13 as taiwan
+SELECT userid, a1 as pls, a2 as sa8888, a3 as mlb, a9 as m7, a13 as taiwan, a4 as nba
 FROM plsport_playsport._qu_2
 where a2 = 1 #速報
 or a3 = 1 #MLB
 or a9 = 1 #7M
-or a13 = 1; #台灣運彩即時比分
+or a13 = 1
+or a4 = 1; #台灣運彩即時比分
 
 ALTER TABLE plsport_playsport._qu_3 ADD INDEX (`userid`);
 
 drop table if exists actionlog._list_5;
 create table actionlog._list_5 engine = myisam
 SELECT a.userid, a.nickname, a.all_pv, a.all_pv_percentile, a.livescore_pv, a.livescore_pv_percentile, a.all_pc, a.all_mobile, a.city, 
-       a.signin, b.pls, b.sa8888, b.mlb, b.m7, b.taiwan
+       a.signin, b.pls, b.sa8888, b.mlb, b.m7, b.taiwan, b.nba
 FROM actionlog._list_4 a left join plsport_playsport._qu_3 b on a.userid = b.userid
 where b.pls is not null;
 
@@ -27945,11 +27946,24 @@ ALTER TABLE actionlog._list_5 CHANGE `sa8888` `sa8888` VARCHAR(1);
 ALTER TABLE actionlog._list_5 CHANGE `mlb` `mlb` VARCHAR(1);
 ALTER TABLE actionlog._list_5 CHANGE `m7` `m7` VARCHAR(1);
 ALTER TABLE actionlog._list_5 CHANGE `taiwan` `taiwan` VARCHAR(1);
+ALTER TABLE actionlog._list_5 CHANGE `nba` `nba` VARCHAR(1);
 update actionlog._list_5 set pls = '' where pls = '0';
 update actionlog._list_5 set sa8888 = '' where sa8888 = '0';
 update actionlog._list_5 set mlb = '' where mlb = '0';
 update actionlog._list_5 set m7 = '' where m7 = '0';
 update actionlog._list_5 set taiwan = '' where taiwan = '0';
+update actionlog._list_5 set nba = '' where nba = '0';
+
+SELECT 'userid', 'nickname', '全站pv', '全站佔比', '即時比分pv', '即時比分佔比', '電腦比例', '手機比例', '居住地', '最後登入', 
+       '玩運彩', '速報', 'MLB', '7M', '台灣運彩', 'NBA' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_list_5.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._list_5
+order by all_pv desc);
+
+
+
 
 # TO EDDY (2016-06-21更新名單)
 # 請依照之前方式重撈名單
@@ -29072,7 +29086,8 @@ FROM plsport_playsport._predict_buyer a left join plsport_playsport.predict_sell
 drop table if exists plsport_playsport._predict_buyer_2;
 create table plsport_playsport._predict_buyer_2 engine = myisam
 SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, a.date, a.price, a.allianceid, a.p, substr(a.p,1,4) as p1, a.sellerid
-FROM plsport_playsport._predict_buyer_1 a left join plsport_playsport.member b on a.userid = b.userid;
+FROM plsport_playsport._predict_buyer_1 a left join plsport_playsport.member b on a.userid = b.userid
+order by a.date desc;
 
 # 先來看找高手(莊單殺/主推/勝率榜的業績)
 drop table if exists plsport_playsport._killer;
@@ -29295,30 +29310,125 @@ SELECT abtest, userid, date(date) as d, price, allianceid, p, p1, sellerid
 FROM plsport_playsport._predict_buyer_2
 where p regexp '^(BZ|MPB|WPB).*'; # <<< 這裡要調整'^(BZ|MPB|WPB).*' 
 
-# 此表可以給R讀
+
+# 此表可以給R讀-------------------------------------------------------------------
 drop table if exists plsport_playsport._killer_1;
 create table plsport_playsport._killer_1 engine = myisam
 SELECT abtest, userid, d, p1, sum(price) as spent, count(price) as spent_count
 FROM plsport_playsport._killer
 where p1 <> 'BZ_R'
+and date(d) between '2016-07-19' and now()
 group by abtest, userid, d, p1;
 
-# SELECT abtest, p1, count(abtest) 
-# FROM plsport_playsport._killer_1
-# group by abtest, p1
-# order by p1;
+drop table if exists plsport_playsport._killer_1_temp;
+create table plsport_playsport._killer_1_temp engine = myisam
+SELECT userid, sum(spent) as spent 
+FROM plsport_playsport._killer_1
+where p1 regexp '^(BZ|MPB|WPB).*'
+and date(d) between '2016-07-19' and now()
+group by userid;
 
+drop table if exists plsport_playsport._killer_1_temp1;
+create table plsport_playsport._killer_1_temp1 engine = myisam
+select userid, spent, round((cnt-rank+1)/cnt,2) as spent_p
+from (SELECT userid, spent, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._killer_1_temp, (SELECT @curRank := 0) r
+      order by spent desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._killer_1_temp) as ct;
 
+ALTER TABLE plsport_playsport._killer_1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._killer_1 ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport._killer_1_temp1 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._killer_1_temp1 ADD INDEX (`userid`);
 
+drop table if exists plsport_playsport._killer_2;
+create table plsport_playsport._killer_2 engine = myisam
+SELECT abtest, a.userid, d, p1, a.spent, spent_count, b.spent_p 
+FROM plsport_playsport._killer_1 a left join plsport_playsport._killer_1_temp1 b on a.userid = b.userid;
 
+drop table if exists plsport_playsport._killer_1_temp2;
+create table plsport_playsport._killer_1_temp2 engine = myisam
+SELECT buyerid as userid, date(min(buy_date)) as first_time 
+FROM plsport_playsport.predict_buyer
+group by buyerid;
 
+ALTER TABLE plsport_playsport._killer_2 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._killer_2 ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport._killer_1_temp2 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport._killer_1_temp2 ADD INDEX (`userid`);
 
+drop table if exists plsport_playsport._killer_3;
+create table plsport_playsport._killer_3 engine = myisam
+SELECT a.abtest, a.userid, d, p1, a.spent, spent_count, a.spent_p, b.first_time, datediff(d, b.first_time) as dif
+FROM plsport_playsport._killer_2 a left join plsport_playsport._killer_1_temp2 b on a.userid = b.userid;
 
+# 以下區塊是專門研究:有小叮嚀的icon的殺手有沒有更多人去買
+# TO Eddy
+# 根據上次會議討論的結果
+# 再麻煩您補充分析：有小叮嚀的icon的殺手有沒有更多人去買
 
+SELECT * 
+FROM plsport_playsport._killer
+where substr(p,1,2) = 'BZ';
 
+drop table if exists actionlog._rp_bz_click_1;
+create table actionlog._rp_bz_click_1 engine = myisam
+SELECT userid, uri, time 
+FROM actionlog.action_201607
+where userid <> '' and uri like '%rp=BZ%';
+insert ignore into actionlog._rp_bz_click_1
+SELECT userid, uri, time 
+FROM actionlog.action_201608
+where userid <> '' and uri like '%rp=BZ%';
+insert ignore into actionlog._rp_bz_click_1
+SELECT userid, uri, time 
+FROM actionlog.action_201609
+where userid <> '' and uri like '%rp=BZ%';
+insert ignore into actionlog._rp_bz_click_1
+SELECT userid, uri, time 
+FROM actionlog.action_201610
+where userid <> '' and uri like '%rp=BZ%';
+insert ignore into actionlog._rp_bz_click_1
+SELECT userid, uri, time 
+FROM actionlog.action_201611
+where userid <> '' and uri like '%rp=BZ%';
 
+drop table if exists actionlog._rp_bz_click_2;
+create table actionlog._rp_bz_click_2 engine = myisam
+select a.userid, a.uri, a.time, a.p
+from (
+	SELECT userid, uri, time, substr(uri,locate('rp=',uri)+3,length(uri)) as p
+	FROM actionlog._rp_bz_click_1) as a
+where a.p not like '%RC%'
+and date(a.time) between '2016-07-19' and now();
 
+drop table if exists actionlog._rp_bz_click_3;
+create table actionlog._rp_bz_click_3 engine = myisam
+select a.userid, a.uri, a.time, a.p, substr(a.v,1,locate('&', a.v)-1) as killer, 
+       date(date_add(a.time, INTERVAL -6 HOUR)) as adj_time,
+       (case when (substr(a.p, length(a.p), 1)='n') then 1 else 0 end) as note
+from (
+	SELECT userid, uri, time, p,  substr(uri,locate('visit=',uri)+6,length(uri)) as v
+	FROM actionlog._rp_bz_click_2) as a;
 
+ALTER TABLE actionlog._rp_bz_click_3 convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists actionlog._rp_bz_click_4;
+create table actionlog._rp_bz_click_4 engine = myisam
+SELECT (case when ((b.id%20)+1<=10) then 'a' else 'b' end) as abtest, a.userid, p, killer, adj_time, note 
+FROM actionlog._rp_bz_click_3 a left join plsport_playsport.member b on a.userid = b.userid
+where a.userid <> killer
+and killer not in ('', '/etc/passwd')
+group by a.userid, p, killer, adj_time, note;
+
+# 用R來讀取actionlog._rp_bz_click_5
+# code在main_ab_testing_code.r中
+drop table if exists actionlog._rp_bz_click_5;
+create table actionlog._rp_bz_click_5 engine = myisam
+SELECT killer, adj_time, note, count(userid) as click 
+FROM actionlog._rp_bz_click_4
+WHERE abtest = 'a'
+group by killer, adj_time, note;
 
 
 
