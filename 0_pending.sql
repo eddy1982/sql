@@ -31856,14 +31856,174 @@ group by c.q1;
 
 
 
+# =================================================================================================
+# 協助撈取"不使用討論區問卷"名單http://redmine.playsport.cc/issues/2617#change-14047
+# TO Eddy
+# 我們要發問卷調查使用者不用討論區的原因
+# 想請您協助撈取名單
+# 
+# 條件如下:
+#    1.註冊半年以上，有在站上活動(有使用其他功能)，但幾乎沒使用過討論區的（含瀏覽）
+#    --->簡單來說就是註冊後幾乎都沒有用過（也不看）討論區的人
+#    2.近兩年有使用過討論區，但近半年沒有再使用的
+#    --->簡單來說就是以前有在用，但近期不用的人
+# =================================================================================================
+# 1.
+# 撈近1年內有在網站上活動的人,但留下近1個月還有在登入的人,
+# 並找出幾乎不使用討論區的族群
+# 2.
+# 撈近1年內有在網站上活動的人,但留下近1個月還有在登入的人,
+# 並找出討論區活動較之前明顯下降者
+
+drop table if exists actionlog._login_inonemonth;
+create table actionlog._login_inonemonth engine = myisam
+SELECT userid, time 
+FROM actionlog.action_201612
+where time between subdate(now(),32) AND now()
+and userid <> '';
+insert ignore into actionlog._login_inonemonth
+SELECT userid, time 
+FROM actionlog.action_201611
+where time between subdate(now(),32) AND now()
+and userid <> '';
+
+drop table if exists actionlog._userlist;
+create table actionlog._userlist engine = myisam
+SELECT userid 
+FROM actionlog._login_inonemonth
+group by userid;
+
+ALTER TABLE actionlog._userlist ADD INDEX (`userid`);
+
+create table actionlog.action_201612_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201612 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201611_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201611 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201610_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201610 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201609_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201609 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201608_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201608 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201607_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201607 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201606_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201606 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201605_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201605 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201604_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201604 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201603_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201603 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201602_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201602 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201601_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201601 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201512_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201512 a inner join actionlog._userlist b on a.userid = b.userid;
+create table actionlog.action_201511_ engine = myisam
+SELECT a.userid, uri, time FROM actionlog.action_201511 a inner join actionlog._userlist b on a.userid = b.userid;
+
+# 在這裡要執行slice08_actionlog_for_any_table_people_dont_use_forum_1.py
+# 在這裡要執行slice08_actionlog_for_any_table_people_dont_use_forum_2.py
+
+drop table if exists actionlog._temp_pv_people_dont_use_fourm;
+create table actionlog._temp_pv_people_dont_use_fourm engine = myisam
+SELECT a.userid, all_pv, forum_pv
+FROM actionlog._temp_pv_allsite_1 a left join actionlog._temp_pv_forum_1 b on a.userid = b.userid;
+
+drop table if exists actionlog._temp_pv_people_dont_use_fourm_1;
+create table actionlog._temp_pv_people_dont_use_fourm_1 engine = myisam
+select userid, all_pv, forum_pv, round((cnt-rank+1)/cnt,2) as all_pv_p
+from (SELECT userid, all_pv, forum_pv, @curRank := @curRank + 1 AS rank
+      FROM actionlog._temp_pv_people_dont_use_fourm, (SELECT @curRank := 0) r
+      order by all_pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._temp_pv_people_dont_use_fourm) as ct;
+
+drop table if exists actionlog._temp_pv_people_dont_use_fourm_2;
+create table actionlog._temp_pv_people_dont_use_fourm_2 engine = myisam
+select userid, all_pv, forum_pv, all_pv_p, round((cnt-rank+1)/cnt,2) as forum_pv_p, round(forum_pv/all_pv,3) as forum_r
+from (SELECT userid, all_pv, forum_pv, all_pv_p, @curRank := @curRank + 1 AS rank
+      FROM actionlog._temp_pv_people_dont_use_fourm_1, (SELECT @curRank := 0) r
+      order by forum_pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._temp_pv_people_dont_use_fourm_1) as ct;
 
 
+# 第一份名單
+SELECT 'userid', 'all_pv', 'forum_pv', 'all_pv_p', 'forum_pv_p', 'forum_r' union (
+SELECT userid, all_pv, COALESCE(forum_pv,0) as forum_pv, all_pv_p, forum_pv_p, COALESCE(forum_r,0) as forum_r
+into outfile 'C:/Users/eddy/Desktop/_temp_pv_people_dont_use_fourm_2.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._temp_pv_people_dont_use_fourm_2);
+
+drop table if exists actionlog._temp_group_forum_all;
+create table actionlog._temp_group_forum_all engine = myisam SELECT * FROM actionlog._temp_201511_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201512_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201601_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201602_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201603_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201604_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201605_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201606_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201607_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201608_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201609_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201610_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201611_group_forum;
+insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201612_group_forum;
 
 
+drop table if exists actionlog._temp_group_forum_all_1;
+create table actionlog._temp_group_forum_all_1 engine = myisam
+SELECT userid, min(d) as d1, max(d) as d2 
+FROM actionlog._temp_group_forum_all
+group by userid;
 
 
+drop table if exists actionlog._temp_group_forum_all_2;
+create table actionlog._temp_group_forum_all_2 engine = myisam
+select a.userid, a.d1, a.d2, a.dif, ADDDATE(a.d1, a.dif/2) as md
+from (
+	SELECT userid, d1, d2, datediff(d2,d1) as dif 
+	FROM actionlog._temp_group_forum_all_1
+	where datediff(d2,d1) >= 30) as a; # 使用天數需大於30天
 
+drop table if exists actionlog._temp_group_forum_pv; # 每天詳細用APP的行為
+create table actionlog._temp_group_forum_pv engine = myisam
+SELECT userid, d, sum(pv) as pv 
+FROM actionlog._temp_group_forum_all
+group by userid, d;
 
+ALTER TABLE actionlog._temp_group_forum_all_2 ADD INDEX (`userid`);
+ALTER TABLE actionlog._temp_group_forum_pv ADD INDEX (`userid`);
 
+ALTER TABLE actionlog._temp_group_forum_all_2 ADD COLUMN id INT NOT NULL auto_increment PRIMARY KEY;
+ALTER TABLE actionlog._temp_group_forum_all_2 ADD INDEX (`id`);
+ALTER TABLE actionlog._temp_group_forum_pv ADD INDEX (`d`);
 
+# 在這裡要去執行scripts\task_2617.py
+
+ALTER TABLE actionlog._temp_forum_pv_count ADD INDEX (`userid`);
+ALTER TABLE actionlog._temp_forum_pv_count convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_group_forum_all_2 convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists actionlog._temp_group_forum_all_3;
+create table actionlog._temp_group_forum_all_3 engine = myisam
+SELECT a.userid, d1, d2, dif, md, id, (b.pv1+b.pv2) as all_pv, b.pv1, b.pv2, round(b.pv2/b.pv1,3)-1 as fluc
+FROM actionlog._temp_group_forum_all_2 a left join actionlog._temp_forum_pv_count b on a.userid = b.userid;
+
+drop table if exists actionlog._temp_group_forum_all_4;
+create table actionlog._temp_group_forum_all_4 engine = myisam
+select userid, d1, d2, dif, md, id, all_pv, round((cnt-rank+1)/cnt,2) as all_pv_p, pv1, pv2, fluc
+from (SELECT userid, d1, d2, dif, md, id, all_pv, pv1, pv2, fluc, @curRank := @curRank + 1 AS rank
+      FROM actionlog._temp_group_forum_all_3, (SELECT @curRank := 0) r
+      order by all_pv desc) as dt,
+     (select count(distinct userid) as cnt from actionlog._temp_group_forum_all_3) as ct;
+
+# 第二份名單
+SELECT 'userid', 'd1', 'd2', 'dif', 'md', 'all_pv', 'all_pv_p', 'pv1', 'pv2', 'fluc' union (
+SELECT userid, d1, d2, dif, md, all_pv, all_pv_p, pv1, pv2, fluc
+into outfile 'C:/Users/eddy/Desktop/_temp_group_forum_all_4.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._temp_group_forum_all_4);
 
