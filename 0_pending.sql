@@ -31948,7 +31948,6 @@ from (SELECT userid, all_pv, forum_pv, all_pv_p, @curRank := @curRank + 1 AS ran
       order by forum_pv desc) as dt,
      (select count(distinct userid) as cnt from actionlog._temp_pv_people_dont_use_fourm_1) as ct;
 
-
 # 第一份名單
 SELECT 'userid', 'all_pv', 'forum_pv', 'all_pv_p', 'forum_pv_p', 'forum_r' union (
 SELECT userid, all_pv, COALESCE(forum_pv,0) as forum_pv, all_pv_p, forum_pv_p, COALESCE(forum_r,0) as forum_r
@@ -31972,13 +31971,11 @@ insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp
 insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201611_group_forum;
 insert ignore into actionlog._temp_group_forum_all SELECT * FROM actionlog._temp_201612_group_forum;
 
-
 drop table if exists actionlog._temp_group_forum_all_1;
 create table actionlog._temp_group_forum_all_1 engine = myisam
 SELECT userid, min(d) as d1, max(d) as d2 
 FROM actionlog._temp_group_forum_all
 group by userid;
-
 
 drop table if exists actionlog._temp_group_forum_all_2;
 create table actionlog._temp_group_forum_all_2 engine = myisam
@@ -32026,4 +32023,34 @@ SELECT userid, d1, d2, dif, md, all_pv, all_pv_p, pv1, pv2, fluc
 into outfile 'C:/Users/eddy/Desktop/_temp_group_forum_all_4.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._temp_group_forum_all_4);
+
+#  是由 文 文工友 於 1 天 前更新
+# Comment EditTO eddy
+# 研究後條件如下
+# 1.所有pv級距 ≧ 0.5
+# 2.討論區pv級距 ≦ 0.6
+# 3.看討論區的比例 ≦ 0.2
+# 再麻煩您看看有沒有什麼問題
+# 另外詢問過壯兔，她說兩千多人還是請工程師塞名單
+# 所以這邊再麻煩您了！謝謝　　　
+# 只採用名單1
+
+drop table if exists actionlog._temp_pv_people_dont_use_fourm_3;
+create table actionlog._temp_pv_people_dont_use_fourm_3 engine = myisam
+SELECT * 
+FROM actionlog._temp_pv_people_dont_use_fourm_2
+WHERE all_pv_p >= 0.5
+and forum_pv_p <= 0.6
+and forum_r <= 0.2;
+
+# 匯出最後的名單
+SELECT 'userid' union (
+SELECT userid
+into outfile 'C:/Users/eddy/Desktop/_temp_pv_people_dont_use_fourm_3.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._temp_pv_people_dont_use_fourm_3);
+
+
+
+
 
