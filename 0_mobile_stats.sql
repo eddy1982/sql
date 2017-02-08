@@ -1,10 +1,10 @@
 # create database mobilestats;
 
 CREATE TABLE mobilestats.our_devices
-( `device`   VARCHAR(100) NOT NULL , 
+( `device`  VARCHAR(100) NOT NULL , 
   `brand`   VARCHAR(30) NOT NULL , 
   `own`     VARCHAR(10) NOT NULL ,
-  `screen`     VARCHAR(10) NOT NULL ,
+  `screen`  VARCHAR(10) NOT NULL ,
   `w`     int(10) NOT NULL ,
   `l`     int(10) NOT NULL ,
   `r`     double(10,2) NOT NULL
@@ -93,6 +93,17 @@ CREATE TABLE mobilestats.ga_201611
   `sessions` int(11) NOT NULL 
 ) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
 
+CREATE TABLE mobilestats.ga_201612
+( `device`   VARCHAR(100) NOT NULL , 
+  `screen`   VARCHAR(30) NOT NULL , 
+  `sessions` int(11) NOT NULL 
+) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
+CREATE TABLE mobilestats.ga_201701
+( `device`   VARCHAR(100) NOT NULL , 
+  `screen`   VARCHAR(30) NOT NULL , 
+  `sessions` int(11) NOT NULL 
+) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
+
 
 LOAD DATA INFILE 'C:/Users/eddy/Desktop/ga_201601.csv' 
 INTO TABLE `mobilestats`.`ga_201601`  
@@ -160,6 +171,19 @@ FIELDS TERMINATED BY ','
 ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS;
+LOAD DATA INFILE 'C:/Users/eddy/Desktop/ga_201612.csv' 
+INTO TABLE `mobilestats`.`ga_201612`  
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
+LOAD DATA INFILE 'C:/Users/eddy/Desktop/ga_201701.csv' 
+INTO TABLE `mobilestats`.`ga_201701`  
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
+
 
 
 
@@ -265,6 +289,33 @@ from (
             substr(screen,locate('x', screen)+1,length(screen)) as l,sessions 
     FROM mobilestats.ga_201611
     WHERE device <> '(not set)') as a;
+drop table if exists mobilestats._ga_201612_1;
+create table mobilestats._ga_201612_1 engine = myisam
+select  a.month, a.device, a.brand, a.screen, a.w, a.l, round((a.l/a.w),2) as r, a.sessions
+from (
+    SELECT (case when (device is not null) then '2016_12' else '' end) as month, device, 
+            substr(device,1,locate(' ', device)-1) as brand, screen, 
+            substr(screen,1,locate('x', screen)-1) as w, 
+            substr(screen,locate('x', screen)+1,length(screen)) as l,sessions 
+    FROM mobilestats.ga_201612
+    WHERE device <> '(not set)') as a;
+drop table if exists mobilestats._ga_201701_1;
+create table mobilestats._ga_201701_1 engine = myisam
+select  a.month, a.device, a.brand, a.screen, a.w, a.l, round((a.l/a.w),2) as r, a.sessions
+from (
+    SELECT (case when (device is not null) then '2017_01' else '' end) as month, device, 
+            substr(device,1,locate(' ', device)-1) as brand, screen, 
+            substr(screen,1,locate('x', screen)-1) as w, 
+            substr(screen,locate('x', screen)+1,length(screen)) as l,sessions 
+    FROM mobilestats.ga_201701
+    WHERE device <> '(not set)') as a;
+
+
+
+
+
+
+
 
 
 
@@ -394,6 +445,28 @@ from (
 left join mobilestats.our_devices_ratio f on e.r = f.r
 order by e.sessions desc; 
 
+drop table if exists mobilestats._ga_201612_2;
+create table mobilestats._ga_201612_2 engine = myisam
+select e.month, e.device, e.brand, e.own, e.screen, e.w, e.l, e.r, e.inc_screen, f.own as inc_ratio, e.sessions
+from (
+    select c.month, c.device, c.own, c.brand, c.screen, c.w, c.l, c.r, d.own as inc_screen ,c.sessions
+    from (
+        SELECT a.month, a.device, b.own, a.brand, a.screen, a.w, a.l, a.r, a.sessions 
+        FROM mobilestats._ga_201612_1 a left join mobilestats.our_devices b on a.device = b.device) as c 
+    left join mobilestats.our_devices_screen as d on c.screen  = d.screen) as e
+left join mobilestats.our_devices_ratio f on e.r = f.r
+order by e.sessions desc; 
+drop table if exists mobilestats._ga_201701_2;
+create table mobilestats._ga_201701_2 engine = myisam
+select e.month, e.device, e.brand, e.own, e.screen, e.w, e.l, e.r, e.inc_screen, f.own as inc_ratio, e.sessions
+from (
+    select c.month, c.device, c.own, c.brand, c.screen, c.w, c.l, c.r, d.own as inc_screen ,c.sessions
+    from (
+        SELECT a.month, a.device, b.own, a.brand, a.screen, a.w, a.l, a.r, a.sessions 
+        FROM mobilestats._ga_201701_1 a left join mobilestats.our_devices b on a.device = b.device) as c 
+    left join mobilestats.our_devices_screen as d on c.screen  = d.screen) as e
+left join mobilestats.our_devices_ratio f on e.r = f.r
+order by e.sessions desc; 
 
 
 
@@ -456,10 +529,18 @@ SELECT *
 FROM mobilestats._ga_201611_2
 group by device, screen, sessions
 order by sessions desc;
-
-
-
-
+drop table if exists mobilestats._ga_201612_3;
+create table mobilestats._ga_201612_3 engine = myisam
+SELECT * 
+FROM mobilestats._ga_201612_2
+group by device, screen, sessions
+order by sessions desc;
+drop table if exists mobilestats._ga_201701_3;
+create table mobilestats._ga_201701_3 engine = myisam
+SELECT * 
+FROM mobilestats._ga_201701_2
+group by device, screen, sessions
+order by sessions desc;
 
 
 
@@ -475,3 +556,5 @@ insert ignore into mobilestats._ga_all SELECT * FROM mobilestats._ga_201608_3;
 insert ignore into mobilestats._ga_all SELECT * FROM mobilestats._ga_201609_3;
 insert ignore into mobilestats._ga_all SELECT * FROM mobilestats._ga_201610_3;
 insert ignore into mobilestats._ga_all SELECT * FROM mobilestats._ga_201611_3;
+insert ignore into mobilestats._ga_all SELECT * FROM mobilestats._ga_201612_3;
+insert ignore into mobilestats._ga_all SELECT * FROM mobilestats._ga_201701_3;
