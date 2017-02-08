@@ -22,8 +22,6 @@ from (
 group by a.predict;
 
 
-
-
 # 檢查預測內容, 如果winner被update為0, 那要不要依其它人的結果來rewrite回去呢?
 SELECT * 
 FROM ultron_killer._prediction_1_p1
@@ -486,48 +484,6 @@ group by  winResult;
 
 
 
-
-# 奧創的勝率 (從2016-10-26開始)
-select c.allianceid, (c.win+c.lose) as c, round(c.win/(c.win+c.lose),2) as win_r
-from (
-	select b.allianceid, sum(b.win) as win, sum(b.lose) as lose
-	from (
-		select a.allianceid, (case when (a.winner = 1) then a.c else 0 end) as win,
-							 (case when (a.winner = 2) then a.c else 0 end) as lose
-		from (
-			SELECT allianceid, winner, count(id) as c
-			FROM ultron_killer_rules._ultron_history
-            WHERE date(createon) between '2016-10-00' and '2016-11-21'
-			group by allianceid, winner) as a) as b
-	group by b.allianceid) as c;
-    
-
-# 奧創的勝率-依玩法來分 (從2016-10-26開始)
-select c.allianceid, c.gametype, (c.win+c.lose) as c, round(c.win/(c.win+c.lose),2) as win_r
-from (
-	select b.allianceid, b.gametype, sum(b.win) as win, sum(b.lose) as lose
-	from (
-		select a.allianceid, a.gametype, (case when (a.winner = 1) then a.c else 0 end) as win,
-										 (case when (a.winner = 2) then a.c else 0 end) as lose
-		from (
-			SELECT allianceid, gametype, winner, count(id) as c
-			FROM ultron_killer_rules._ultron_history
-			WHERE date(createon) between '2016-10-00' and '2016-11-21'
-			and winner in (1,2)
-			group by allianceid, gametype, winner) as a) as b
-	group by b.allianceid, b.gametype) as c
-group by c.allianceid, c.gametype;
-
-
-
-
-
-    
-
-
-
-
-
 create database ultron_killer_lab;
 
 drop table if exists ultron_killer_lab._test;
@@ -636,5 +592,167 @@ where gametype in (11,12)
 and allianceid = 91
 and date(createon) between '2015-10-08' and '2016-06-13';
 ALTER TABLE ultron_killer_lab._prediction_y20152016_alliance91 ADD INDEX (`gameid`);
+
+
+
+
+
+
+
+
+# 奧創開始預測的日期
+select a.allianceid, min(a.d) as earliest_date
+from (
+	SELECT allianceid, date(createon) as d 
+	FROM ultron_killer_rules._ultron_history) as a
+group by a.allianceid;
+
+
+
+
+
+
+# 奧創的勝率 (從2016-10-26開始)
+select c.allianceid, (c.win+c.lose) as bet_count, c.win as win_count, round(c.win/(c.win+c.lose),2) as win_ratio
+from (
+	select b.allianceid, sum(b.win) as win, sum(b.lose) as lose
+	from (
+		select a.allianceid, (case when (a.winner = 1) then a.c else 0 end) as win,
+							 (case when (a.winner = 2) then a.c else 0 end) as lose
+		from (
+			SELECT allianceid, winner, count(id) as c
+			FROM ultron_killer_rules._ultron_history
+            WHERE date(createon) between '2017-02-01' and now()
+			group by allianceid, winner) as a) as b
+	group by b.allianceid) as c;
+
+# 奧創的勝率-依玩法來分 (從2016-10-26開始)
+select c.allianceid, c.gametype, (c.win+c.lose) as bet_count, c.win as win_count, round(c.win/(c.win+c.lose),2) as win_ratio
+from (
+	select b.allianceid, b.gametype, sum(b.win) as win, sum(b.lose) as lose
+	from (
+		select a.allianceid, a.gametype, (case when (a.winner = 1) then a.c else 0 end) as win,
+										 (case when (a.winner = 2) then a.c else 0 end) as lose
+		from (
+			SELECT allianceid, gametype, winner, count(id) as c
+			FROM ultron_killer_rules._ultron_history
+			WHERE date(createon) between '2017-02-01' and now()
+			and winner in (1,2)
+			group by allianceid, gametype, winner) as a) as b
+	group by b.allianceid, b.gametype) as c
+group by c.allianceid, c.gametype;
+
+
+
+
+
+
+
+
+drop table if exists ultron_killer_prediction_db.prediction_a91_y2016_win_ratio;
+create table ultron_killer_prediction_db.prediction_a91_y2016_win_ratio engine = myisam
+select c.userid, c.gametype, c.win, c.lose, round(c.win/(c.win+c.lose),2) as win_ratio
+from (
+	select b.userid, b.gametype, sum(b.win) as win, sum(b.lose) as lose
+	from (
+		select a.userid, a.gametype, (case when (a.winner=1) then c else 0 end) as win,
+									 (case when (a.winner=2) then c else 0 end) as lose
+		from(                             
+			SELECT userid, gametype, winner, count(userid) as c
+			FROM ultron_killer_prediction_db.prediction_a91_y2016
+			where winner in (1,2)
+			group by userid, gametype, winner) as a) as b
+	group by b.userid, b.gametype) as c;
+
+select c.win, c.lose, (c.win+c.lose) as total, round(c.win/(c.win+c.lose),3) as win_r
+from (
+select sum(b.win) as win, sum(b.lose) as lose
+from (
+select (case when (a.winner=1) then c else 0 end) as win,
+       (case when (a.winner=2) then c else 0 end) as lose
+from (
+SELECT winner, count(userid) as c 
+FROM ultron_killer_prediction_db.prediction_a3_this_season_skilled_users
+where winner in (1,2)
+and gametype = 12
+group by winner) as a) as b) as c;
+
+
+
+
+# 每月要做的報表(不同時間點預測)
+drop table if exists ultron_killer._prediction_ts_all;
+create table ultron_killer._prediction_ts_all engine = myisam
+SELECT '03' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, 
+       apply_rate, correct_game, correct_rate, predict_time 
+FROM ultron_killer._prediction_ts_3_p5_dif_predict_time_ultron;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '08' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, 
+       apply_rate, correct_game, correct_rate, predict_time 
+FROM ultron_killer._prediction_ts_8_p5_dif_predict_time_ultron;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '91' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, 
+       apply_rate, correct_game, correct_rate, predict_time 
+FROM ultron_killer._prediction_ts_91_p5_dif_predict_time_ultron;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '92' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, 
+       apply_rate, correct_game, correct_rate, predict_time 
+FROM ultron_killer._prediction_ts_92_p5_dif_predict_time_ultron;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '94' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, 
+       apply_rate, correct_game, correct_rate, predict_time 
+FROM ultron_killer._prediction_ts_94_p5_dif_predict_time_ultron;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '97' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, 
+       apply_rate, correct_game, correct_rate, predict_time 
+FROM ultron_killer._prediction_ts_97_p5_dif_predict_time_ultron;
+
+# 每月要做的報表(最後點預測)
+drop table if exists ultron_killer._prediction_ts_all;
+create table ultron_killer._prediction_ts_all engine = myisam
+SELECT '03' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_ts_3_p5_ultron;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '08' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_ts_8_p5_ultron;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '91' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_ts_91_p5_ultron;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '92' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_ts_92_p5_ultron;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '94' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_ts_94_p5_ultron;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '97' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_ts_97_p5_ultron;
+
+
+# 方便要用的而己
+drop table if exists ultron_killer._prediction_ts_all;
+create table ultron_killer._prediction_ts_all engine = myisam
+SELECT '03' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_3_p5;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '08' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_8_p5;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '91' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_91_p5;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '92' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_92_p5;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '94' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_94_p5;
+insert ignore into ultron_killer._prediction_ts_all
+SELECT '97' as allianceid, gametype, start_date, end_date, dur, win_condition, rules, total_game, apply_game, apply_rate, correct_game, correct_rate 
+FROM ultron_killer._prediction_97_p5;
+
+
+
+
+
 
 
