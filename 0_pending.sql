@@ -31346,8 +31346,19 @@ group by c.ym, c.t;
 
 
 # =================================================================================================
-# 自己的研究任務
+# 自己的研究任務- 預測通知/殺手售牌預測通知的功能討論gmail
 #     預測通知和殺手售牌預測通知的使用估計
+# to 靜怡, 阿達:
+# 
+# 之前我有提出一個殺手售版預測通知(以下簡稱B)的提案, 靜怡打算把預測通知(以下簡稱A)當成明燈的後續優化,
+# 後來我思考後覺得他們目的雖一樣, 但影響的族群卻不太一樣
+# 要使用A, 前提使用者需先使用明燈, 才可有A的功能
+# 但要使用B, 只需要消費過
+# 假設一個情境是, 消費者常在買某人的牌, 但剛好這個消費者並沒有在用明燈, 這樣此消費者還是得常常在站上F5(重新整理)等待殺手賣牌,
+# 並沒有解決到他常要等待殺手賣牌的問題; 在站上明燈使用率上還沒有那麼普及的情況下, 只開發A, 那上述例子的消費者永遠
+# 都會有一樣問題.
+# 
+# 所以我覺得A功能雖然有包含到B, 但B還是有獨立開發的價值, 這可以讓沒有用明燈的人, 也可以收到殺手販售通知.
 # =================================================================================================
 
 # 新版明燈10/14全面上線
@@ -31360,6 +31371,22 @@ FROM actionlog.action_201610
 where userid <> ''
 and uri like '%friends.php%'
 and time between '2016-10-14 00:00:00' and now();
+insert ignore into actionlog._new_friend_page
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201611
+where userid <> ''
+and uri like '%friends.php%'
+and time between '2016-10-14 00:00:00' and now();
+insert ignore into actionlog._new_friend_page
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201612
+where userid <> ''
+and uri like '%friends.php%'
+and time between '2016-10-14 00:00:00' and now();
+
+
+
+
 
 select b.d, count(b.userid) as user_use_friend
 from (
@@ -31388,7 +31415,7 @@ select a.userid, a.d
 from (
 	SELECT userid, date(time) as d 
 	FROM actionlog._new_friend_page) as a
-group by a.userid, a.d
+group by a.userid, a.d;
 
 create table actionlog._user_buy_list engine = myisam
 select a.d, a.userid
@@ -32049,6 +32076,386 @@ SELECT userid
 into outfile 'C:/Users/eddy/Desktop/_temp_pv_people_dont_use_fourm_3.txt'
 fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
 FROM actionlog._temp_pv_people_dont_use_fourm_3);
+
+
+
+
+# 辦公室粉絲團2016-12-22
+create table actionlog._who_see_board1 engine = myisam
+SELECT * 
+FROM actionlog.action_201612
+where userid in ('ydasam','wenting0403lin','ckone1209','chinginge','sakyla','pauleanr','yenhsun1982',
+'n12232001','rookie','wenchi','hw0710','ztwo79','harry1008')
+and uri like '%board=1%'
+and uri like '%/forum%';
+
+create table actionlog._who_see_board2 engine = myisam
+SELECT userid, time, hour(time) as h 
+FROM actionlog._who_see_board1;
+
+create table actionlog._who_see_board3 engine = myisam
+SELECT h, userid, count(userid) as pv 
+FROM actionlog._who_see_board2
+group by h, userid;
+
+create table actionlog._who_see_board4 engine = myisam
+select a.h, (case when (length(a.hour)=5) then substr(a.hour,2,5) else hour end) as hour, a.userid, a.pv
+from (
+	SELECT h, (case when (h<12) then concat('0',h,'AM')
+				 when (h>=12) then concat(h,'PM') end) as hour,
+		   userid, pv
+	FROM actionlog._who_see_board3) as a;
+
+drop table if exists actionlog._who_see_board5;
+create table actionlog._who_see_board5 engine = myisam
+SELECT h, hour, userid, pv, substr(md5(userid),1,2) as userid1
+FROM actionlog._who_see_board4;
+
+# 以下是R
+# rm(list=ls())
+# library(RMySQL)
+# library(ggplot2)
+# library(ggthemes)
+# Sys.setlocale("LC_CTYPE","CHT") #cht for traditional Chinese
+# Sys.setlocale("LC_COLLATE","CHT") #cht for traditional Chinese
+# Sys.setlocale(category = "LC_CTYPE", locale = 'CHT')
+# 
+# con<-dbConnect(RMySQL::MySQL(), host = "localhost", user = "root", password = "0000", dbname = "actionlog")
+# 
+# q<-sprintf("SELECT * FROM actionlog._who_see_board5")
+# temp<-dbGetQuery(con,q)
+# dbDisconnect(con)
+# 
+# temp$hour<-as.factor(temp$hour)
+# temp$userid<-as.factor(temp$userid)
+# 
+# temp$userid1<-paste0('工友代碼:', temp$userid1, sep='')
+# temp$userid1<-as.factor(temp$userid1)
+# temp<-subset(temp, userid!='wenchi')
+# temp<-subset(temp, userid!='chinginge')
+# 
+# w = 33
+# h = 30
+# dpi_c = 300
+# 
+# p<-ggplot(temp, aes(hour, pv, color=pv)) + 
+# geom_point(alpha = 0.5, size = 5.0) + facet_wrap(~userid1, nrow = 3) + 
+# scale_colour_gradient(high='red', low = "green") +
+# theme(legend.position = "none") + 
+# theme(panel.border=element_blank()) +
+# theme(axis.ticks=element_blank()) +
+# theme(axis.text.x = element_text(size = 12, angle = 90)) +
+# theme(axis.text.y = element_blank())+
+# labs(x = "") + labs(y = "") + labs(title='工友最愛玩運彩討論區生活版') +
+#   theme(plot.title = element_text(size = 33))+
+#   theme(strip.text.x = element_text(size = 18))
+# ggsave(file='living_board.png', plot=p, width=w, height=h, units=c("cm"), dpi=dpi_c)
+# 
+
+
+# =================================================================================================
+# [201511-C-19]購牌專區改版-昨日戰績改為個人頁戰績ABtestinge報告http://redmine.playsport.cc/issues/2497
+# 說明    
+# 目的：了解昨日戰績改為個人頁戰績對營業額影響
+# 
+# 內容  
+# - 測試時間：12/8~12/29 
+# - 設定測試組別(50%)
+#  
+# - 觀察指標
+# 推薦專區點擊與購買次數
+# 推薦專區購買金額
+# 購牌區購買金額
+# 整體購買與儲值金額
+# =================================================================================================
+
+# a/b testing名單: userid%20+1 in (11,12,13,14,15,16,17,18,19,20)
+# a/b testing已於今日12-08的10:10上線
+
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT userid, uri, time, platform_type as pt
+FROM actionlog.action_201612
+where uri like '%rp=BZ%'
+and userid <> '';
+insert ignore into actionlog._temp
+SELECT userid, uri, time, platform_type as pt
+FROM actionlog.action_201701
+where uri like '%rp=BZ%'
+and userid <> '';
+
+drop table if exists actionlog._temp_1;
+create table actionlog._temp_1 engine = myisam
+SELECT userid, uri, time, pt, substr(uri, locate('rp=',uri)+3, length(uri)) as rp
+FROM actionlog._temp
+where time between '2016-12-08 10:10:00' and now();
+
+ALTER TABLE actionlog._temp_1 convert to character set utf8 collate utf8_general_ci;
+
+drop table if exists actionlog._temp_2;
+create table actionlog._temp_2 engine = myisam
+SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.uri, a.time, a.pt, a.rp 
+FROM actionlog._temp_1 a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists actionlog._temp_3;
+create table actionlog._temp_3 engine = myisam
+SELECT abtest, userid, date(time) as d, pt, rp, substr(rp,1,5) as area, 
+       (case when (rp like '%RCT%') then 'RCT' else '' end) as rct,
+       (case when (rp like '%RC%') then 'RC' else '' end) as rc
+FROM actionlog._temp_2;
+
+drop table if exists actionlog._rct_click;
+create table actionlog._rct_click engine = myisam
+SELECT abtest, userid, d, area, rct, count(d) as c 
+FROM actionlog._temp_3
+group by abtest, userid, d, area, rct;
+
+drop table if exists actionlog._rct_click_1;
+create table actionlog._rct_click_1 engine = myisam
+SELECT abtest, userid, d, area, rc, count(d) as c 
+FROM actionlog._temp_3
+group by abtest, userid, d, area, rc;
+
+
+# 購買次數
+
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT buyerid as userid, buy_price as price, position as rp, allianceid, date(buy_date) as d
+FROM plsport_playsport._predict_buyer_with_cons
+where buy_date between '2016-12-08 10:10:00' and now()
+order by buy_date;
+
+drop table if exists actionlog._temp_1;
+create table actionlog._temp_1 engine = myisam
+SELECT (case when ((b.id%20)+1>10) then 'a' else 'b' end) as abtest, a.userid, a.price, a.rp, a.allianceid, a.d
+FROM actionlog._temp a left join plsport_playsport.member b on a.userid = b.userid;
+
+drop table if exists actionlog._temp_2;
+create table actionlog._temp_2 engine = myisam
+SELECT abtest, userid, price, rp, substr(rp,1,5) as area, 
+       (case when (rp like '%RCT%') then 'RCT' else '' end) as rct,
+       (case when (rp like '%RC%') then 'RC' else '' end) as rc, d
+FROM actionlog._temp_1
+where substr(rp,1,2) = 'BZ';
+
+drop table if exists actionlog._rct_buy;
+create table actionlog._rct_buy engine = myisam
+SELECT abtest, userid, d, area, rct, count(price) as buy_count, sum(price) as buy_total 
+FROM actionlog._temp_2
+group by abtest, userid, d, area, rct;
+
+drop table if exists actionlog._rct_buy_1;
+create table actionlog._rct_buy_1 engine = myisam
+SELECT abtest, userid, d, area, rc, count(price) as buy_count, sum(price) as buy_total 
+FROM actionlog._temp_2
+group by abtest, userid, d, area, rc;
+
+
+
+# =================================================================================================
+# [201611-A-3]開發討論區手機版文章內頁-內頁各功能手機點擊狀況了解
+# http://redmine.playsport.cc/issues/2813#change-15154
+# 概述
+# 說明
+# 了解各功能在手機上的點擊狀況
+# 
+# 內容
+# - 協助點擊狀況設定
+# - 須設定功能：引用回覆、檢舉、最新回文、加入明燈、追蹤發文、禁止回文
+# =================================================================================================
+
+# TO 靜怡2017-01-19 18:00:00
+# 我已經塞好上主站了（Eddy 已檢查過）
+# 之後再請Eddy 觀察 log 情況即可
+# 謝謝
+
+drop table if exists plsport_playsport._events;
+create table plsport_playsport._events engine = myisam
+SELECT * 
+FROM plsport_playsport.events
+where time between '2017-01-19 18:00:00' and now();
+
+drop table if exists plsport_playsport._events_1;
+create table plsport_playsport._events_1 engine = myisam
+SELECT name, platform_type, count(id) as c 
+FROM plsport_playsport._events
+where name like '%forum%'
+group by name, platform_type;
+
+
+
+# =================================================================================================
+# 2017世界棒球經典賽販售分析任務(殺手名單、效益）http://redmine.playsport.cc/issues/2759
+# TO Eddy:
+# 
+# 這邊要麻煩您撈取經典賽的莊家殺手名單
+# 
+# 條件如下:
+#    1.當過下方期數的中職、日棒、韓棒、美棒、澳棒的殺手
+#    2.評選勝率曾達70%以上
+#    3.依照殺手次數排序
+# =================================================================================================
+
+# 國際、運彩盤都要（中職就只有運彩）
+# 販售期間如下
+# 
+# (6)中華職棒:175~180期 販售期間 2016-10-17 ~ 2016-11-13
+# (2)日本職棒:175~180期 販售期間 2016-10-17 ~ 2016-11-13
+# (9)韓國職棒:176~181期 販售期間 2016-10-31 ~ 2016-11-27
+# (1)美國職棒:176~181期 販售期間 2016-10-31 ~ 2016-11-27
+# (83)澳洲職棒:183~188期 販售期間2017-02-06 ~ 2017-03-05
+# 
+# 然後評選日的話就是販售期間的第一天，例如中華職棒180期的評選日是2016-10-17這樣~
+
+# 要匯入(1)medal_fire (2)sell_deny
+
+# 國際盤
+drop table if exists plsport_playsport._medal_fire_baseball_int;
+create table plsport_playsport._medal_fire_baseball_int engine = myisam
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (2) # 日本職棒
+and winpercentage > 69  # 勝率達70%
+and vol in (175,176,177,178,179,180)
+and mode = 2 # 國際盤
+order by vol desc;
+insert ignore into plsport_playsport._medal_fire_baseball_int
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (9) # 韓國職棒
+and winpercentage > 69  # 勝率達70%
+and vol in (176,177,178,179,180,181)
+and mode = 2 # 國際盤
+order by vol desc;
+insert ignore into plsport_playsport._medal_fire_baseball_int
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (1) # 美國職棒
+and winpercentage > 69  # 勝率達70%
+and vol in (176,177,178,179,180,181)
+and mode = 2 # 國際盤
+order by vol desc;
+insert ignore into plsport_playsport._medal_fire_baseball_int
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (83) # 澳洲職棒
+and winpercentage > 69   # 勝率達70%
+and vol in (183,184,185,186,187,188)
+and mode = 2 # 國際盤
+order by vol desc;
+
+
+# 運彩盤
+drop table if exists plsport_playsport._medal_fire_baseball_twn;
+create table plsport_playsport._medal_fire_baseball_twn engine = myisam
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (6) # 中華職棒
+and winpercentage > 69  # 勝率達70%
+and vol in (175,176,177,178,179,180)
+and mode = 1 # 運彩盤
+order by vol desc;
+insert ignore into plsport_playsport._medal_fire_baseball_twn
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (2) # 日本職棒
+and winpercentage > 69  # 勝率達70%
+and vol in (175,176,177,178,179,180)
+and mode = 1 # 運彩盤
+order by vol desc;
+insert ignore into plsport_playsport._medal_fire_baseball_twn
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (9) # 韓國職棒
+and winpercentage > 69  # 勝率達70%
+and vol in (176,177,178,179,180,181)
+and mode = 1 # 運彩盤
+order by vol desc;
+insert ignore into plsport_playsport._medal_fire_baseball_twn
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (1) # 美國職棒
+and winpercentage > 69  # 勝率達70%
+and vol in (176,177,178,179,180,181)
+and mode = 1 # 運彩盤
+order by vol desc;
+insert ignore into plsport_playsport._medal_fire_baseball_twn
+SELECT vol, userid, nickname, allianceid, alliancename, winpercentage, winearn 
+FROM plsport_playsport.medal_fire
+where allianceid in (83) # 澳洲職棒
+and winpercentage > 69   # 勝率達70%
+and vol in (183,184,185,186,187,188)
+and mode = 1 # 運彩盤
+order by vol desc;
+
+        # 禁售名單
+        # 分身
+        drop table if exists plsport_playsport._block_list1;
+        CREATE TABLE plsport_playsport._block_list1 engine = myisam
+        SELECT slave_userid as userid 
+        FROM plsport_playsport.sell_deny
+        WHERE date(time) between '2016-10-17' AND '2017-03-05';
+        # then remove duplicate userid
+        drop table if exists plsport_playsport._block_list;
+        CREATE TABLE plsport_playsport._block_list engine = myisam
+        SELECT userid
+        FROM plsport_playsport._block_list1
+        GROUP BY userid;
+        drop TABLE plsport_playsport._block_list1;
+
+drop table if exists plsport_playsport._medal_fire_baseball_int_1;
+create table plsport_playsport._medal_fire_baseball_int_1 engine = myisam
+select a.userid, a.nickname, a.killer_count, a.avg_win, a.avg_winearn
+from (
+    SELECT userid, nickname, count(userid) as killer_count, round(avg(winpercentage),1) as avg_win, round(avg(winearn),1) as avg_winearn
+    FROM plsport_playsport._medal_fire_baseball_int
+    group by userid, nickname) as a
+order by a.killer_count desc, a.avg_win desc, a.avg_winearn desc;
+
+drop table if exists plsport_playsport._medal_fire_baseball_twn_1;
+create table plsport_playsport._medal_fire_baseball_twn_1 engine = myisam
+select a.userid, a.nickname, a.killer_count, a.avg_win, a.avg_winearn
+from (
+    SELECT userid, nickname, count(userid) as killer_count, round(avg(winpercentage),1) as avg_win, round(avg(winearn),1) as avg_winearn
+    FROM plsport_playsport._medal_fire_baseball_twn
+    group by userid, nickname) as a
+order by a.killer_count desc, a.avg_win desc, a.avg_winearn desc;
+
+# 國際盤
+drop table if exists plsport_playsport._medal_fire_baseball_int_2;
+create table plsport_playsport._medal_fire_baseball_int_2 engine = myisam
+SELECT a.userid, a.nickname, a.killer_count, a.avg_win, a.avg_winearn 
+FROM plsport_playsport._medal_fire_baseball_int_1 a left join plsport_playsport._block_list b on a.userid = b.userid
+where b.userid is null
+limit 0, 100;
+
+# 運彩盤
+drop table if exists plsport_playsport._medal_fire_baseball_twn_2;
+create table plsport_playsport._medal_fire_baseball_twn_2 engine = myisam
+SELECT a.userid, a.nickname, a.killer_count, a.avg_win, a.avg_winearn 
+FROM plsport_playsport._medal_fire_baseball_twn_1 a left join plsport_playsport._block_list b on a.userid = b.userid
+where b.userid is null
+limit 0, 100;
+
+SELECT 'userid', 'nickname', '殺手次數', '平均勝率', '平均獲利' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_medal_fire_baseball_int.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._medal_fire_baseball_int_2);
+
+SELECT 'userid', 'nickname', '殺手次數', '平均勝率', '平均獲利' union (
+SELECT *
+into outfile 'C:/Users/eddy/Desktop/_medal_fire_baseball_twn.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._medal_fire_baseball_twn_2);
+
+
+
+
+
+
+
 
 
 
