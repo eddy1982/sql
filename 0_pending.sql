@@ -32452,8 +32452,69 @@ FROM plsport_playsport._medal_fire_baseball_twn_2);
 
 
 
+# =================================================================================================
+# 行銷企劃 #2808: 2017/04儲值優惠
+# 查詢網站哪天人數最多http://redmine.playsport.cc/issues/2836
+# 概述
+# 
+# to EDDY:
+# 由於要規劃2017/4月的儲值優惠時間，想知道網站ㄧ周內的人數變化、哪個星期人數較多，所以麻煩你協助撈取數據。
+# 數據時間:2016/3~5月，2016/11~2017/1，
+# 完成時間: 2/10(若無法請再告知我喔!)
+# =================================================================================================
 
 
+drop table if exists actionlog._w_201603;
+create table actionlog._w_201603 engine = myisam
+select a.d, dayofweek(a.d) as w, count(a.id) as c
+from (
+	SELECT id, date(time) as d
+	FROM actionlog.action_201603) as a
+group by a.d;
+drop table if exists actionlog._w_201604;
+create table actionlog._w_201604 engine = myisam
+select a.d, dayofweek(a.d) as w, count(a.id) as c
+from (
+	SELECT id, date(time) as d
+	FROM actionlog.action_201604) as a
+group by a.d;
+drop table if exists actionlog._w_201605;
+create table actionlog._w_201605 engine = myisam
+select a.d, dayofweek(a.d) as w, count(a.id) as c
+from (
+	SELECT id, date(time) as d
+	FROM actionlog.action_201605) as a
+group by a.d;
+drop table if exists actionlog._w_201611;
+create table actionlog._w_201611 engine = myisam
+select a.d, dayofweek(a.d) as w, count(a.id) as c
+from (
+	SELECT id, date(time) as d
+	FROM actionlog.action_201611) as a
+group by a.d;
+drop table if exists actionlog._w_201612;
+create table actionlog._w_201612 engine = myisam
+select a.d, dayofweek(a.d) as w, count(a.id) as c
+from (
+	SELECT id, date(time) as d
+	FROM actionlog.action_201612) as a
+group by a.d;
+drop table if exists actionlog._w_201701;
+create table actionlog._w_201701 engine = myisam
+select a.d, dayofweek(a.d) as w, count(a.id) as c
+from (
+	SELECT id, date(time) as d
+	FROM actionlog.action_201701) as a
+group by a.d;
+
+drop table if exists actionlog._all;
+create table actionlog._all engine = myisam
+SELECT * FROM actionlog._w_201603;
+insert ignore into actionlog._all SELECT * FROM actionlog._w_201604;
+insert ignore into actionlog._all SELECT * FROM actionlog._w_201605;
+insert ignore into actionlog._all SELECT * FROM actionlog._w_201611;
+insert ignore into actionlog._all SELECT * FROM actionlog._w_201612;
+insert ignore into actionlog._all SELECT * FROM actionlog._w_201701;
 
 
 
