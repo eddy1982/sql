@@ -622,7 +622,7 @@ from (
 		from (
 			SELECT allianceid, winner, count(id) as c
 			FROM ultron_killer_rules._ultron_history
-            WHERE date(createon) between '2017-02-01' and now()
+            WHERE date(createon) between '2016-11-24' and now()
 			group by allianceid, winner) as a) as b
 	group by b.allianceid) as c;
 
@@ -636,7 +636,7 @@ from (
 		from (
 			SELECT allianceid, gametype, winner, count(id) as c
 			FROM ultron_killer_rules._ultron_history
-			WHERE date(createon) between '2017-02-01' and now()
+			WHERE date(createon) between '2016-11-24' and now()
 			and winner in (1,2)
 			group by allianceid, gametype, winner) as a) as b
 	group by b.allianceid, b.gametype) as c
