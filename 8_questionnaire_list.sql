@@ -308,7 +308,7 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where date(signin_time) between '2017-01-01' and '2017-01-31') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
+    where date(signin_time) between '2017-02-01' and '2017-02-28') as a /*要指定上個月, 例如3月時, 要寫2/1~2/28*/
 group by a.userid;
 
 
@@ -376,7 +376,7 @@ order by rand()    # 隨機抽出3000名受測者
 limit 0, 3500;     # update: 2016-07-04改為3500人
 
 # 再把工友放進去
-insert into questionnaire._list_limit_3000 values ('chinginge'),('pauleanr'),('yenhsun1982'),('n12232001'),('sakyla'),('wenchi'),('harry1008'),('hw0710');
+insert into questionnaire._list_limit_3000 values ('chinginge'),('pauleanr'),('yenhsun1982'),('sakyla'),('wenchi'),('harry1008'),('hw0710');
 
     #重要, 第一次執行要注意工友是否有2筆????
     # 輸出到桌面
