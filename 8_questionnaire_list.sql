@@ -308,7 +308,7 @@ select a.userid, count(a.userid) as user_count
 from (
     SELECT userid, signin_time
     FROM plsport_playsport.member_signin_log_archive
-    where substr(signin_time,1,7) = '2017-09') as a /*要指定上個月*/
+    where substr(signin_time,1,7) = '2017-10') as a /*要指定上個月*/
 group by a.userid;
 
 

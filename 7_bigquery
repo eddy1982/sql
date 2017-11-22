@@ -1,0 +1,39 @@
+
+#撈出所有event
+SELECT event_dim.name, count(event_dim.name) as event_count
+FROM [playsport-710f3:cc_playsport_playsport_IOS.app_events_20171116] 
+group by event_dim.name
+LIMIT 50
+
+#撈出所有event-賽事列表
+SELECT event_dim.name, count(event_dim.name) as event_count
+FROM [playsport-710f3:cc_playsport_playsport_IOS.app_events_20171116] 
+where event_dim.name='onGameList'
+group by event_dim.name
+LIMIT 50
+
+#撈出所有event-賽事列表by今日/昨日/明日
+SELECT event_dim.name, event_dim.params.value.string_value, count(event_dim.name) as event_count
+FROM [playsport-710f3:cc_playsport_playsport_IOS.app_events_20171116] 
+where event_dim.name='onGameList'
+and event_dim.params.key='firebase_screen'
+group by event_dim.name, event_dim.params.value.string_value
+LIMIT 50
+
+#撈出所有event-切換tab
+SELECT event_dim.name, event_dim.params.value.string_value, count(event_dim.name) as event_count
+FROM [playsport-710f3:cc_playsport_playsport_IOS.app_events_20171116] 
+where event_dim.name='gameDetailSwitchTab'
+and event_dim.params.key='full_text'
+group by event_dim.name, event_dim.params.value.string_value
+LIMIT 50
+
+#撈出所有event-切換tab,只限NBA
+SELECT event_dim.name, event_dim.params.value.string_value, count(event_dim.name) as event_count
+FROM [playsport-710f3:cc_playsport_playsport_IOS.app_events_20171116] 
+where event_dim.name='gameDetailSwitchTab'
+and event_dim.params.key='full_text'
+and event_dim.params.value.string_value like '%NBA%'
+group by event_dim.name, event_dim.params.value.string_value
+LIMIT 50
+

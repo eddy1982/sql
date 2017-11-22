@@ -37416,3 +37416,1089 @@ CHARACTER SET big5 fields terminated by ',' enclosed by '' lines terminated by '
 FROM plsport_playsport._list_all_6 a left join plsport_playsport.member b on a.userid = b.userid);
 
 
+
+# =================================================================================================
+# [201710-B-02] 即時比分APP內置廣告的觀感調查 - 撈問卷名單https://redmine.playsport.cc/issues/3839#change-22351
+# 要麻煩你先預撈名單，用來評估預設的撈取區間是否能得到足夠的問卷人數。
+# 
+# 條件：
+# 近一週有點擊即時比分APP版標，且有登入官網的用戶。
+# 需區分iOS與Android。
+# 
+# 謝謝～
+# =================================================================================================
+
+# 1. 先ftp上把app_action_log捉下來
+# 2. 再匯入localhost的mysql, SELECT * FROM actionlog._app_action_log; 執行import_mangodb_app_action_log_custom_with_all_cols.py
+
+drop table if exists actionlog._app_action_log_1;
+create table actionlog._app_action_log_1 engine = myisam
+SELECT * 
+FROM actionlog._app_action_log
+where app = 1
+and deviceidMd5 <> '';
+
+ALTER TABLE actionlog._app_action_log_1 ADD INDEX (`os`);
+ALTER TABLE actionlog._app_action_log_1 ADD INDEX (`deviceidMd5`);
+
+drop table if exists actionlog._app_action_log_2;
+create table actionlog._app_action_log_2 engine = myisam
+SELECT os, deviceidMd5, count(app) as pv
+FROM actionlog._app_action_log_1
+group by os, deviceidMd5;
+
+
+# 內容
+# 問卷名單
+# 於10/17 07:00 ~ 10/23 09:00 有點擊即時比分APP版標，且有登入官網的用戶
+# 需區分iOS與Android用戶
+# 視名單人數可能會往前拉長取樣時間
+# 問卷預計在10/23 18:00上線
+
+
+drop table if exists actionlog._click_from_app;
+create table actionlog._click_from_app engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201710
+where uri like '%rp=MS%'
+and uri like '%&dmd%'
+and userid <> ''
+and time between '2017-10-16 18:00:00' and '2017-10-22 23:59:59';
+
+drop table if exists actionlog._click_from_app_1;
+create table actionlog._click_from_app_1 engine = myisam
+SELECT userid, uri, date(time) as d, platform_type, substr(uri,locate('&dmd=',uri)+5,length(uri)) as dmd,
+                                         substr(uri,locate('&rp=',uri)+4,3) as rp
+FROM actionlog._click_from_app;
+
+drop table if exists actionlog._click_from_app_2;
+create table actionlog._click_from_app_2 engine = myisam
+SELECT rp, dmd, userid, d, count(uri) as c 
+FROM actionlog._click_from_app_1
+group by rp, dmd, userid, d;
+            
+            #計算人數
+			select a.rp, count(a.userid) as c_count
+			from (
+				SELECT rp, userid 
+				FROM actionlog._click_from_app_2
+				where d between '2017-10-01' and '2017-10-12'
+				group by rp, userid) as a
+			group by a.rp;
+
+
+
+drop table if exists actionlog._click_from_app_2;
+create table actionlog._click_from_app_2 engine = myisam
+SELECT userid, rp
+FROM actionlog._click_from_app_1
+group by userid, rp;
+
+#找出誰有用2種裝置登入過
+select userid
+from (
+	SELECT userid, count(rp)  as c
+	FROM actionlog._click_from_app_2
+	group by userid) as a
+where a.c = 2;
+
+drop table if exists actionlog._click_from_app_3;
+create table actionlog._click_from_app_3 engine = myisam
+SELECT * FROM actionlog._click_from_app_2
+where userid not in (select userid
+					from (
+						SELECT userid, count(rp)  as c
+						FROM actionlog._click_from_app_2
+						group by userid) as a
+					where a.c = 2);
+
+SELECT userid FROM actionlog._click_from_app_3
+where rp = 'MSA';
+SELECT userid FROM actionlog._click_from_app_3
+where rp = 'MSI';
+
+SELECT userid
+into outfile 'C:/Users/eddy/Desktop/20171023_list_for_android.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._click_from_app_3
+where rp = 'MSA';
+
+SELECT userid
+into outfile 'C:/Users/eddy/Desktop/20171023_list_for_ios.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._click_from_app_3
+where rp = 'MSI';
+
+
+
+
+
+
+
+drop table if exists plsport_playsport._temp;
+CREATE TABLE plsport_playsport._temp
+          ( `id`       int(20) NOT NULL, 
+            `userid`   varchar(50) NOT NULL,
+            `gameid`   varchar(50) NOT NULL,
+            `predict`   int(5) NOT NULL, 
+            `winner`   int(5) NOT NULL,
+            `createon` varchar(50) NOT NULL,
+            `biggame`  double(10,2) NOT NULL,
+            `homebig_w` double(10,2) NOT NULL,
+            `visitbig_w` double(10,2) NOT NULL,
+            `homeaheadgame` double(10,2) NOT NULL,
+            `visitaheadgame` double(10,2) NOT NULL,
+            `homeahead_w` double(10,2) NOT NULL,
+            `visitbig_w1` double(10,2) NOT NULL,
+            `homewin` double(10,2) NOT NULL,
+            `visitwin` double(10,2) NOT NULL,
+            `gohomer` double(10,2) NOT NULL
+          ) ENGINE = MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;
+
+LOAD DATA INFILE "C:/Users/eddy/Downloads/prediction_data/prediction_2017.csv"
+INTO TABLE plsport_playsport._temp
+FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES;
+
+
+# 所有的殺手名單
+drop table if exists plsport_playsport._temp_1;
+create table plsport_playsport._temp_1 engine = myisam
+SELECT userid, gameid, predict, winner, createon 
+FROM plsport_playsport._temp;
+
+drop table if exists plsport_playsport._killer_list;
+create table plsport_playsport._killer_list
+SELECT userid 
+FROM plsport_playsport.medal_fire
+group by userid;
+insert ignore into plsport_playsport._killer_list
+SELECT userid 
+FROM plsport_playsport.single_killer
+group by userid;
+
+drop table if exists plsport_playsport._killer_list_1;
+create table plsport_playsport._killer_list_1
+SELECT userid 
+FROM plsport_playsport._killer_list
+group by userid;
+
+SELECT * FROM plsport_playsport._killer_list_1;
+
+SELECT 'userid' union (
+SELECT userid
+into outfile 'C:/Users/eddy/Desktop/_killer_list_1.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._killer_list_1);
+
+
+
+
+
+
+
+
+# =================================================================================================
+# 2017/10儲值優惠-成效分析任務https://redmine.playsport.cc/issues/3923
+# To eddy:
+#  
+# 儲值優惠：10/19(四)中午12點 -  10/20(五)中午12點
+# 宣傳期間：10/16(一)中午12點 -  10/19(四)中午12點
+# （宣傳期中，僅即時比分頁上方的banner是10月17日 中午12點 - 10月19日 中午11:59放置）
+# 
+# 麻煩協助分析活動成效，項目如下:
+#    1.活動期間的業績總額(總儲值金額)
+#    2.活動參與人數
+#    3.金額分佈: 每個價格有多少筆數、有多少人購買該價格
+#    4.網站廣告點擊成效分析
+#    5.簡訊發送效益(包含各項撈取條件中的人是否有回來)
+#    6.三個月後，分析有得到優惠的消費者的arpu，是否較沒有得到優惠的使用者高
+#      （在計算ARPU時, 需要注意同電話號碼的人要視為同一人）
+# =================================================================================================
+
+
+#   1.活動期間的業績總額(總儲值金額)
+drop table if exists plsport_playsport._campaign;
+create table plsport_playsport._campaign engine = myisam
+SELECT userid, createon, price, payway, platform_type, create_from, substr(createon,1,7) as ym
+FROM plsport_playsport.order_data
+where sellconfirm = 1
+and price >= 999
+and create_from = 8
+and userid not in ('ckone12093', 'ckone1209', 'ckone12092', 'a1', 'wenting0403lin', 'a1', 'a4', 'a8', 'a2', 'a3');
+
+select a.ym, sum(a.price) as sales
+from (
+	SELECT substr(createon,1,7) as ym, userid, createon, price, payway, platform_type, create_from
+	FROM plsport_playsport._campaign) as a
+group by a.ym;
+
+# 2014-04	647073
+# 2014-09	935751
+# 2015-04	858559
+# 2015-10	982234
+# 2016-04	1385890
+# 2016-10	1467405
+# 2017-04	2799544
+# 2017-10	2302899
+
+#   2.活動參與人數, 加上消費級距變化
+drop table if exists plsport_playsport._campaian_by_user;
+create table plsport_playsport._campaian_by_user engine = myisam
+SELECT userid, ym, sum(price) as total_redeem 
+FROM plsport_playsport._campaign
+where ym ='2016-04'
+group by userid, ym;
+drop table if exists plsport_playsport._campaian_by_user_1;
+create table plsport_playsport._campaian_by_user_1 engine = myisam
+select userid, total_redeem, round((cnt-rank+1)/cnt,2) as total_redeem_percentile
+from (SELECT userid, total_redeem, @curRank := @curRank + 1 AS rank
+      FROM plsport_playsport._campaian_by_user, (SELECT @curRank := 0) r
+      order by total_redeem desc) as dt,
+     (select count(distinct userid) as cnt from plsport_playsport._campaian_by_user) as ct;
+select *
+from (
+	SELECT total_redeem_percentile, max(total_redeem) as total_redeem
+	FROM plsport_playsport._campaian_by_user_1
+	where total_redeem_percentile in (1, 0.9,0.75,0.5,0.25,0.1)
+	group by total_redeem_percentile) as a
+order by a.total_redeem desc;
+
+#   3.金額分佈: 每個價格有多少筆數、有多少人購買該價格
+SELECT price, ym, count(userid) as c , sum(price) as total
+FROM plsport_playsport._campaign
+where ym in ('2016-04','2016-10','2017-04','2017-10')
+group by price, ym;
+
+#  儲值方式
+SELECT ym, platform_type, payway, sum(price) as total 
+FROM plsport_playsport._campaign
+where ym in ('2016-04','2016-10','2017-04','2017-10')
+group by ym, platform_type, payway;
+
+
+#   4.網站廣告點擊成效分析(含LINE分享)
+#     點擊活動頁面
+drop table if exists actionlog._campaign_click;
+create table actionlog._campaign_click engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201710
+where uri like '%utm_campaign=buyPcash%'
+and userid not in ('ckone12093', 'ckone12092', 'a1', 'wenting0403lin', 'a1', 'a4', 'a8', 'a2', 'a3');
+
+update actionlog._campaign_click set platform_type = 1 where platform_type = 3;
+
+drop table if exists actionlog._campaign_click_1;
+create table actionlog._campaign_click_1 engine = myisam
+select a.userid, a.uri, a.time, a.p, a.page, a.s, substr(a.s,1,locate('&',s)-1) as s1
+from (
+	SELECT userid, uri, time, platform_type as p, 
+           substr(uri,1,locate('.php',uri)+3) as page,
+		   substr(uri,locate('utm_source=',uri)+11,length(uri)) as s
+	FROM actionlog._campaign_click) as a;
+
+drop table if exists actionlog._campaign_click_2;
+create table actionlog._campaign_click_2 engine = myisam
+SELECT userid, uri, time, p, page, s1,
+       substr(s,locate('utm_medium=',s)+11,length(s)) as s2
+FROM actionlog._campaign_click_1
+where s1 <> ''
+and s1 not like '%php%'
+and page <> '//activity.php';
+
+
+# 活動前
+SELECT p, page, s1, s2, count(uri) as click
+FROM actionlog._campaign_click_2
+where time between '2017-10-16 12:00:00' and '2017-10-19 11:59:59'
+and page like '%activity%'
+group by p, page, s1, s2;
+
+# 活動中
+SELECT p, page, s1, s2, count(uri) as click
+FROM actionlog._campaign_click_2
+where time between '2017-10-19 12:00:00' and '2017-10-20 12:00:00'
+and page like '%activity%'
+group by p, page, s1, s2;
+
+# 活動中-前往儲值頁
+SELECT p, page, s1, s2, count(uri) as click
+FROM actionlog._campaign_click_2
+where time between '2017-10-19 12:00:00' and '2017-10-20 12:00:00'
+and page like '%buy_pcash%'
+group by p, page, s1, s2;
+
+# 點擊簡訊
+SELECT *
+FROM actionlog._campaign_click_2
+where s2 like '%text%';
+
+SELECT *
+FROM actionlog._campaign_click_2
+where s2 like '%text%'
+and userid <> '';
+
+drop table if exists actionlog._campaign_click_2_text;
+create table actionlog._campaign_click_2_text engine = myisam
+SELECT userid, count(uri) as click
+FROM actionlog._campaign_click_2
+where s2 like '%text%'
+and userid <> ''
+group by userid;
+
+ALTER TABLE actionlog._campaign_click_2_text CHANGE `userid` `userid` VARCHAR(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+
+# 點擊簡訊後, 是否有消費
+SELECT total_redeem, count(userid) as user_count
+FROM plsport_playsport._campaian_by_user_1
+where userid in (SELECT userid
+				FROM actionlog._campaign_click_2_text)
+group by total_redeem;
+
+
+SELECT *
+FROM plsport_playsport._campaian_by_user_1
+where userid in (SELECT userid
+				FROM actionlog._campaign_click_2_text);
+
+
+# 再去把名單給撈出來
+#    二、簡訊名單撈取http://redmine.playsport.cc/issues/2811#change-15914
+#    直接去任務中捉名單比較精確
+
+SELECT * 
+FROM plsport_playsport._list_all_6; #當初的名單
+
+drop table if exists plsport_playsport._campaign_detail;
+create table plsport_playsport._campaign_detail engine = myisam
+SELECT userid, createon, price, payway, platform_type, phone
+FROM plsport_playsport.order_data
+where sellconfirm = 1
+and createon between '2017-10-19 12:00:00' and '2017-10-20 12:00:00'
+and price >= 999;
+
+drop table if exists plsport_playsport._phone;
+create table plsport_playsport._phone engine = myisam
+SELECT phone, sum(price) as redeem
+FROM plsport_playsport._campaign_detail
+group by phone;
+
+drop table if exists plsport_playsport._phone_1;
+create table plsport_playsport._phone_1 engine = myisam
+SELECT a.userid, a.phone, IFNULL(a.cat1,'') as c1, IFNULL(a.cat2,'') as c2, IFNULL(a.cat3,'') as c3, IFNULL(a.cat4,'') as c4, b.redeem 
+FROM plsport_playsport._list_all_6 a inner join plsport_playsport._phone b on a.phone = b.phone;
+
+drop table if exists plsport_playsport._phone_2;
+create table plsport_playsport._phone_2 engine = myisam
+SELECT userid, phone, c1, c2, c3, c4, redeem, concat(c1,c2,c3,c4) as c
+FROM plsport_playsport._phone_1;
+
+
+#點擊簡訊的會員當中, 比對出有消費的人數如下表
+SELECT redeem, count(userid) as user_count, sum(redeem) as total_redeem 
+FROM plsport_playsport._phone_2
+where redeem in (999,1148,1999,3999,8888,16888,29999,56888)
+group by redeem ;
+
+SELECT c4, sum(redeem)
+FROM plsport_playsport._phone_2
+where redeem in (999,1148,1999,3999,8888,16888,29999,56888)
+group by c4;
+
+#組合條件
+SELECT c, sum(redeem) 
+FROM plsport_playsport._phone_2
+where redeem in (999,1148,1999,3999,8888,16888,29999,56888)
+group by c;
+
+
+# =================================================================================================
+#記錄運彩盤、國際盤真實賠率https://redmine.playsport.cc/issues/3779#change-21925
+# 未來會紀錄 parser 抓下來的逐筆賠率紀錄
+# 
+# 1. 請先設計 "賠率紀錄資料表"（參考 prediction）後與壯兔、Eddy討論
+# 
+# 需注意：國際盤讓分會有"1輸"、大小會有"8平'，需完整記錄（我們目前只有回傳 1+50 1-50）
+# TO Eddy 
+# 提供我的 parser 給你邊測試邊更新
+# http://192.168.1.16:8877/
+# 
+# 主站測試機
+# http://192.168.1.16
+# =================================================================================================
+
+
+# 需使用192.168.1.46連線
+# 執行C:\proc\python\scripts\task_3779.py
+
+SELECT a.id ,a.gameid, b.visitteam, b.hometeam, a.allianceid ,a.mode, (case when (a.mode=1) then '運彩' else '國際' end) as mode1,
+a.createon ,a.biggame ,a.homebig_w ,a.visitbig_w ,a.homeaheadgame ,a.visitaheadgame ,
+a.homeahead_w ,a.visitahead_w ,a.homewin ,a.nowin ,a.visitwin ,a.iaheadgame ,a.iaheadgame_origin ,a.iaheadgame_w ,a.iaheadgame_w_origin ,
+a.iaheadgame_home_odds_origin ,a.iaheadgame_visit_odds_origin ,a.ibiggame ,a.ibiggame_origin ,a.ibiggame_w ,a.ibiggame_w_origin ,
+a.ibiggame_home_odds_origin ,a.ibiggame_visit_odds_origin
+FROM plsport_playsport.games_log a left join plsport_playsport.games b on a.gameid = b.gameid
+where a.allianceid = '2'
+and mode = 1
+order by a.id desc;
+
+
+
+# =================================================================================================
+# 每月使用者榮譽數據統計https://redmine.playsport.cc/issues/3108#change-22854
+# 
+# TO Eddy
+# 
+# 因工地月報要轉型成使用者榮譽，每個月要麻煩您協助撈取下列資料：
+# 1.國際盤、運彩盤全壘打次數最多的使用者前5名(不分聯盟)，如次數相同，需撈誰點的注數最多
+# 2.發表文章數最多的使用者前5名(熱門聯盟) (要麻煩您撈出MLB、日棒、韓棒、中職、NBA、中籃、日籃、韓籃、NHL各聯盟的第一名，我會再自己選前五名)
+# 3.回覆文章數最多的使用者前5名(熱門聯盟) (要麻煩您撈出MLB、日棒、韓棒、中職、NBA、中籃、日籃、韓籃、NHL各聯盟的第一名，我會再自己選前五名)
+# 4.收到最多感謝的使用者前3名
+# 5.最多人加明燈的使用者前3名
+# 6.個人頁瀏覽量前3名
+# =================================================================================================
+
+# 執行C:\proc\python\scripts\task_3108.py
+
+
+
+# =================================================================================================
+# [201708-B-7]優化對戰資訊、球隊資訊手機版介面-滿意度問卷分析https://redmine.playsport.cc/issues/3964#change-23071
+# 說明 提供更詳細的問卷分析
+# 內容 - 排除10/13~10/31未曾觀看對戰資訊、球隊資訊頁者
+# 
+# - 提供重度、中度、輕度問卷填寫狀況
+# - 問卷https://www.playsport.cc/questionnaire.php?question=201710121026135668&action=statistics
+# =================================================================================================
+# 記錄:
+# 
+# 以下問題只留下有看過對戰資訊的人
+#    關於新版對戰資訊的手機版畫面，您覺得如何?
+#    關於對戰資訊的手機版畫面，您喜歡新版還是舊版?
+# 以下問題只留下有看過球隊資訊的人
+#    關於新版球隊資訊的手機版畫面，您覺得如何?
+#    關於球隊資訊的手機版畫面，您喜歡新版還是舊版?
+# 
+# 問券會排掉輕度使用的人, 問券結果只會看重/中度
+
+drop table if exists actionlog._games_data;
+create table actionlog._games_data engine = myisam
+SELECT userid, uri, time, platform_type 
+FROM actionlog.action_201710
+where uri like '%games_data.php%'
+and userid <> ''
+and time between '2017-10-13 00:00:00' and '2017-10-31 23:59:59';
+
+update actionlog._games_data set platform_type = 1 where platform_type = 3;
+
+drop table if exists actionlog._games_data_a;
+create table actionlog._games_data_a engine = myisam
+SELECT * 
+FROM actionlog._games_data
+where uri not like '%action=team%';
+drop table if exists actionlog._games_data_b;
+create table actionlog._games_data_b engine = myisam
+SELECT * 
+FROM actionlog._games_data
+where uri like '%action=team%';
+
+drop table if exists actionlog._games_data_a_1;
+create table actionlog._games_data_a_1 engine = myisam
+select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
+from (
+	select a.userid, (case when (a.platform_type=1) then pv else 0 end) as pc,
+					 (case when (a.platform_type=2) then pv else 0 end) as mobile
+	from (
+		SELECT userid, platform_type, count(uri) as pv 
+		FROM actionlog._games_data_a
+		group by userid, platform_type) as a) as b
+group by b.userid;
+drop table if exists actionlog._games_data_b_1;
+create table actionlog._games_data_b_1 engine = myisam
+select b.userid, sum(b.pc) as pc, sum(b.mobile) as mobile
+from (
+	select a.userid, (case when (a.platform_type=1) then pv else 0 end) as pc,
+					 (case when (a.platform_type=2) then pv else 0 end) as mobile
+	from (
+		SELECT userid, platform_type, count(uri) as pv 
+		FROM actionlog._games_data_b
+		group by userid, platform_type) as a) as b
+group by b.userid;
+
+drop table if exists actionlog._games_data_a_2;
+create table actionlog._games_data_a_2 engine = myisam
+select userid, pc, mobile, round((cnt-rank+1)/cnt,2) as mobile_percentile
+from (SELECT userid, pc, mobile, @curRank := @curRank + 1 AS rank
+	  FROM actionlog._games_data_a_1, (SELECT @curRank := 0) r
+	  order by mobile desc) as dt,
+	 (select count(distinct userid) as cnt from actionlog._games_data_a_1) as ct;
+drop table if exists actionlog._games_data_b_2;
+create table actionlog._games_data_b_2 engine = myisam
+select userid, pc, mobile, round((cnt-rank+1)/cnt,2) as mobile_percentile
+from (SELECT userid, pc, mobile, @curRank := @curRank + 1 AS rank
+	  FROM actionlog._games_data_b_1, (SELECT @curRank := 0) r
+	  order by mobile desc) as dt,
+	 (select count(distinct userid) as cnt from actionlog._games_data_a_1) as ct;
+
+ALTER TABLE actionlog._games_data_a_2 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._games_data_b_2 convert to character set utf8 collate utf8_general_ci;
+
+
+drop table if exists actionlog._qu;
+create table actionlog._qu engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201710121026135668_answer;
+ALTER TABLE actionlog._qu CHANGE `1507774975` q1 VARCHAR(20);
+ALTER TABLE actionlog._qu CHANGE `1507775132` q2 VARCHAR(20);
+ALTER TABLE actionlog._qu CHANGE `1507775860` q3 VARCHAR(20);
+ALTER TABLE actionlog._qu CHANGE `1507776771` q4 VARCHAR(20);
+ALTER TABLE actionlog._qu convert to character set utf8 collate utf8_general_ci;
+
+
+drop table if exists actionlog._games_data_a_3;
+create table actionlog._games_data_a_3 engine = myisam
+SELECT a.userid, a.q1, a.q2, a.q3, a.q4, b.pc, b.mobile, b.mobile_percentile
+FROM actionlog._qu a left join actionlog._games_data_a_2 b on a.userid = b.userid;
+drop table if exists actionlog._games_data_b_3;
+create table actionlog._games_data_b_3 engine = myisam
+SELECT a.userid, a.q1, a.q2, a.q3, a.q4, b.pc, b.mobile, b.mobile_percentile
+FROM actionlog._qu a left join actionlog._games_data_b_2 b on a.userid = b.userid;
+
+SELECT q1, count(userid) 
+FROM actionlog._games_data_a_3
+where mobile_percentile >= 0.9
+group by q1;
+
+SELECT q2, count(userid) 
+FROM actionlog._games_data_a_3
+where mobile_percentile >= 0.9
+group by q2;
+
+SELECT q3, count(userid) 
+FROM actionlog._games_data_b_3
+where mobile_percentile >= 0.9
+group by q3;
+
+SELECT q4, count(userid) 
+FROM actionlog._games_data_b_3
+where mobile_percentile >= 0.9
+group by q4;
+
+# =================================================================================================
+# 即時比分APP內置廣告的觀感調查 - 問券結果分析
+# 任務說明:
+# 問券結果約於10/23完成
+# 因簡單看目前問券填寫情況, 發現android和ios的使用者對放置廣告的厭惡程度不太一樣, 故決定2個作業系統的結果會分開來看
+# 需簡單的排除一些亂填的使用者, 例如填寫很快的人
+# 需於每題問券結果附上該廣告位置對於整個APP廣告收入的貢獻程式(如金額或佔比), 需注意流量不一定是100%, 需簡單估算一下
+# 
+# 問卷調查已經結束，請參閱：
+# 
+# iOS即時比分APP內置廣告的觀感調查
+# 問卷編號：201710052008354959
+# 
+# Android即時比分APP內置廣告的觀感調查
+# 問卷編號：201710052014035010
+# =================================================================================================
+
+drop table if exists actionlog._qu_ios;
+create table actionlog._qu_ios engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201710052008354959_answer;
+drop table if exists actionlog._qu_android;
+create table actionlog._qu_android engine = myisam
+SELECT * FROM plsport_playsport.questionnaire_201710052014035010_answer;
+
+ALTER TABLE actionlog._qu_ios CHANGE `1508228352` q1 VARCHAR(20);
+ALTER TABLE actionlog._qu_ios CHANGE `1508321524` q2 VARCHAR(20);
+ALTER TABLE actionlog._qu_ios CHANGE `1508321583` q3 VARCHAR(20);
+ALTER TABLE actionlog._qu_ios CHANGE `1508321621` q4 VARCHAR(20);
+ALTER TABLE actionlog._qu_ios CHANGE `1508321667` q5 VARCHAR(20);
+ALTER TABLE actionlog._qu_ios CHANGE `1508321696` q6 VARCHAR(20);
+ALTER TABLE actionlog._qu_ios CHANGE `1508321731` q7 VARCHAR(20);
+ALTER TABLE actionlog._qu_ios CHANGE `1508321762` q8 VARCHAR(200);
+ALTER TABLE actionlog._qu_android CHANGE `1508322194` q1 VARCHAR(20);
+ALTER TABLE actionlog._qu_android CHANGE `1508322264` q2 VARCHAR(20);
+ALTER TABLE actionlog._qu_android CHANGE `1508322323` q3 VARCHAR(20);
+ALTER TABLE actionlog._qu_android CHANGE `1508322367` q4 VARCHAR(20);
+ALTER TABLE actionlog._qu_android CHANGE `1508322408` q5 VARCHAR(20);
+ALTER TABLE actionlog._qu_android CHANGE `1508322442` q6 VARCHAR(20);
+ALTER TABLE actionlog._qu_android CHANGE `1508322475` q7 VARCHAR(20);
+ALTER TABLE actionlog._qu_android CHANGE `1508322512` q8 VARCHAR(200);
+
+ALTER TABLE actionlog._qu_ios convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._qu_android convert to character set utf8 collate utf8_general_ci;
+
+SELECT q1, count(userid) 
+FROM actionlog._qu_ios
+group by q1;
+SELECT q2, count(userid) 
+FROM actionlog._qu_ios
+group by q2;
+SELECT q3, count(userid) 
+FROM actionlog._qu_ios
+group by q3;
+SELECT q4, count(userid) 
+FROM actionlog._qu_ios
+group by q4;
+SELECT q5, count(userid) 
+FROM actionlog._qu_ios
+group by q5;
+SELECT q6, count(userid) 
+FROM actionlog._qu_ios
+group by q6;
+SELECT q7, count(userid) 
+FROM actionlog._qu_ios
+group by q7;
+
+SELECT q1, count(userid) 
+FROM actionlog._qu_android
+group by q1;
+SELECT q2, count(userid) 
+FROM actionlog._qu_android
+group by q2;
+SELECT q3, count(userid) 
+FROM actionlog._qu_android
+group by q3;
+SELECT q4, count(userid) 
+FROM actionlog._qu_android
+group by q4;
+SELECT q5, count(userid) 
+FROM actionlog._qu_android
+group by q5;
+SELECT q6, count(userid) 
+FROM actionlog._qu_android
+group by q6;
+SELECT q7, count(userid) 
+FROM actionlog._qu_android
+group by q7;
+
+
+
+# =================================================================================================
+# [201711-C-2] 籃球即時比分訪談 - 訪談名單https://redmine.playsport.cc/issues/3998#change-23262
+# 說明
+# 提供籃球即時比分電話訪談名單
+# 訪談名單
+# 
+# 1. 非玩運彩即時比分使用者
+# - ID、暱稱、討論區pv及百分比、NBA即時比分pv及百分比、中籃即時比分pv及百分比、日籃即時比分pv及百分比、韓籃即時比分pv及百分比、
+# 歐籃即時比分pv及百分比、網站最近登入時間、即時比分APP開啟次數、即時比分APP最近開啟日期( 近28天)
+#    - 條件
+#    討論區PV前30%
+#    NBA即時比分PV後50%
+#    中籃即時比分PV後50%
+#    日籃即時比分PV後50%
+#    韓籃即時比分PV後50%
+#    歐籃即時比分PV後50%
+#    即時比分APP開啟次數後30%
+# ​   網站最近登入時間 11/13(含)以後
+# 
+# 2. 玩運彩網頁即時比分使用者
+# - ID、暱稱、NBA即時比分pv及百分比、中籃即時比分pv及百分比、日籃即時比分pv及百分比、韓籃即時比分pv及百分比、歐籃即時比分pv及百分比、
+# 網站最近登入時間、手機即時比分pv佔比、即時比分APP開啟次數、即時比分APP最近開啟日期( 近28天)
+# - 條件
+# NBA即時比分PV前30%
+# 即時比分APP開啟次數後30%
+# 網站最近登入時間 11/13(含)以後
+# 
+# 3. 玩運彩APP即時比分使用者
+# 
+# - ID、暱稱、NBA即時比分pv及百分比、中籃即時比分pv及百分比、日籃即時比分pv及百分比、韓籃即時比分pv及百分比、歐籃即時比分pv及百分比、
+# 網站最近登入時間、手機即時比分pv佔比、即時比分APP開啟次數、即時比分APP最近開啟日期( 近28天)
+# - 條件
+# 即時比分APP開啟次數前30%
+# 即時比分APP最近開啟日期 11/13(含)以後
+# =================================================================================================
+
+drop table if exists actionlog._actionlog_0;
+create table actionlog._actionlog_0 engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201711
+where userid <> ''
+and time between subdate(now(),28) AND now();
+insert ignore into actionlog._actionlog_0
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201710
+where userid <> ''
+and time between subdate(now(),28) AND now();
+
+drop table if exists actionlog._actionlog_0_forum;
+create table actionlog._actionlog_0_forum engine = myisam
+SELECT * 
+FROM actionlog._actionlog_0
+where uri like '%/forum%';
+drop table if exists actionlog._actionlog_0_livescore;
+create table actionlog._actionlog_0_livescore engine = myisam
+SELECT * 
+FROM actionlog._actionlog_0
+where uri like '%/livescore%';
+drop table if exists actionlog._actionlog_0_visitmember;
+create table actionlog._actionlog_0_visitmember engine = myisam
+SELECT * 
+FROM actionlog._actionlog_0
+where uri like '%/visit_member%';
+
+
+
+drop table if exists actionlog._actionlog_1_livescore;
+create table actionlog._actionlog_1_livescore engine = myisam
+SELECT userid, uri, time, platform_type, (case when (locate('aid',uri)=0) then 3 else substr(uri,locate('aid',uri)+4,4) end) as aid
+FROM actionlog._actionlog_0_livescore;
+
+drop table if exists actionlog._actionlog_2_livescore;
+create table actionlog._actionlog_2_livescore engine = myisam
+select *
+from (
+	SELECT userid, uri, time, platform_type, (case when (locate('&',aid)=0) then aid else substr(aid,1,locate('&',aid)-1) end) as aid
+	FROM actionlog._actionlog_1_livescore) as a
+where a.aid in ('3','94','97','92','8');
+
+
+
+drop table if exists actionlog._list_0;
+create table actionlog._list_0 engine = myisam
+SELECT userid 
+FROM actionlog._actionlog_2_livescore
+group by userid;
+
+
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._actionlog_2_livescore
+where aid = 3
+group by userid;
+drop table if exists actionlog._temp_3;
+create table actionlog._temp_3 engine = myisam
+select userid, pv as pv3, round((cnt-rank+1)/cnt,2) as pv3_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+	  FROM actionlog._temp, (SELECT @curRank := 0) r
+	  order by pv desc) as dt,
+	 (select count(distinct userid) as cnt from actionlog._temp) as ct;
+
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._actionlog_2_livescore
+where aid = 94
+group by userid;
+drop table if exists actionlog._temp_94;
+create table actionlog._temp_94 engine = myisam
+select userid, pv as pv94, round((cnt-rank+1)/cnt,2) as pv94_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+	  FROM actionlog._temp, (SELECT @curRank := 0) r
+	  order by pv desc) as dt,
+	 (select count(distinct userid) as cnt from actionlog._temp) as ct;
+
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._actionlog_2_livescore
+where aid = 97
+group by userid;
+drop table if exists actionlog._temp_97;
+create table actionlog._temp_97 engine = myisam
+select userid, pv as pv97, round((cnt-rank+1)/cnt,2) as pv97_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+	  FROM actionlog._temp, (SELECT @curRank := 0) r
+	  order by pv desc) as dt,
+	 (select count(distinct userid) as cnt from actionlog._temp) as ct;
+
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._actionlog_2_livescore
+where aid = 92
+group by userid;
+drop table if exists actionlog._temp_92;
+create table actionlog._temp_92 engine = myisam
+select userid, pv as pv92, round((cnt-rank+1)/cnt,2) as pv92_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+	  FROM actionlog._temp, (SELECT @curRank := 0) r
+	  order by pv desc) as dt,
+	 (select count(distinct userid) as cnt from actionlog._temp) as ct;
+
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._actionlog_2_livescore
+where aid = 8
+group by userid;
+drop table if exists actionlog._temp_8;
+create table actionlog._temp_8 engine = myisam
+select userid, pv as pv8, round((cnt-rank+1)/cnt,2) as pv8_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+	  FROM actionlog._temp, (SELECT @curRank := 0) r
+	  order by pv desc) as dt,
+	 (select count(distinct userid) as cnt from actionlog._temp) as ct;
+     
+     
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT userid, count(uri) as pv 
+FROM actionlog._actionlog_0_forum
+group by userid;
+drop table if exists actionlog._temp_forum;
+create table actionlog._temp_forum engine = myisam
+select userid, pv as pvforum, round((cnt-rank+1)/cnt,2) as pvforum_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+	  FROM actionlog._temp, (SELECT @curRank := 0) r
+	  order by pv desc) as dt,
+	 (select count(distinct userid) as cnt from actionlog._temp) as ct;
+
+drop table if exists actionlog._temp;
+ALTER TABLE actionlog._list_0 convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_3 convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_94 convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_97 convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_92 convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_8 convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_forum convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._list_0 ADD INDEX (`userid`);
+ALTER TABLE actionlog._temp_3 ADD INDEX (`userid`);
+ALTER TABLE actionlog._temp_94 ADD INDEX (`userid`);
+ALTER TABLE actionlog._temp_97 ADD INDEX (`userid`);
+ALTER TABLE actionlog._temp_92 ADD INDEX (`userid`);
+ALTER TABLE actionlog._temp_8 ADD INDEX (`userid`);
+ALTER TABLE actionlog._temp_forum ADD INDEX (`userid`);
+
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT a.userid, b.pv3, b.pv3_p 
+FROM actionlog._list_0 a left join actionlog._temp_3 b on a.userid = b.userid;
+drop table if exists actionlog._temp_1;
+create table actionlog._temp_1 engine = myisam
+SELECT a.userid, a.pv3, a.pv3_p, b.pv94, b.pv94_p
+FROM actionlog._temp a left join actionlog._temp_94 b on a.userid = b.userid;
+drop table if exists actionlog._temp_2;
+create table actionlog._temp_2 engine = myisam
+SELECT a.userid, a.pv3, a.pv3_p, a.pv94, a.pv94_p, b.pv97, b.pv97_p 
+FROM actionlog._temp_1 a left join actionlog._temp_97 b on a.userid = b.userid;
+drop table if exists actionlog._temp__3;
+create table actionlog._temp__3 engine = myisam
+SELECT a.userid, a.pv3, a.pv3_p, a.pv94, a.pv94_p, a.pv97, a.pv97_p, b.pv92, b.pv92_p
+FROM actionlog._temp_2 a left join actionlog._temp_92 b on a.userid = b.userid;
+drop table if exists actionlog._temp_4;
+create table actionlog._temp_4 engine = myisam
+SELECT a.userid, a.pv3, a.pv3_p, a.pv94, a.pv94_p, a.pv97, a.pv97_p, a.pv92, a.pv92_p, b.pv8, b.pv8_p
+FROM actionlog._temp__3 a left join actionlog._temp_8 b on a.userid = b.userid;
+drop table if exists actionlog._list_1;
+create table actionlog._list_1 engine = myisam
+SELECT a.userid, b.pvforum as pvf, b.pvforum_p as pvf_p, a.pv3, a.pv3_p, a.pv94, a.pv94_p, a.pv97, a.pv97_p, a.pv92, a.pv92_p, a.pv8, a.pv8_p
+FROM actionlog._temp_4 a left join actionlog._temp_forum b on a.userid = b.userid;
+
+drop table if exists actionlog._temp;
+drop table if exists actionlog._temp_1;
+drop table if exists actionlog._temp_2;
+drop table if exists actionlog._temp__3;
+drop table if exists actionlog._temp_4;
+drop table if exists actionlog._temp_5;
+
+#匯入member_signin_log_archive
+# 最近一次登入
+drop table if exists actionlog._last_signin;
+CREATE TABLE actionlog._last_signin engine = myisam 
+SELECT userid, date(max(signin_time)) as last_signin
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+ALTER TABLE actionlog._last_signin convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._last_signin ADD INDEX (`userid`);
+
+drop table if exists actionlog._list_2;
+create table actionlog._list_2 engine = myisam
+SELECT a.userid, a.pvf, a.pvf_p, a.pv3, a.pv3_p, a.pv94, a.pv94_p, a.pv97, a.pv97_p, a.pv92, a.pv92_p, a.pv8, a.pv8_p, b.last_signin
+FROM actionlog._list_1 a left join actionlog._last_signin b on a.userid = b.userid
+where b.last_signin in ('2017-11-13','2017-11-14','2017-11-15','2017-11-16');
+
+ALTER TABLE actionlog._list_2 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._list_2 ADD INDEX (`userid`);
+
+drop table if exists actionlog._list_3;
+create table actionlog._list_3 engine = myisam
+SELECT a.userid, b.nickname, coalesce(a.pvf,0) as pvf ,coalesce(a.pvf_p,0) as pvf_p ,coalesce(a.pv3,0) as pv3 ,coalesce(a.pv3_p,0) as pv3_p ,
+coalesce(a.pv94,0) as pv94 ,coalesce(a.pv94_p,0) as pv94_p ,coalesce(a.pv97,0) as pv97 ,coalesce(a.pv97_p,0) as pv97_p ,
+coalesce(a.pv92,0) as pv92 ,coalesce(a.pv92_p,0) as pv92_p ,coalesce(a.pv8,0) as pv8 ,coalesce(a.pv8_p,0) as pv8_p, a.last_signin
+FROM actionlog._list_2 a left join plsport_playsport.member b on a.userid = b.userid;
+
+# drop table if exists actionlog._temp__;
+# create table actionlog._temp__ engine = myisam
+# SELECT userid, count(uri) as mobile_pv 
+# FROM actionlog._actionlog_2_livescore
+# where platform_type = 2
+# group by userid;
+# drop table if exists actionlog._temp__mp;
+# create table actionlog._temp__mp engine = myisam
+# select userid, mobile_pv as mpv, round((cnt-rank+1)/cnt,2) as mpv_p
+# from (SELECT userid, mobile_pv, @curRank := @curRank + 1 AS rank
+# 	  FROM actionlog._temp__, (SELECT @curRank := 0) r
+# 	  order by mobile_pv desc) as dt,
+# 	 (select count(distinct userid) as cnt from actionlog._temp__) as ct;
+     
+     
+drop table if exists actionlog._temp__;
+create table actionlog._temp__ engine = myisam
+SELECT userid, platform_type as p, count(uri) as pv 
+FROM actionlog._actionlog_2_livescore
+where platform_type in ('1','2')
+group by userid, platform_type;
+drop table if exists actionlog._temp__mp;
+create table actionlog._temp__mp engine = myisam
+select b.userid, round(mobile/(pc+mobile),3) as mobile_p
+from (
+	select a.userid, sum(pc) as pc, sum(mobile) as mobile
+	from (
+		SELECT userid, (case when (p=1) then pv else 0 end) as pc,
+					   (case when (p=2) then pv else 0 end) as mobile 
+		FROM actionlog._temp__) as a
+	group by a.userid) as b;
+
+ALTER TABLE actionlog._temp__mp convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp__mp ADD INDEX (`userid`);
+
+drop table if exists actionlog._list_4;
+create table actionlog._list_4 engine = myisam
+SELECT a.userid, nickname, pvf, pvf_p, pv3, pv3_p, pv94, pv94_p, pv97, pv97_p, pv92, pv92_p, pv8, pv8_p, last_signin, coalesce(b.mobile_p,0) as mobile_p
+FROM actionlog._list_3 a left join actionlog._temp__mp b on a.userid = b.userid;
+
+UPDATE actionlog._list_4 SET userid = REPLACE(userid, ';', '');
+UPDATE actionlog._list_4 SET userid = REPLACE(userid, ',', '');
+UPDATE actionlog._list_4 SET userid = REPLACE(userid, ' ', '');
+UPDATE actionlog._list_4 SET userid = REPLACE(userid, '\"', '');
+UPDATE actionlog._list_4 SET userid = REPLACE(userid, '\'', '');
+UPDATE actionlog._list_4 SET userid = REPLACE(userid, '"', '');
+UPDATE actionlog._list_4 SET userid = REPLACE(userid, '\r', '');
+UPDATE actionlog._list_4 SET userid = REPLACE(userid, '\n', '');
+UPDATE actionlog._list_4 SET userid = REPLACE(userid, '\t', '');
+
+
+
+
+
+
+
+#匯入app_action_log (使用C:\proc\python\dump\import_mangodb_app_action_log_custom_with_all_cols.py)
+drop table if exists actionlog._app_action_log_0;
+create table actionlog._app_action_log_0 engine = myisam
+SELECT app, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5, d 
+FROM actionlog._app_action_log
+where app = 1;
+# 使用C:\proc\python\scripts\slice08_actionlog_for_any_table_use_for_app_action_log.py, 記得改table name
+# 會產生actionlog._temp, 需再做一次group 
+# 計算APP使用程度
+drop table if exists actionlog._app_action_log_1;
+create table actionlog._app_action_log_1 engine = myisam
+SELECT deviceidMd5, sum(pv) as pv
+FROM actionlog._temp
+group by deviceidMd5;
+
+drop table if exists actionlog._app_action_log_2;
+create table actionlog._app_action_log_2 engine = myisam
+select deviceidMd5, pv as apppv, round((cnt-rank+1)/cnt,2) as apppv_p
+from (SELECT deviceidMd5, pv, @curRank := @curRank + 1 AS rank
+	  FROM actionlog._app_action_log_1, (SELECT @curRank := 0) r
+	  order by pv desc) as dt,
+	 (select count(distinct deviceidMd5) as cnt from actionlog._app_action_log_1) as ct;
+
+drop table if exists actionlog._app_action_log_login;
+create table actionlog._app_action_log_login engine = myisam
+SELECT deviceidMd5, max(d) as d
+FROM actionlog._temp
+group by deviceidMd5;
+
+drop table if exists actionlog._app_action_log_3;
+create table actionlog._app_action_log_3 engine = myisam
+SELECT a.deviceidMd5, a.apppv, a.apppv_p, b.d 
+FROM actionlog._app_action_log_2 a left join actionlog._app_action_log_login b on a.deviceidMd5 = b.deviceidMd5;
+
+
+
+
+
+drop table if exists actionlog._user_click_title;
+create table actionlog._user_click_title engine = myisam
+SELECT * FROM actionlog._actionlog_0_visitmember
+where uri like '%dmd=%';
+drop table if exists actionlog._user_click_title_1;
+create table actionlog._user_click_title_1 engine = myisam
+SELECT userid, time, platform_type, substr(uri,locate('dmd=',uri)+4,length(uri)) as dmd
+FROM actionlog._user_click_title;
+drop table if exists actionlog._user_click_title_2;
+create table actionlog._user_click_title_2 engine = myisam
+SELECT userid, dmd 
+FROM actionlog._user_click_title_1
+group by userid, dmd;
+ALTER TABLE actionlog._user_click_title_2 CHANGE `dmd` `dmd` VARCHAR(100) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE actionlog._user_click_title_2 ADD INDEX (`dmd`);
+ALTER TABLE actionlog._app_action_log_3 ADD INDEX (`deviceidMd5`);
+
+drop table if exists actionlog._app_action_log_4;
+create table actionlog._app_action_log_4 engine = myisam
+SELECT a.userid, a.dmd, b.apppv, b.apppv_p, b.d
+FROM actionlog._user_click_title_2 a inner join actionlog._app_action_log_3 b on a.dmd = b.deviceidMd5;
+drop table if exists actionlog._app_action_log_5;
+create table actionlog._app_action_log_5 engine = myisam
+SELECT userid, dmd, max(apppv) as apppv, apppv_p, d 
+FROM actionlog._app_action_log_4
+group by userid;
+
+ALTER TABLE actionlog._list_4 convert to character set utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._app_action_log_5 convert to character set utf8 collate utf8_general_ci;
+
+
+drop table if exists actionlog._list_5;
+create table actionlog._list_5 engine = myisam
+SELECT a.userid, nickname, pvf, pvf_p, pv3, pv3_p, pv94, pv94_p, pv97, pv97_p, pv92, pv92_p, pv8, pv8_p, last_signin, mobile_p ,
+       coalesce(b.apppv,0) as apppv, coalesce(b.apppv_p,0) as apppv_p, coalesce(b.d,'') as d
+FROM actionlog._list_4 a left join actionlog._app_action_log_5 b on a.userid = b.userid;
+
+
+drop table if exists actionlog._list_5_a;
+create table actionlog._list_5_a engine = myisam
+SELECT * 
+FROM actionlog._list_5
+where pvf_p>=0.7
+and (pv3_p<=0.5 and pv94_p<=0.5 and pv97_p<=0.5 and pv92_p<=0.5 and pv8_p<=0.5)
+and apppv_p<=0.3
+order by pvf desc;
+drop table if exists actionlog._list_5_b;
+create table actionlog._list_5_b engine = myisam
+SELECT userid, nickname, pv3, pv3_p, pv94, pv94_p, pv97, pv97_p, pv92, pv92_p, pv8, pv8_p, last_signin, mobile_p, apppv, apppv_p, d 
+FROM actionlog._list_5
+where pv3_p>=0.7
+and apppv_p<=0.3
+order by pv3 desc;
+drop table if exists actionlog._list_5_c;
+create table actionlog._list_5_c engine = myisam
+SELECT userid, nickname, pv3, pv3_p, pv94, pv94_p, pv97, pv97_p, pv92, pv92_p, pv8, pv8_p, last_signin, mobile_p, apppv, apppv_p, d 
+FROM actionlog._list_5
+where apppv_p>=0.7
+order by apppv desc;
+
+SELECT 'ID','暱稱','討論區pv','討論區pv%','NBA','NBA%','中籃','中籃%','日籃','日籃%','韓籃','韓籃%','歐籃','歐籃%','最後登',
+'APP','APP%','最後用APP' union (
+SELECT userid, nickname, pvf, pvf_p, pv3, pv3_p, pv94, pv94_p, pv97, pv97_p, pv92, pv92_p, pv8, pv8_p, last_signin, apppv, apppv_p, d
+into outfile 'C:/Users/eddy/Desktop/_list_5_a.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._list_5_a);
+SELECT 'ID','暱稱','NBA','NBA%','中籃','中籃%','日籃','日籃%','韓籃','韓籃%','歐籃','歐籃%','最後登','手機比例%',
+'APP','APP%','最後用APP' union (
+SELECT userid, nickname, pv3, pv3_p, pv94, pv94_p, pv97, pv97_p, pv92, pv92_p, pv8, pv8_p, last_signin, mobile_p, apppv, apppv_p, d
+into outfile 'C:/Users/eddy/Desktop/_list_5_b.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._list_5_b);
+SELECT 'ID','暱稱','NBA','NBA%','中籃','中籃%','日籃','日籃%','韓籃','韓籃%','歐籃','歐籃%','最後登','手機比例%',
+'APP','APP%','最後用APP' union (
+SELECT userid, nickname, pv3, pv3_p, pv94, pv94_p, pv97, pv97_p, pv92, pv92_p, pv8, pv8_p, last_signin, mobile_p, apppv, apppv_p, d
+into outfile 'C:/Users/eddy/Desktop/_list_5_c.csv'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM actionlog._list_5_c);
+
+
+
+
+
+
+
+
+
+
