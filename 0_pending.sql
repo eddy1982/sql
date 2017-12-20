@@ -37123,40 +37123,49 @@ group by q4;
 #    - 測試時間：9/18~10/2
 # =================================================================================================
 
+# updated:20171212 分成5組的版本
 drop table if exists actionlog._forum;
 create table actionlog._forum engine = myisam
 SELECT userid, uri, time, platform_type
-FROM actionlog.action_201709
+FROM actionlog.action_201711
 where uri like '%/forum%'
 and userid <> ''
-and time between '2017-09-18 00:00:00' and '2017-10-10 23:59:59';
+and time between '2017-11-09 09:00:00' and now();
 insert ignore into actionlog._forum
 SELECT userid, uri, time, platform_type
-FROM actionlog.action_201710
+FROM actionlog.action_201712
 where uri like '%/forum%'
 and userid <> ''
-and time between '2017-09-18 00:00:00' and '2017-10-10 23:59:59';
+and time between '2017-11-09 09:00:00' and now();
 update actionlog._forum set platform_type = 1 where platform_type = 3;
 ALTER TABLE actionlog._forum convert to character set utf8 collate utf8_general_ci;
 
+#記得匯入最新的forumcontent
 drop table if exists actionlog._forumcontent;
 create table actionlog._forumcontent engine = myisam
 SELECT articleid, subjectid, userid, date(postdate) as d, quote_articleid
 FROM plsport_playsport.forumcontent
-where postdate between '2017-09-18 00:00:00' and '2017-10-10 23:59:59';
+where postdate between '2017-11-09 09:00:00' and now();
 
 drop table if exists actionlog._forumcontent_1;
 create table actionlog._forumcontent_1 engine = myisam
-SELECT (case when ((b.id%20+1) <= 10) then 'a' else 'b' end) as abtest, articleid, subjectid, a.userid, d, quote_articleid 
+SELECT (case when ((b.id%20+1) in (1,2,3,4)) then 'a' 
+             when ((b.id%20+1) in (5,6,7,8)) then 'b'
+             when ((b.id%20+1) in (9,10,11,12)) then 'c'
+             when ((b.id%20+1) in (13,14,15,16)) then 'd'
+             when ((b.id%20+1) in (17,18,19,20)) then 'e' else 'error' end) as abtest, 
+       articleid, subjectid, a.userid, d, quote_articleid 
 FROM actionlog._forumcontent a left join plsport_playsport.member b on a.userid = b.userid;
 
+
+# 為了辯別回文時的裝置, 所以需要用event資料表, 需匯入
 drop table if exists actionlog._event;
 create table actionlog._event engine = myisam
 SELECT userid, name, platform_type, time, substr(name,13,length(name)) as r_id
 FROM plsport_playsport.events
 where name like '%forum_reply%'
 and name <> 'forum_reply_disable'
-and time between '2017-09-18 00:00:00' and '2017-10-10 23:59:59';
+and time between '2017-11-09 09:00:00' and now();
 update actionlog._event set platform_type = 1 where platform_type = 3;
 ALTER TABLE actionlog._event CHANGE `r_id` `r_id` INT(20) NOT NULL;
 
@@ -37172,7 +37181,12 @@ FROM actionlog._forumcontent_1 a left join actionlog._event b on a.articleid = b
 
 drop table if exists actionlog._forum_1;
 create table actionlog._forum_1 engine = myisam
-SELECT (case when ((b.id%20+1) <= 10) then 'a' else 'b' end) as abtest, a.userid, uri, time, platform_type 
+SELECT (case when ((b.id%20+1) in (1,2,3,4)) then 'a' 
+             when ((b.id%20+1) in (5,6,7,8)) then 'b'
+             when ((b.id%20+1) in (9,10,11,12)) then 'c'
+             when ((b.id%20+1) in (13,14,15,16)) then 'd'
+             when ((b.id%20+1) in (17,18,19,20)) then 'e' else 'error' end) as abtest, 
+             a.userid, uri, time, platform_type 
 FROM actionlog._forum a left join plsport_playsport.member b on a.userid = b.userid
 where uri like '%subjectid%';
 
@@ -37189,6 +37203,10 @@ SELECT abtest, userid, uri, d, platform_type, subjectid, (case when (reply = '')
 FROM actionlog._forum_2;
 
 ALTER TABLE actionlog._forum_3 ADD INDEX (`userid`, `subjectid`, `abtest`, `d`, `platform_type`);
+
+
+
+
 
 # 原始名單
 drop table if exists actionlog._forum_4;
@@ -37213,7 +37231,7 @@ group by abtest, userid, d, platform_type, subjectid;
 
 drop table if exists actionlog._forum_6;
 create table actionlog._forum_6 engine = myisam
-SELECT abtest, userid, d, platform_type, count(subjectid) as c
+SELECT abtest, userid, d, platform_type, count(subjectid) as read_count
 FROM actionlog._temp
 group by abtest, userid, d, platform_type;
 
@@ -37227,16 +37245,26 @@ group by abtest, userid, d, platform_type, subjectid;
 
 drop table if exists actionlog._forum_6_1;
 create table actionlog._forum_6_1 engine = myisam
-SELECT abtest, userid, d, platform_type, count(subjectid) as c
+SELECT abtest, userid, d, platform_type, count(subjectid) as read_count_with_icon
 FROM actionlog._temp
 group by abtest, userid, d, platform_type;
 
 # 回文數
 drop table if exists actionlog._forum_7;
 create table actionlog._forum_7 engine = myisam
-SELECT abtest, userid, d, count(articleid) as c, '1' as platform_type
+SELECT abtest, userid, d, platform_type, count(articleid) as reply_count
 FROM actionlog._forumcontent_2
-group by abtest, userid, d;
+where platform_type is not null # 有蠻多回文是偵測不到顯示null
+group by abtest, userid, d, platform_type;
+
+
+
+
+
+
+
+
+
 
 # 貝葉氏a/b testing資料準備
 drop table if exists actionlog._forum_8;
@@ -37254,6 +37282,7 @@ select a.abtest, a.d, count(a.userid) as reply_count
 from (
 	SELECT abtest, userid, d 
 	FROM actionlog._forumcontent_2
+    where platform_type is not null
 	group by abtest, userid, d) as a
 group by a.abtest, a.d;
 
@@ -37264,30 +37293,48 @@ FROM actionlog._forum_8 a left join actionlog._forum_8_1 b
 on a.abtest = b.abtest 
 and a.d = b.d;
 
-        drop table if exists actionlog._forum_9_1;
-		create table actionlog._forum_9_1 engine = myisam
+        drop table if exists actionlog._forum_9_a;
+		create table actionlog._forum_9_a engine = myisam
 		SELECT abtest, d, read_count, reply_count, (read_count-reply_count) as not_read_count
 		FROM actionlog._forum_9
 		where abtest = 'a'
 		order by d;
-		ALTER TABLE actionlog._forum_9_1 ADD COLUMN id INT NOT NULL auto_increment PRIMARY KEY;
-
-        drop table if exists actionlog._forum_9_2;
-		create table actionlog._forum_9_2 engine = myisam
+		ALTER TABLE actionlog._forum_9_a ADD COLUMN id INT NOT NULL auto_increment PRIMARY KEY;
+        drop table if exists actionlog._forum_9_b;
+		create table actionlog._forum_9_b engine = myisam
 		SELECT abtest, d, read_count, reply_count, (read_count-reply_count) as not_read_count
 		FROM actionlog._forum_9
 		where abtest = 'b'
 		order by d;
-		ALTER TABLE actionlog._forum_9_2 ADD COLUMN id INT NOT NULL auto_increment PRIMARY KEY;
+		ALTER TABLE actionlog._forum_9_b ADD COLUMN id INT NOT NULL auto_increment PRIMARY KEY;
+        drop table if exists actionlog._forum_9_c;
+		create table actionlog._forum_9_c engine = myisam
+		SELECT abtest, d, read_count, reply_count, (read_count-reply_count) as not_read_count
+		FROM actionlog._forum_9
+		where abtest = 'c'
+		order by d;
+		ALTER TABLE actionlog._forum_9_c ADD COLUMN id INT NOT NULL auto_increment PRIMARY KEY;
+        drop table if exists actionlog._forum_9_d;
+		create table actionlog._forum_9_d engine = myisam
+		SELECT abtest, d, read_count, reply_count, (read_count-reply_count) as not_read_count
+		FROM actionlog._forum_9
+		where abtest = 'd'
+		order by d;
+		ALTER TABLE actionlog._forum_9_d ADD COLUMN id INT NOT NULL auto_increment PRIMARY KEY;
+        drop table if exists actionlog._forum_9_e;
+		create table actionlog._forum_9_e engine = myisam
+		SELECT abtest, d, read_count, reply_count, (read_count-reply_count) as not_read_count
+		FROM actionlog._forum_9
+		where abtest = 'e'
+		order by d;
+		ALTER TABLE actionlog._forum_9_e ADD COLUMN id INT NOT NULL auto_increment PRIMARY KEY;
 
-drop table if exists actionlog._forum_9_3;
-create table actionlog._forum_9_3 engine = myisam
-SELECT * 
-FROM actionlog._forum_9_1;
-insert ignore into actionlog._forum_9_3
-SELECT * 
-FROM actionlog._forum_9_2;
-
+drop table if exists actionlog._forum_9_all;
+create table actionlog._forum_9_all engine = myisam SELECT * FROM actionlog._forum_9_a;
+insert ignore into actionlog._forum_9_all SELECT * FROM actionlog._forum_9_b;
+insert ignore into actionlog._forum_9_all SELECT * FROM actionlog._forum_9_c;
+insert ignore into actionlog._forum_9_all SELECT * FROM actionlog._forum_9_d;
+insert ignore into actionlog._forum_9_all SELECT * FROM actionlog._forum_9_e;
 
 
 # =================================================================================================
@@ -39350,22 +39397,100 @@ where userid <> ''
 group by userid, appVersion;
 
 #用舊版1.3.18的人
-select count(a.userid) as user_count
+drop table if exists actionlog._temp_list_old_version;
+create table actionlog._temp_list_old_version engine = myisam
+SELECT userid
+FROM actionlog._temp_1
+where userid not in (SELECT userid 
+					FROM actionlog._temp_1
+					where appversion in ('2.0.0','2.0.1')
+					group by userid)
+group by userid;
+
+drop table if exists actionlog._temp_list_old_version_1;
+create table actionlog._temp_list_old_version_1 engine = myisam
+SELECT a.userid, remark 
+FROM actionlog._temp a inner join actionlog._temp_list_old_version b on a.userid = b.userid
+where substr(appversion,1,1) = '1'
+and remark like '%reply%'
+group by a.userid, remark;
+
+select b.remark, count(b.userid) as c
 from (
-	SELECT userid
-	FROM actionlog._temp_1
-	where userid not in (SELECT userid 
-						FROM actionlog._temp_1
-						where appversion in ('2.0.0','2.0.1')
-						group by userid)
-	group by userid) as a;
+	select a.userid, a.remark
+	from (
+	SELECT userid, substr(remark,1,11) as remark 
+	FROM actionlog._temp_list_old_version_1) as a
+	group by a.userid, a.remark) as b
+group by b.remark;
+
 #用新版的人
-select count(a.userid) as user_count
+drop table if exists actionlog._temp_list_new_version;
+create table actionlog._temp_list_new_version engine = myisam
+SELECT userid 
+FROM actionlog._temp_1
+where appversion in ('2.0.0','2.0.1')
+group by userid;
+
+drop table if exists actionlog._temp_list_new_version_1;
+create table actionlog._temp_list_new_version_1 engine = myisam
+SELECT a.userid, remark 
+FROM actionlog._temp a inner join actionlog._temp_list_new_version b on a.userid = b.userid
+where substr(appversion,1,1) = '2'
+and remark like '%reply%'
+group by a.userid, remark;
+
+select b.remark, count(b.userid) as c
 from (
-	SELECT userid 
-	FROM actionlog._temp_1
-	where appversion in ('2.0.0','2.0.1')
-	group by userid) as a;
+	select a.userid, a.remark
+	from (
+	SELECT userid, substr(remark,1,11) as remark 
+	FROM actionlog._temp_list_new_version_1) as a
+	group by a.userid, a.remark) as b
+group by b.remark;
+
+
+drop table if exists actionlog._temp_list_new_version_2;
+create table actionlog._temp_list_new_version_2 engine = myisam
+SELECT abtestGroup, remark, deviceModel, ip, app, a.userid, appVersion, datetime, deviceid, deviceOsVersion, action, os, deviceidMd5, d
+FROM actionlog._temp a inner join actionlog._temp_list_new_version b on a.userid = b.userid
+where substr(appversion,1,1) = '2';
+
+drop table if exists actionlog._temp_list_1;
+create table actionlog._temp_list_1 engine = myisam
+SELECT userid, count(userid) as read_count 
+FROM actionlog._temp_list_new_version_2
+where action = 'readArticle'
+group by userid;
+
+drop table if exists actionlog._temp_list_2;
+create table actionlog._temp_list_2 engine = myisam
+SELECT userid, count(userid) as post_count 
+FROM actionlog._temp_list_new_version_2
+where remark like '%postConfirm%'
+group by userid;
+
+drop table if exists actionlog._temp_list_3;
+create table actionlog._temp_list_3 engine = myisam
+SELECT userid, count(userid) as reply_count 
+FROM actionlog._temp_list_new_version_2
+where remark like '%replyConfirm%'
+group by userid;
+
+drop table if exists actionlog._temp_list_new_version_3;
+create table actionlog._temp_list_new_version_3 engine = myisam
+SELECT a.userid, b.read_count 
+FROM actionlog._temp_list_new_version a left join actionlog._temp_list_1 b on a.userid = b.userid;
+
+drop table if exists actionlog._temp_list_new_version_4;
+create table actionlog._temp_list_new_version_4 engine = myisam
+SELECT a.userid, a.read_count, b.post_count
+FROM actionlog._temp_list_new_version_3 a left join actionlog._temp_list_2 b on a.userid = b.userid;
+
+drop table if exists actionlog._temp_list_new_version_5;
+create table actionlog._temp_list_new_version_5 engine = myisam
+SELECT a.userid, a.read_count, a.post_count, b.reply_count
+FROM actionlog._temp_list_new_version_4 a left join actionlog._temp_list_3 b on a.userid = b.userid;
 
 
 
@@ -39450,6 +39575,131 @@ FROM actionlog._forum_1 a left join plsport_playsport.member b on a.postuser = b
 where ym = '2017-11'
 order by total_pv desc
 limit 0,50;
+
+
+
+
+# =================================================================================================
+# [201711-C-2] 籃球即時比分訪談 - 訪談名單https://redmine.playsport.cc/issues/3998#change-23262
+# To Eddy：
+# 
+# 因要進行Kano問卷圖片MVP測試，麻煩週三下午產生下列名單，謝謝！
+# 1. 玩運彩網頁即時比分使用者
+# - ID、暱稱、NBA即時比分pv及百分比、網站最近登入時間、手機即時比分pv佔比
+# - 條件
+# NBA即時比分PV前30%
+# 網站最近登入時間 12/19(含)以後
+# =================================================================================================
+
+drop table if exists actionlog._actionlog_0;
+create table actionlog._actionlog_0 engine = myisam
+SELECT userid, uri, time, platform_type
+FROM actionlog.action_201712
+where userid <> ''
+and uri like '%livescore.php%'
+and time between subdate(now(),28) AND now();
+
+update actionlog._actionlog_0 set platform_type = 1 where platform_type = 3;
+
+drop table if exists actionlog._actionlog_1;
+create table actionlog._actionlog_1 engine = myisam
+SELECT userid, uri, time, platform_type, (case when (locate('aid',uri)=0) then 3 else substr(uri,locate('aid',uri)+4,4) end) as aid
+FROM actionlog._actionlog_0;
+
+drop table if exists actionlog._actionlog_2;
+create table actionlog._actionlog_2 engine = myisam
+select *
+from (
+	SELECT userid, uri, time, platform_type, (case when (locate('&',aid)=0) then aid else substr(aid,1,locate('&',aid)-1) end) as aid
+	FROM actionlog._actionlog_1) as a
+where a.aid in ('3');
+
+drop table if exists actionlog._actionlog_3;
+create table actionlog._actionlog_3 engine = myisam
+SELECT userid, count(aid) as pv 
+FROM actionlog._actionlog_2
+group by userid;
+
+drop table if exists actionlog._actionlog_4;
+create table actionlog._actionlog_4 engine = myisam
+select userid, pv as pv3, round((cnt-rank+1)/cnt,2) as pv3_p
+from (SELECT userid, pv, @curRank := @curRank + 1 AS rank
+	  FROM actionlog._actionlog_3, (SELECT @curRank := 0) r
+	  order by pv desc) as dt,
+	 (select count(distinct userid) as cnt from actionlog._actionlog_3) as ct;
+
+drop table if exists actionlog._temp;
+create table actionlog._temp engine = myisam
+SELECT userid, platform_type, count(uri) as pv 
+FROM actionlog._actionlog_2
+group by userid, platform_type;
+
+drop table if exists actionlog._temp_1;
+create table actionlog._temp_1 engine = myisam
+select b.userid, round(b.pc/(b.pc+b.mobile),3) as p_pc, round(b.mobile/(b.pc+b.mobile),3) as p_mobile
+from (
+select a.userid, sum(a.pc) as pc, sum(a.mobile) as mobile
+from (
+SELECT userid, (case when (platform_type=1) then pv else 0 end) as pc,
+               (case when (platform_type=2) then pv else 0 end) as mobile
+FROM actionlog._temp) as a
+group by a.userid) as b;
+
+ALTER TABLE actionlog._actionlog_4 convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._temp_1 convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._actionlog_4 ADD INDEX (`userid`);
+ALTER TABLE actionlog._temp_1 ADD INDEX (`userid`);
+
+drop table if exists actionlog._actionlog_5;
+create table actionlog._actionlog_5 engine = myisam
+SELECT a.userid, pv3, pv3_p, b.p_pc, b.p_mobile
+FROM actionlog._actionlog_4 a left join actionlog._temp_1 b on a.userid = b.userid;
+
+drop table if exists actionlog._last_signin;
+CREATE TABLE actionlog._last_signin engine = myisam 
+SELECT userid, date(max(signin_time)) as last_signin
+FROM plsport_playsport.member_signin_log_archive
+GROUP BY userid;
+
+ALTER TABLE actionlog._actionlog_5 convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._last_signin convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._actionlog_5 ADD INDEX (`userid`);
+ALTER TABLE actionlog._last_signin ADD INDEX (`userid`);
+
+drop table if exists actionlog._actionlog_6;
+create table actionlog._actionlog_6 engine = myisam
+SELECT a.userid, pv3, pv3_p, p_pc, p_mobile, b.last_signin
+FROM actionlog._actionlog_5 a left join actionlog._last_signin b on a.userid = b.userid
+where b.last_signin = '2017-12-19'
+and pv3_p >= 0.7;
+
+ALTER TABLE actionlog._actionlog_6 convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE plsport_playsport.member convert to character SET utf8 collate utf8_general_ci;
+ALTER TABLE actionlog._actionlog_6 ADD INDEX (`userid`);
+ALTER TABLE plsport_playsport.member ADD INDEX (`userid`);
+
+drop table if exists actionlog._actionlog_7;
+create table actionlog._actionlog_7 engine = myisam
+SELECT a.userid, b.nickname, pv3, pv3_p, p_pc, p_mobile, last_signin
+FROM actionlog._actionlog_6 a left join plsport_playsport.member b on a.userid = b.userid;
+
+UPDATE actionlog._actionlog_7 SET userid = REPLACE(userid, ';', '');
+UPDATE actionlog._actionlog_7 SET userid = REPLACE(userid, ',', '');
+UPDATE actionlog._actionlog_7 SET userid = REPLACE(userid, ' ', '');
+UPDATE actionlog._actionlog_7 SET userid = REPLACE(userid, '\"', '');
+UPDATE actionlog._actionlog_7 SET userid = REPLACE(userid, '\'', '');
+UPDATE actionlog._actionlog_7 SET userid = REPLACE(userid, '"', '');
+UPDATE actionlog._actionlog_7 SET userid = REPLACE(userid, '\r', '');
+UPDATE actionlog._actionlog_7 SET userid = REPLACE(userid, '\n', '');
+UPDATE actionlog._actionlog_7 SET userid = REPLACE(userid, '\t', '');
+
+SELECT 'userid', 'nickname', 'pv', 'pv級距', '電腦佔比', '手機佔比', '最後登入' union (
+SELECT userid, nickname, pv3, pv3_p, p_pc, p_mobile, last_signin
+into outfile 'C:/Users/eddy/Desktop/list.txt'
+fields terminated by ',' enclosed by '"' lines terminated by '\r\n'
+FROM plsport_playsport._actionlog_7);
+
+
 
 
 
