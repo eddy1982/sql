@@ -77,6 +77,17 @@ use function STR_TO_DATE to convert MongeDB datetime value to MySQL
 DATE_ADD(STR_TO_DATE(datetime,'%Y-%m-%dT%H:%i:%s.000Z'), INTERVAL 8 HOUR) as d
 ```
 
+Get all columns from MySQL tables
+-------------------------------------------------------------------
+```
+select *
+from information_schema.columns
+where table_schema = 'database'
+and table_name = 'table'
+order by table_name,ordinal_position
+```
+
+
 Add Auto-Increment ID to existing table
 ---------------------------------------
 ```
