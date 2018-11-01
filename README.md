@@ -87,7 +87,6 @@ and table_name = 'table'
 order by table_name,ordinal_position
 ```
 
-
 Add Auto-Increment ID to existing table
 ---------------------------------------
 ```
@@ -120,5 +119,14 @@ PURGE BINARY LOGS Syntax
 -------------------------
 ```sh
 PURGE BINARY LOGS BEFORE '2014-12-31 00:00:00';
+```
+
+QUERY TO GET COLUMN NAMES
+-------------------------
+```
+SELECT `COLUMN_NAME`
+FROM `INFORMATION_SCHEMA`.`COLUMNS`
+WHERE `TABLE_SCHEMA`=''
+AND `TABLE_NAME`=''
 ```
 
